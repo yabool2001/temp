@@ -58,13 +58,17 @@ if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_m
 
 # Inicjalizacja pliku CSV
 csv_filename_raw = "complex_rx_raw.csv"
-csv_filename_filtered = "complex_rx_filtered.csv"
-#csv_file_raw = open ( csv_filename_raw , mode = "w" , newline = '' )
-csv_file_filtered = open ( csv_filename_filtered , mode = "w" , newline = '' )
-#csv_writer_raw = csv.writer ( csv_file_raw )
-csv_writer_filtered = csv.writer ( csv_file_filtered )
-#csv_writer_raw.writerow ( [ "timestamp" , "real" , "imag" ] )
-csv_writer_filtered.writerow ( [ "timestamp" , "real" , "imag" ] )
+csv_filename_rrc_filtered = "complex_rx_rrc_filtered.csv"
+csv_filename_time_synced = "complex_rx_time_synced.csv"
+csv_file_raw = open ( csv_filename_raw , mode = "w" , newline = '' )
+csv_file_rrc_filtered = open ( csv_filename_rrc_filtered , mode = "w" , newline = '' )
+csv_file_time_synced = open ( csv_filename_time_synced , mode = "w" , newline = '' )
+csv_writer_raw = csv.writer ( csv_file_raw )
+csv_writer_rrc_filtered = csv.writer ( csv_file_rrc_filtered )
+csv_writer_time_synced = csv.writer ( csv_file_time_synced )
+csv_writer_raw.writerow ( [ "timestamp" , "real" , "imag" ] )
+csv_writer_rrc_filtered.writerow ( [ "timestamp" , "real" , "imag" ] )
+csv_writer_time_synced.writerow ( [ "timestamp" , "real" , "imag" ] )
 
 # Inicjalizacja filtry RRC
 rrc_taps = rrc_filter ( RRC_BETA , RRC_SPS , RRC_SPAN )
@@ -77,24 +81,53 @@ try :
             print ( "Naciśnięto Esc. Kończę zbieranie." )
             break
         raw_samples = sdr.rx ()
-        filtered_samples = lfilter ( rrc_taps , 1.0 , raw_samples )
         ts = time.time () - t0
-        synced_samples = polyphase_clock_sync ( filtered_samples , sps = SPS, nfilts = NFILTS , excess_bw = RRC_BETA )
+        for sample in raw_samples :
+            csv_writer_raw.writerow ( [ ts , sample.real , sample.imag ] )
+        csv_file_raw.flush ()
+        rrc_filtered_samples = lfilter ( rrc_taps , 1.0 , raw_samples )
+        ts = time.time () - t0
+        for sample in rrc_filtered_samples :
+            csv_writer_rrc_filtered.writerow ( [ ts , sample.real , sample.imag ] )
+        csv_file_rrc_filtered.flush ()
+        time_synced_samples = polyphase_clock_sync ( rrc_filtered_samples , sps = SPS, nfilts = NFILTS , excess_bw = RRC_BETA )
+        ts = time.time () - t0
+        for sample in time_synced_samples :
+            csv_writer_time_synced.writerow ( [ ts , sample.real , sample.imag ] )
+        csv_file_time_synced.flush ()
         if verbose : acg_vaule = sdr._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
-        for sample in synced_samples :
-            csv_writer_filtered.writerow ( [ ts , sample.real , sample.imag ] )
-        csv_file_filtered.flush ()
-        if verbose : print ( f"{type ( filtered_samples )=}, {filtered_samples.dtype=}" ) ; print ( f"{filtered_samples=}" )
+        if verbose : print ( f"{type ( raw_samples )=}, {raw_samples.dtype=}" ) ; print ( f"{raw_samples=}" )
 
 except KeyboardInterrupt :
     print ( "Zakończono ręcznie (Ctrl+C)" )
 
 finally:
-    csv_file_filtered.close ()
+    csv_file_raw.close ()
+    csv_file_rrc_filtered.close ()
+    csv_file_time_synced.close ()
 
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print("Rysuję wykres...")
-df = pd.read_csv(csv_filename_filtered)
+df = pd.read_csv(csv_filename_raw)
+# Zbuduj sygnał zespolony (opcjonalnie, jeśli chcesz jako 1D)
+signal = df["real"].values + 1j * df["imag"].values
+# Przygotuj dane do wykresu
+df["index"] = df.index
+# Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
+fig = px.line(df, x="index", y="real", title="Sygnał BPSK RAW: I i Q")
+fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
+fig.update_layout(
+    xaxis_title="Numer próbki",
+    yaxis_title="Amplituda",
+    xaxis=dict(rangeslider_visible=True),
+    legend=dict(x=0.01, y=0.99),
+    height=500
+)
+fig.show()
+
+# Wczytanie danych i wyświetlenie wykresu w Plotly
+print("Rysuję wykres...")
+df = pd.read_csv(csv_filename_rrc_filtered)
 # Zbuduj sygnał zespolony (opcjonalnie, jeśli chcesz jako 1D)
 signal = df["real"].values + 1j * df["imag"].values
 # Przygotuj dane do wykresu
@@ -111,6 +144,26 @@ fig.update_layout(
 )
 fig.show()
 
+# Wczytanie danych i wyświetlenie wykresu w Plotly
+print("Rysuję wykres...")
+df = pd.read_csv(csv_filename_time_synced)
+# Zbuduj sygnał zespolony (opcjonalnie, jeśli chcesz jako 1D)
+signal = df["real"].values + 1j * df["imag"].values
+# Przygotuj dane do wykresu
+df["index"] = df.index
+# Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
+fig = px.line(df, x="index", y="real", title="Sygnał BPSK po filtracji RRC i synchronizacji czasu samplowania: I i Q")
+fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
+fig.update_layout(
+    xaxis_title="Numer próbki",
+    yaxis_title="Amplituda",
+    xaxis=dict(rangeslider_visible=True),
+    legend=dict(x=0.01, y=0.99),
+    height=500
+)
+fig.show()
+
+'''
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print ( "Rysuję wykres..." )
 
@@ -132,3 +185,4 @@ fig.update_layout(
 
 
 fig.show ()
+'''
