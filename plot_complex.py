@@ -15,7 +15,7 @@ import pandas as pd
 import plotly.express as px
 
 # Inicjalizacja pliku CSV
-csv_filename_waveform = "complex_rx_waveform.csv"
+csv_filename_waveform = "complex_tx_waveform.csv"
 
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print ( "Rysuję wykres..." )

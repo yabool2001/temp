@@ -29,7 +29,7 @@ RX_GAIN = 0.1
 
 # Parametry RF 
 F_C = 2_900_000_000
-#F_S = 521_100
+F_S = 521_100
 F_S = 3_000_000
 BW  = 1_000_000
 NUM_SAMPLES = 32768
@@ -42,7 +42,6 @@ GAIN_CONTROL = "fast_attack"
 RRC_BETA = 0.35 # Excess_bw
 RRC_SPS = SPS   # Samples per symbol
 RRC_SPAN = 11
-
 NFILTS = 32
 
 # Inicjalizacja Pluto SDR
