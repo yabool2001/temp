@@ -28,9 +28,8 @@ F_S = 521_100           # częstotliwość próbkowania [Hz]
 F_S = 3_000_000         # częstotliwość próbkowania [Hz]
 BW  = 1_000_000         # szerokość pasma [Hz]
 SPS = 4                 # próbek na symbol
-TX_ATTENUATION = 10.0
-# NUM_SAMPLES = 32768
-NUM_SAMPLES = 1000
+TX_GAIN = -10.0
+NUM_SAMPLES = 32768
 GAIN_CONTROL = "fast_attack"
 #GAIN_CONTROL = "manual"
 
@@ -46,8 +45,8 @@ sdr.rx_lo = int ( F_C )
 sdr.sample_rate = int ( F_S )
 sdr.rx_rf_bandwidth = int ( BW )
 sdr.rx_buffer_size = int ( NUM_SAMPLES )
+sdr.tx_hardwaregain_chan0 = float ( TX_GAIN )
 sdr.gain_control_mode_chan0 = GAIN_CONTROL
-sdr.tx_hardwaregain_chan0 = float ( -TX_ATTENUATION )
 sdr.rx_output_type = "SI"
 if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
 
@@ -128,9 +127,10 @@ def main():
     print (packet )
     waveform = modulate_packet ( packet , SPS , RRC_BETA , RRC_SPAN )
     t0 = time.time ()
+    waveform *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     write_waveform ( waveform , csv_file_waveform , csv_writer_waveform , t0 )
-    transmit ( waveform , sdr )
     plot_tx_waveform ( csv_filename_waveform )
+    transmit ( waveform , sdr )
 
 if __name__ == "__main__":
     main ()
