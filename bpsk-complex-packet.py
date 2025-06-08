@@ -12,14 +12,10 @@ from modules.rrc import rrc_filter
 from modules.clock_sync import polyphase_clock_sync
 
 # Inicjalizacja pliku CSV
-csv_filename_raw = "complex_rx_raw.csv"
-csv_filename_filtered = "complex_rx_filtered.csv"
-csv_file_raw = open ( csv_filename_raw , mode = "w" , newline = '' )
-csv_file_filtered = open ( csv_filename_filtered , mode = "w" , newline = '' )
-csv_writer_raw = csv.writer ( csv_file_raw )
-csv_writer_filtered = csv.writer ( csv_file_filtered )
-csv_writer_raw.writerow ( [ "timestamp" , "real" , "imag" ] )
-csv_writer_filtered.writerow ( [ "timestamp" , "real" , "imag" ] )
+csv_filename_waveform = "complex_rx_waveform.csv"
+csv_file_waveform = open ( csv_filename_waveform , mode = "w" , newline = '' )
+csv_writer_waveform = csv.writer ( csv_file_waveform )
+csv_writer_waveform.writerow ( [ "timestamp" , "real" , "imag" ] )
 
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
@@ -54,21 +50,13 @@ def rrc_filter(beta, sps, span):
     taps /= np.sqrt(np.sum(taps**2))
     return taps
 
-'''
 def modulate_packet(packet, sps, beta, span):
     bits = np.unpackbits(np.array(packet, dtype=np.uint8))
     symbols = bits_to_bpsk(bits)
     rrc = rrc_filter(beta, sps, span)
     shaped = upfirdn(rrc, symbols, up=sps)
-    return (shaped + 0j).astype(np.complex64)
-'''
-
-def modulate_packet_2 ( packet , sps , beta , span ) :
-    bits = np.unpackbits(np.array(packet, dtype=np.uint8))
-    symbols = bits_to_bpsk(bits)
-    shaped = upfirdn(rrc, symbols, up=sps)
-    rrc = rrc_filter(beta, sps, span)
-    return upfirdn(rrc, symbols, up=sps)
+    wf = (shaped + 0j).astype(np.complex64)
+    return wf
 
 def shape ( shaped ):
     return (shaped + 0j).astype(np.complex64)
@@ -82,13 +70,11 @@ def write_waveform ( waveform , file, writer , t0 ) :
 def main():
     packet = create_packet ( header , payload )
     print (packet )
-    # waveform = modulate_packet ( packet , SPS , RRC_BETA , RRC_SPAN )
-    waveform = modulate_packet_2 ( packet , SPS , RRC_BETA , RRC_SPAN )
-    waveform = shape (waveform)
+    waveform = modulate_packet ( packet , SPS , RRC_BETA , RRC_SPAN )
     t0 = time.time ()
-    write_waveform ( waveform , csv_file_filtered , csv_writer_filtered , t0 )
-    time.sleep ( CYCLE_MS / 1000.0 )
-    write_waveform ( waveform , csv_file_filtered , csv_writer_filtered , t0 )
+    write_waveform ( waveform , csv_file_waveform , csv_writer_waveform , t0 )
+    #time.sleep ( CYCLE_MS / 1000.0 )
+    #write_waveform ( waveform , csv_file_filtered , csv_writer_filtered , t0 )
 
 if __name__ == "__main__":
     main ()
