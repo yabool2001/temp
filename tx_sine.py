@@ -1,3 +1,5 @@
+# https://pysdr.org/content/pluto.html#transmitting
+
 import numpy as np
 import adi
 

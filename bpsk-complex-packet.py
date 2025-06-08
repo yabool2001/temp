@@ -63,11 +63,11 @@ def create_packet(header, payload):
     return header + length_byte + payload + crc_bytes
 
 def bits_to_bpsk ( bits ) :
-    return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.float32 )
+    return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.int64 )
 
 def rrc_filter(beta, sps, span):
     N = sps * span
-    t = np.arange(-N//2, N//2 + 1, dtype=np.float32) / sps
+    t = np.arange(-N//2, N//2 + 1, dtype=np.float64) / sps
     taps = np.sinc(t) * np.cos(np.pi * beta * t) / (1 - (2 * beta * t)**2)
     taps[np.isnan(taps)] = 0
     taps /= np.sqrt(np.sum(taps**2))
@@ -80,11 +80,21 @@ def create_bpsk_symbols ( packet ) :
 def modulate_packet ( symbols , sps , beta , span ) :
     rrc = rrc_filter(beta, sps, span)
     shaped = upfirdn(rrc, symbols, up=sps)
-    wf = (shaped + 0j).astype(np.complex64)
+    wf = (shaped + 0j).astype(np.complex128)
     return wf
 
+def bpsk_modulation ( bpsk_symbols ) :
+    zeros = np.zeros_like ( bpsk_symbols )
+    zeros[bpsk_symbols == -1] = 180
+    x_radians = zeros*np.pi/180.0 # sin() and cos() takes in radians
+    samples = np.cos(x_radians) + 1j*0 # this produces our QPSK complex symbols
+    #samples = np.repeat(symbols, 4) # 4 samples per symbol (rectangular pulses) ale to robi rrc
+    samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
+    plot_tx_waveform ( samples )
+    pass
+
 def shape ( shaped ):
-    return (shaped + 0j).astype(np.complex64)
+    return (shaped + 0j).astype(np.complex128)
 
 def write_waveform ( waveform , file, writer , t0 ) :
     for sample in waveform :
@@ -96,7 +106,7 @@ def transmit_2_pluto ( waveform , sdr ) :
     try :
         while True :
             sdr.tx ( waveform )
-            time.sleep( 10 / 1000.0)
+            time.sleep( CYCLE_MS / 1000.0)
     except KeyboardInterrupt :
         print ( "Zakończono ręcznie (Ctrl+C)" )
     finally:
@@ -129,7 +139,8 @@ def main():
     packet = create_packet ( header , payload )
     print ( packet )
     bpsk_symbols = create_bpsk_symbols ( packet )
-    waveform = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
+    #waveform = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
+    waveform = bpsk_modulation ( bpsk_symbols )
     t0 = time.time ()
     write_waveform ( waveform , csv_file_waveform , csv_writer_waveform , t0 )
     plot_tx_waveform ( csv_filename_waveform )
