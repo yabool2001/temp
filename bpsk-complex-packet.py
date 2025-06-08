@@ -62,8 +62,8 @@ def create_packet(header, payload):
     crc_bytes = list(crc32.to_bytes(4, 'big'))
     return header + length_byte + payload + crc_bytes
 
-def bits_to_bpsk(bits):
-    return np.array([1.0 if bit else -1.0 for bit in bits], dtype=np.float32)
+def bits_to_bpsk ( bits ) :
+    return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.float32 )
 
 def rrc_filter(beta, sps, span):
     N = sps * span
@@ -73,9 +73,11 @@ def rrc_filter(beta, sps, span):
     taps /= np.sqrt(np.sum(taps**2))
     return taps
 
-def modulate_packet(packet, sps, beta, span):
-    bits = np.unpackbits(np.array(packet, dtype=np.uint8))
-    symbols = bits_to_bpsk(bits)
+def create_bpsk_symbols ( packet ) :
+    bits = np.unpackbits ( np.array ( packet , dtype = np.uint8 ) )
+    return bits_to_bpsk ( bits )
+
+def modulate_packet ( symbols , sps , beta , span ) :
     rrc = rrc_filter(beta, sps, span)
     shaped = upfirdn(rrc, symbols, up=sps)
     wf = (shaped + 0j).astype(np.complex64)
@@ -89,7 +91,8 @@ def write_waveform ( waveform , file, writer , t0 ) :
         writer.writerow ( [ time.time () - t0 , sample.real , sample.imag ] )
     file.flush ()
 
-def transmit ( waveform , sdr ) :
+def transmit_2_pluto ( waveform , sdr ) :
+    waveform *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     try :
         while True :
             sdr.tx ( waveform )
@@ -110,7 +113,7 @@ def plot_tx_waveform ( filename ) :
     # Przygotuj dane do wykresu
     df["index"] = df.index
     # Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
-    fig = px.line(df, x="index", y="real", title="Sygnał BPSK raw: I i Q")
+    fig = px.line(df, x="index", y="real", title="Sygnał Tx BPSK raw: I i Q")
     fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
     fig.update_layout(
         xaxis_title="Numer próbki",
@@ -124,13 +127,13 @@ def plot_tx_waveform ( filename ) :
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
     packet = create_packet ( header , payload )
-    print (packet )
-    waveform = modulate_packet ( packet , SPS , RRC_BETA , RRC_SPAN )
+    print ( packet )
+    bpsk_symbols = create_bpsk_symbols ( packet )
+    waveform = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
     t0 = time.time ()
-    waveform *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     write_waveform ( waveform , csv_file_waveform , csv_writer_waveform , t0 )
     plot_tx_waveform ( csv_filename_waveform )
-    transmit ( waveform , sdr )
+    transmit_2_pluto ( waveform , sdr )
 
 if __name__ == "__main__":
     main ()

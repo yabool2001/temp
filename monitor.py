@@ -84,6 +84,7 @@ try :
         for sample in raw_samples :
             csv_writer_raw.writerow ( [ ts , sample.real , sample.imag ] )
         csv_file_raw.flush ()
+        '''
         rrc_filtered_samples = lfilter ( rrc_taps , 1.0 , raw_samples )
         ts = time.time () - t0
         for sample in rrc_filtered_samples :
@@ -94,6 +95,7 @@ try :
         for sample in time_synced_samples :
             csv_writer_time_synced.writerow ( [ ts , sample.real , sample.imag ] )
         csv_file_time_synced.flush ()
+        '''
         if verbose : acg_vaule = sdr._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
         if verbose : print ( f"{type ( raw_samples )=}, {raw_samples.dtype=}" ) ; print ( f"{raw_samples=}" )
 
@@ -113,7 +115,7 @@ signal = df["real"].values + 1j * df["imag"].values
 # Przygotuj dane do wykresu
 df["index"] = df.index
 # Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
-fig = px.line(df, x="index", y="real", title="Sygnał BPSK RAW: I i Q")
+fig = px.line(df, x="index", y="real", title="Sygnał Rx BPSK RAW: I i Q")
 fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
 fig.update_layout(
     xaxis_title="Numer próbki",
@@ -132,7 +134,7 @@ signal = df["real"].values + 1j * df["imag"].values
 # Przygotuj dane do wykresu
 df["index"] = df.index
 # Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
-fig = px.line(df, x="index", y="real", title="Sygnał BPSK po filtracji RRC: I i Q")
+fig = px.line(df, x="index", y="real", title="Sygnał Rx BPSK po filtracji RRC: I i Q")
 fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
 fig.update_layout(
     xaxis_title="Numer próbki",
@@ -142,7 +144,7 @@ fig.update_layout(
     height=500
 )
 fig.show()
-
+'''
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print("Rysuję wykres...")
 df = pd.read_csv(csv_filename_time_synced)
@@ -151,7 +153,7 @@ signal = df["real"].values + 1j * df["imag"].values
 # Przygotuj dane do wykresu
 df["index"] = df.index
 # Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
-fig = px.line(df, x="index", y="real", title="Sygnał BPSK po filtracji RRC i synchronizacji czasu samplowania: I i Q")
+fig = px.line(df, x="index", y="real", title="Sygnał Rx BPSK po filtracji RRC i synchronizacji czasu samplowania: I i Q")
 fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
 fig.update_layout(
     xaxis_title="Numer próbki",
@@ -162,12 +164,11 @@ fig.update_layout(
 )
 fig.show()
 
-'''
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print ( "Rysuję wykres..." )
 
 # Wykres Plotly Express – wersja liniowa z filtrem
-fig = px.line(df, x="timestamp", y="real", title="Sygnał BPSK po filtracji RRC I i Q na osi czasu")
+fig = px.line(df, x="timestamp", y="real", title="Sygnał Rx BPSK po filtracji RRC I i Q na osi czasu")
 fig.add_scatter(x=df["timestamp"], y=df["imag"], mode="markers", name="Q (imag filtrowane)", line=dict(dash="dash"))
 
 fig.update_layout(
