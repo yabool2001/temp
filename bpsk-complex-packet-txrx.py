@@ -25,7 +25,7 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
 F_C = 868e6     # częstotliwość nośna [Hz]
-F_S = 6e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
+F_S = 1e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
 #BW  = 1_000_000         # szerokość pasma [Hz]
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
