@@ -1,8 +1,8 @@
 import adi
 
-TX_GAIN = -30
-GAIN_CONTROL = "slow_attack"
-#GAIN_CONTROL = "fast_attack"
+TX_GAIN = -10
+#GAIN_CONTROL = "slow_attack"
+GAIN_CONTROL = "fast_attack"
 NUM_SAMPLES = 100e3
 
 
@@ -20,7 +20,15 @@ def init_pluto ( uri , f_c , f_s ) :
     return sdr
 
 
-def transmit_2_pluto_cyclic ( samples , sdr ) :
+def tx_cyclic ( samples , sdr ) :
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = True
     sdr.tx ( samples )
+
+def stop_tx_cyclic ( sdr ) :
+    sdr.tx_destroy_buffer ()
+    sdr.tx_cyclic_buffer = False
+    print ( f"{sdr.tx_cyclic_buffer=}" )
+
+def rx_samples ( sdr ) :
+    return sdr.rx ()

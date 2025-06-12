@@ -8,9 +8,7 @@ from scipy.signal import upfirdn
 import pandas as pd
 import plotly.express as px
 
-import ops_file
-import ops_packet
-import sdr
+from modules import sdr , ops_packet , ops_file
 from modules.rrc import rrc_filter
 from modules.clock_sync import polyphase_clock_sync
  
@@ -27,13 +25,13 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
 F_C = 868e6     # częstotliwość nośna [Hz]
-F_S = 1e6         # częstotliwość próbkowania [Hz]
+F_S = 6e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
 #BW  = 1_000_000         # szerokość pasma [Hz]
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
 NUM_SAMPLES = 100e3
-GAIN_CONTROL = "fast_attack"
-#GAIN_CONTROL = "manual"
+# GAIN_CONTROL = "fast_attack"
+GAIN_CONTROL = "manual"
 URI = "ip:192.168.2.1"
 
 RRC_BETA = 0.35         # roll-off factor
@@ -74,32 +72,25 @@ def bpsk_modulation ( bpsk_symbols ) :
 def shape ( shaped ):
     return (shaped + 0j).astype(np.complex128)
 
-
-def transmit_2_pluto_cyclic ( waveform , sdr ) :
-    waveform *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
-    sdr.tx_cyclic_buffer = True
-    sdr.tx ( waveform )
-
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
     packet = ops_packet.create_packet ( PAYLOAD )
-    print ( f"{packet=}")
+    print ( f"{packet=}" )
     bpsk_symbols = ops_packet.create_bpsk_symbols ( packet )
-    waveform = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
-    transmit_2_pluto_cyclic ( waveform , sdr )
+    tx_samples = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
+    pluto = sdr.init_pluto ( URI , F_C , F_S )
+    sdr.tx_cyclic ( tx_samples , pluto )
     
     # Clear buffer just to be safe
     for i in range ( 0 , 10 ) :
-        raw_data = sdr.rx ()
+        raw_data = sdr.rx_samples ( pluto )
     # Receive samples
-    rx_samples = sdr.rx ()
+    rx_samples = sdr.rx_samples ( pluto )
 
     # Stop transmitting
-    sdr.tx_destroy_buffer ()
-    sdr.tx_cyclic_buffer = False
-    print ( f"{sdr.tx_cyclic_buffer=}" )
+    sdr.stop_tx_cyclic ( pluto )
 
-    csv_file_tx , csv_writer_tx = ops_file.open_and_write_samples_2_csv ( csv_filename_tx_waveform , waveform )
+    csv_file_tx , csv_writer_tx = ops_file.open_and_write_samples_2_csv ( csv_filename_tx_waveform , tx_samples )
     csv_file_rx , csv_writer_rx = ops_file.open_and_write_samples_2_csv ( csv_filename_rx_waveform , rx_samples )
     ops_file.flush_samples_and_close_csv ( csv_file_tx )
     ops_file.flush_samples_and_close_csv ( csv_file_rx )
