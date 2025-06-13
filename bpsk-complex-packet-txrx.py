@@ -24,14 +24,14 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
-F_C = 868e6     # częstotliwość nośna [Hz]
-F_S = 1e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
+F_C = 2900e6     # częstotliwość nośna [Hz]
+F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
 #BW  = 1_000_000         # szerokość pasma [Hz]
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
 NUM_SAMPLES = 100e3
-# GAIN_CONTROL = "fast_attack"
-GAIN_CONTROL = "manual"
+GAIN_CONTROL = "fast_attack"
+# GAIN_CONTROL = "manual"
 URI = "ip:192.168.2.1"
 
 RRC_BETA = 0.35         # roll-off factor
@@ -86,7 +86,7 @@ def main():
         raw_data = sdr.rx_samples ( pluto )
     # Receive samples
     rx_samples = sdr.rx_samples ( pluto )
-
+    acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
     sdr.stop_tx_cyclic ( pluto )
 
@@ -96,6 +96,7 @@ def main():
     ops_file.flush_samples_and_close_csv ( csv_file_rx )
     ops_file.plot_samples ( csv_filename_tx_waveform )
     ops_file.plot_samples ( csv_filename_rx_waveform )
+    print ( f"{acg_vaule=}" )
 
 if __name__ == "__main__":
     main ()
