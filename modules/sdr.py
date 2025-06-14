@@ -1,4 +1,5 @@
 import adi
+from modules import filters
 
 TX_GAIN = -10
 RX_GAIN = 70
@@ -35,3 +36,6 @@ def stop_tx_cyclic ( sdr ) :
 
 def rx_samples ( sdr ) :
     return sdr.rx ()
+
+def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
+    return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )

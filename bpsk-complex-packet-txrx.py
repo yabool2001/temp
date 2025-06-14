@@ -25,10 +25,10 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
 F_C = 2900e6     # częstotliwość nośna [Hz]
-F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
-#F_S = 3000000     # częstotliwość próbkowania [Hz] >= 521e3 && <
+#F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
+F_S = 521100     # częstotliwość próbkowania [Hz] >= 521e3 && <
 BW  = 1_000_000         # szerokość pasma [Hz]
-SPS = 4                 # próbek na symbol
+SPS = 8                 # próbek na symbol
 TX_GAIN = -10.0
 URI = "ip:192.168.2.1"
 #URI = "usb:"
@@ -62,7 +62,7 @@ def main():
     for i in range ( 0 , 10 ) :
         raw_data = sdr.rx_samples ( pluto )
     # Receive samples
-    rx_samples = sdr.rx_samples ( pluto )
+    rx_samples = sdr.rx_samples_filtered ( pluto , SPS , RRC_BETA , RRC_SPAN )
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
     sdr.stop_tx_cyclic ( pluto )
