@@ -26,7 +26,7 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
 F_C = 2900e6     # częstotliwość nośna [Hz]
 F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
-#BW  = 1_000_000         # szerokość pasma [Hz]
+BW  = 1_000_000         # szerokość pasma [Hz]
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
 NUM_SAMPLES = 100e3
@@ -38,11 +38,6 @@ URI = "ip:192.168.2.1"
 RRC_BETA = 0.35         # roll-off factor
 RRC_SPAN = 11           # długość filtru RRC w symbolach
 CYCLE_MS = 10           # opóźnienie między pakietami [ms]; <0 = liczba powtórzeń
-
-pluto = sdr.init_pluto ( URI , F_C , F_S )
-if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
-
-
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 
@@ -79,7 +74,8 @@ def main():
     print ( f"{packet=}" )
     bpsk_symbols = ops_packet.create_bpsk_symbols ( packet )
     tx_samples = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
-    pluto = sdr.init_pluto ( URI , F_C , F_S )
+    pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
+    if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.tx_cyclic ( tx_samples , pluto )
     
     # Clear buffer just to be safe
