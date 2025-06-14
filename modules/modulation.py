@@ -3,8 +3,7 @@ from modules import filters
 
 from scipy.signal import upfirdn
 
-def create_bpsk_symbols ( packet ) :
-    bits = np.unpackbits ( np.array ( packet , dtype = np.uint8 ) )
+def create_bpsk_symbols ( bits ) :
     return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.int64 )
 
 def modulate_bpsk ( packet , sps , beta , span ) :
