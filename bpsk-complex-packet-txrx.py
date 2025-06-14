@@ -33,6 +33,7 @@ NUM_SAMPLES = 100e3
 GAIN_CONTROL = "fast_attack"
 # GAIN_CONTROL = "manual"
 URI = "ip:192.168.2.1"
+#URI = "usb:"
 
 RRC_BETA = 0.35         # roll-off factor
 RRC_SPAN = 11           # długość filtru RRC w symbolach
