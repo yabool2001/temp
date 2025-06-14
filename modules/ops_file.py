@@ -38,7 +38,7 @@ def plot_samples ( filename ) :
     # Przygotuj dane do wykresu
     df["index"] = df.index
     # Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
-    fig = px.line ( df , x = "index" , y = "real" , title = "Sygnał {filename} BPSK raw: I i Q" )
+    fig = px.line ( df , x = "index" , y = "real" , title = f"Sygnał {filename} BPSK raw: I i Q" )
     fig.add_scatter ( x = df[ "index" ] , y=df[ "imag" ] , mode = "lines" , name = "Q (imag filtrowane)" , line = dict ( dash = "dash" ) )
     fig.update_layout (
         xaxis_title = "Numer próbki" ,

@@ -1,16 +1,16 @@
 import adi
-import csv
+#import csv
 import numpy as np
-from scipy.signal import lfilter
-import time
-import zlib
-from scipy.signal import upfirdn
+#from scipy.signal import lfilter
+#import time
+#import zlib
+#from scipy.signal import upfirdn
 import pandas as pd
 import plotly.express as px
 
-from modules import sdr , ops_packet , ops_file
-from modules.rrc import rrc_filter
-from modules.clock_sync import polyphase_clock_sync
+from modules import sdr , ops_packet , ops_file , modulation
+#from modules.rrc import rrc_filter
+#from modules.clock_sync import polyphase_clock_sync
  
 
 
@@ -26,12 +26,10 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
 F_C = 2900e6     # częstotliwość nośna [Hz]
 F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
+#F_S = 3000000     # częstotliwość próbkowania [Hz] >= 521e3 && <
 BW  = 1_000_000         # szerokość pasma [Hz]
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
-NUM_SAMPLES = 100e3
-GAIN_CONTROL = "fast_attack"
-# GAIN_CONTROL = "manual"
 URI = "ip:192.168.2.1"
 #URI = "usb:"
 
@@ -40,20 +38,6 @@ RRC_SPAN = 11           # długość filtru RRC w symbolach
 CYCLE_MS = 10           # opóźnienie między pakietami [ms]; <0 = liczba powtórzeń
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
-
-def rrc_filter(beta, sps, span):
-    N = sps * span
-    t = np.arange(-N//2, N//2 + 1, dtype=np.float64) / sps
-    taps = np.sinc(t) * np.cos(np.pi * beta * t) / (1 - (2 * beta * t)**2)
-    taps[np.isnan(taps)] = 0
-    taps /= np.sqrt(np.sum(taps**2))
-    return taps
-
-def modulate_packet ( symbols , sps , beta , span ) :
-    rrc = rrc_filter(beta, sps, span)
-    shaped = upfirdn(rrc, symbols, up=sps)
-    wf = (shaped + 0j).astype(np.complex128)
-    return wf
 
 def bpsk_modulation ( bpsk_symbols ) :
     zeros = np.zeros_like ( bpsk_symbols )
@@ -65,15 +49,11 @@ def bpsk_modulation ( bpsk_symbols ) :
     plot_tx_waveform ( samples )
     pass
 
-def shape ( shaped ):
-    return (shaped + 0j).astype(np.complex128)
-
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
     packet = ops_packet.create_packet ( PAYLOAD )
     print ( f"{packet=}" )
-    bpsk_symbols = ops_packet.create_bpsk_symbols ( packet )
-    tx_samples = modulate_packet ( bpsk_symbols , SPS , RRC_BETA , RRC_SPAN )
+    tx_samples = modulation.modulate_bpsk ( packet , SPS , RRC_BETA , RRC_SPAN )
     pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
     if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.tx_cyclic ( tx_samples , pluto )
