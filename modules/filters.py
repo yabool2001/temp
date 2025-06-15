@@ -1,7 +1,5 @@
-
-### Root Raised Cosine Filter Module ###
-
 import numpy as np
+from scipy.signal import lfilter
 
 def rrc_filter ( beta , sps , num_taps ):
     N = num_taps * sps
@@ -27,9 +25,6 @@ def rrc_filter ( beta , sps , num_taps ):
             taps[i] = numerator / denominator
 
     return taps / np.sqrt ( np.sum ( taps ** 2 ) )
-
-import numpy as np
-from scipy.signal import lfilter
 
 def rrc_filter(beta, sps, span):
     """
@@ -60,14 +55,14 @@ def rrc_filter(beta, sps, span):
     h = h / np.sqrt(np.sum(h ** 2))  # normalizacja energetyczna
     return h
 
-def apply_rrc_filter(rx_samples, beta=0.35, sps=8, span=11):
+def apply_rrc_filter(rx_samples, beta=0.35, sps=4, span=11):
     """
     Filtruje dane wejściowe za pomocą filtra RRC.
     
     :param rx_samples: próbki zespolone (np.ndarray, complex)
     :return: przefiltrowane próbki
     """
-    rrc_taps = rrc_filter(beta, sps, span)
+    rrc_taps = rrc_filter_v2(beta, sps, span)
     filtered = lfilter(rrc_taps, 1.0, rx_samples)
     return filtered
 
