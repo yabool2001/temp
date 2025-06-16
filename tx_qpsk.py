@@ -28,6 +28,7 @@ def plot_tx_waveform(samples):
 
 num_symbols = 1000
 x_int = np.random.randint(0, 4, num_symbols) # 0 to 3
+x_int = np.array ( [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ] , dtype = np.float64 )
 x_degrees = x_int*360/4.0 + 45 # 45, 135, 225, 315 degrees
 x_radians = x_degrees*np.pi/180.0 # sin() and cos() takes in radians
 x_symbols = np.cos(x_radians) + 1j*np.sin(x_radians) # this produces our QPSK complex symbols
