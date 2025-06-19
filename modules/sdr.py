@@ -1,6 +1,7 @@
 import adi
 from modules import filters
 import numpy as np
+import time 
 
 TX_GAIN = -10
 RX_GAIN = 70
@@ -23,6 +24,7 @@ def init_pluto ( uri , f_c , f_s , bw ) :
     sdr.rx_output_type = "SI"
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
+    time.sleep ( 0.2 ) #delay after setting device parameters
     return sdr
 
 
