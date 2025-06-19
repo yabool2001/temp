@@ -43,13 +43,3 @@ def rx_samples ( sdr ) :
 
 def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
     return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )
-
-def correlate_and_estimate_phase ( rx_samples ) :
-    BARKER13 = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
-    barker13_symbols = [1 if b == 0 else -1 for b in BARKER13]
-    bpsk_waveform = np.array(barker13_symbols, dtype=np.complex128)
-    # Korelacja w oknie
-    corr = np.correlate ( rx_samples , bpsk_waveform , mode = 'valid' )
-    max_index = np.argmax ( np.abs ( corr ) )
-    peak_phase = np.angle ( corr[max_index] )
-    return max_index , peak_phase
