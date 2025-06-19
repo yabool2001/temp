@@ -64,7 +64,7 @@ def plot_samples ( filename ) :
     )
     fig.show ()
 
-def plot_bpsk_symbols ( filename ) :
+def plot_symbols ( filename ) :
     # Wczytanie danych
     print("Rysuję wykres symboli BPSK...")
     df = pd.read_csv(filename)
@@ -73,12 +73,12 @@ def plot_bpsk_symbols ( filename ) :
     df["symbol_index"] = df.index
     
     # Tworzenie wykresu
-    fig = px.scatter(df, x="symbol_index", y="symbols", 
+    fig = px.scatter(df, x="symbol_index", y="symbol", 
                      title=f"Symbole BPSK z pliku {filename}",
-                     labels={"symbols": "Wartość symbolu", "symbol_index": "Indeks symbolu"})
+                     labels={"symbol": "Wartość symbolu", "symbol_index": "Indeks symbolu"})
     
     # Dodanie linii łączącej symbole dla lepszej wizualizacji
-    fig.add_scatter(x=df["symbol_index"], y=df["symbols"], 
+    fig.add_scatter(x=df["symbol_index"], y=df["symbol"], 
                     mode='lines+markers', name='Symbole BPSK',
                     line=dict(color='gray', width=1, dash='dot'))
     
