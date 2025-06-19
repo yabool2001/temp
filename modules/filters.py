@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit  # Dodane dla przyspieszenia obliczeń
-from scipy.signal import lfilter
+from scipy.signal import lfilter , upfirdn
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
     """
@@ -133,13 +133,52 @@ def rrc_filter_v4 ( beta , sps , span ) :
 
     return h
 
-def apply_rrc_filter ( samples , beta = 0.35 , sps = 4 , span = 11 ) :
+def apply_tx_rrc_filter ( symbols: np.ndarray , sps: int = 4 , beta: float = 0.35, span: int = 11 , upsample: bool = True , ) -> np.ndarray :
     """
-    Filtruje dane wejściowe za pomocą filtra RRC.
-    
-    :param rx_samples: próbki zespolone (np.ndarray, complex)
-    :return: przefiltrowane próbki
+    Stosuje filtr Root Raised Cosine (RRC) z opcjonalnym upsamplingiem.
+    Zawsze zwraca sygnał zespolony (complex128).
+
+    Parametry:
+        symbols: Sygnał wejściowy (real lub complex).
+        beta: Współczynnik roll-off (0.0-1.0).
+        sps: Próbek na symbol (samples per symbol).
+        span: Długość filtra w symbolach.
+        upsample: Czy wykonać upsampling (True) czy tylko filtrować (False).
+
+    Zwraca:
+        Przefiltrowany sygnał zespolony (complex128).
     """
     rrc_taps = rrc_filter_v4 ( beta , sps , span )
-    filtered = lfilter ( rrc_taps , 1.0 , samples )
-    return filtered
+    
+    if upsample:
+        filtered = upfirdn ( rrc_taps , symbols , sps )  # Auto-upsampling + filtracja
+    else:
+        filtered = lfilter ( rrc_taps , 1.0 , symbols )     # Tylko filtracja
+    
+    return ( filtered + 0j ) .astype ( np.complex128 )  # Wymuszenie complex128
+
+def apply_rrc_rx_filter ( rx_samples: np.ndarray , sps: int = 4 , beta: float = 0.35 , span: int = 11 , downsample: bool = True ) -> np.ndarray :
+    """
+    Filtruje odebrane próbki z SDR filtrem RRC.
+    
+    Parametry:
+        rx_samples: Odebrane próbki (complex128) z SDR.
+        beta: Współczynnik roll-off filtra.
+        sps: Próbek na symbol (musi być zgodny z nadajnikiem!).
+        span: Długość filtra w symbolach.
+        downsample: Czy zmniejszyć liczbę próbek do 1 na symbol (True/False).
+    
+    Zwraca:
+        Przefiltrowane próbki (complex128).
+    """
+    # Generuj współczynniki filtra RRC
+    rrc_taps = rrc_filter_v4 ( beta , sps , span )
+    
+    # Filtracja (uwaga: filtr musi być znormalizowany!)
+    filtered = lfilter ( rrc_taps , 1.0 , rx_samples )
+
+    # Downsampling (opcjonalny)
+    if downsample :
+        filtered = filtered[::sps]  # Wybierz 1 próbkę na symbol
+    
+    return filtered.astype ( np.complex128 )  # Gwarancja complex128

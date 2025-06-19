@@ -12,6 +12,7 @@ NUM_SAMPLES = 32768
 
 def init_pluto ( uri , f_c , f_s , bw ) :
     sdr = adi.Pluto ( uri )
+    sdr.tx_lo = int ( f_c )
     sdr.rx_lo = int ( f_c )
     sdr.sample_rate = int ( f_s )
     sdr.rx_rf_bandwidth = int ( bw )

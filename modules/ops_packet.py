@@ -18,3 +18,8 @@ def create_packet_bits ( payload ) :
     payload_bits = gen_bits ( payload )
     crc32_bits = gen_bits ( crc32_bytes )
     return np.concatenate ( [ preamble_bits , header_bits , payload_bits , crc32_bits ] )
+
+def create_doubled_payload_packet_bits ( payload ) :
+    print ( f"{payload=}")
+    payload_bits = gen_bits ( payload )
+    return np.concatenate ( [ payload_bits , payload_bits ] )
