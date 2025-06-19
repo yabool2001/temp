@@ -16,22 +16,16 @@ def phase_shift_corr ( samples ) :
     offset , theta = correlate_and_estimate_phase ( samples )
     return samples[offset:] * np.exp ( -1j * theta )
 
-def find_frame_start ( samples , sps ) :
-    # Żeby samplować w odpowiednim miejscu
-    barker = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
-    barker_upsampled = np.zeros ( len ( barker ) * sps )
-    barker_upsampled[::sps] = barker
-    
-    corr = np.abs ( correlate ( samples , barker_upsampled , mode = 'full' ) )
-    peak_pos = np.argmax ( corr ) - len ( barker_upsampled ) + 1
-    frame_start = peak_pos + ( len ( barker_upsampled ) // 2 )  # Środek preambuły
-    return frame_start
-
-def samples_2_bpsk_symbols ( samples , sps ) :
-    frame_start = find_frame_start ( samples , sps )
-    # Pobierz symbole (1 na symbol)
-    symbols = samples[ frame_start::sps ]
-    # Demodulacja BPSK (proste dekodowanie fazy)
-    bpsk_symbols = np.sign ( np.real ( symbols ) )  # BPSK: 1 dla Re>0, -1 dla Re<0
-    
-    return bpsk_symbols
+def samples_2_bpsk_symbols ( samples , sps , beta , span ) :
+    # Żeby zacząć samplować w odpowiednim miejscu
+    barker_waveform = modulation.modulate_bpsk ( ops_packet.BARKER13 , sps , beta , span )
+    corr = np.correlate ( samples , barker_waveform , mode = 'valid' )
+    peak_index = np.argmax ( np.abs ( corr ) )
+    theta = np.angle ( corr[ peak_index ] )
+    # 3. Korekta fazy i przycięcie
+    aligned_rx_samples = samples[ peak_index:] * np.exp( -1j * theta)
+    # 4. Próbkowanie co sps, po preambule
+    start = len(barker_waveform)
+    symbol_samples = aligned_rx_samples[start::sps]
+    # 5. Decyzja BPSK
+    return symbol_samples

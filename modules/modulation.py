@@ -21,3 +21,11 @@ def modulate_bpsk ( bits , sps = 4 , beta = 0.35 , span = 11 ) :
     rrc = filters.rrc_filter_v4 ( sps , beta , span )
     shaped = upfirdn ( rrc , symbols , up = sps )
     return ( shaped + 0j ).astype ( np.complex128 )
+
+def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
+    """
+    Zwraca ciąg zinterpolowany przez zero-stuffing (impulse upsampling).
+    """
+    upsampled = np.zeros ( len ( symbols ) * sps , dtype = symbols.dtype )
+    upsampled[ ::sps ] = symbols
+    return upsampled

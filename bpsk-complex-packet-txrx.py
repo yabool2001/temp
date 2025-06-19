@@ -61,7 +61,7 @@ def main():
     rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
     #offset, theta = sdr.correlate_and_estimate_phase ( rx_samples )
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
-    rx_bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS )
+    rx_bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN )
 
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
