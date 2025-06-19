@@ -2,31 +2,46 @@ import csv
 import pandas as pd
 import plotly.express as px
 
-def open_and_init_csv ( name ) :
-    csv_filename = name
-    csv_file = open ( csv_filename , mode = "w" , newline = '' )
+def open_and_init_symbols_csv ( filename ) :
+    csv_file = open ( filename , mode = "w" , newline = '' )
+    csv_writer = csv.writer ( csv_file )
+    csv_writer.writerow ( [ "symbol" ] )
+    return csv_file , csv_writer
+
+def open_and_init_complex_samples_csv ( filename ) :
+    csv_file = open ( filename , mode = "w" , newline = '' )
     csv_writer = csv.writer ( csv_file )
     csv_writer.writerow ( [ "real" , "imag" ] )
     return csv_file , csv_writer
 
+def open_and_write_symbols_2_csv ( name , symbols ) :
+    csv_file , csv_writer = open_and_init_symbols_csv ( name )
+    for symbol in symbols :
+        csv_writer.writerow ( [ symbol ] )
+    return csv_file , csv_writer
+
 def open_and_write_samples_2_csv ( name , samples ) :
-    csv_file , csv_writer = open_and_init_csv ( name )
+    csv_file , csv_writer = open_and_init_complex_samples_csv ( name )
     for sample in samples :
         csv_writer.writerow ( [ sample.real , sample.imag ] )
     return csv_file , csv_writer
 
+def append_symbols_2_csv ( csv_writer , symbols ) :
+    for symbol in symbols :
+        csv_writer.writerow ( [ symbol ] )
+        
 def append_samples_2_csv ( csv_writer , samples ) :
     for sample in samples :
         csv_writer.writerow ( [ sample.real , sample.imag ] )
 
-def flush_samples ( csv_file ) :
+def flush_data ( csv_file ) :
     csv_file.flush ()
 
 def close_csv ( csv_file ) :
     csv_file.close ()
 
-def flush_samples_and_close_csv ( csv_file ) :
-    flush_samples ( csv_file )
+def flush_data_and_close_csv ( csv_file ) :
+    flush_data ( csv_file )
     close_csv ( csv_file )
 
 def plot_samples ( filename ) :
@@ -48,3 +63,33 @@ def plot_samples ( filename ) :
         height = 500
     )
     fig.show ()
+
+def plot_bpsk_symbols ( filename ) :
+    # Wczytanie danych
+    print("Rysuję wykres symboli BPSK...")
+    df = pd.read_csv(filename)
+    
+    # Dodanie indeksu symboli
+    df["symbol_index"] = df.index
+    
+    # Tworzenie wykresu
+    fig = px.scatter(df, x="symbol_index", y="symbols", 
+                     title=f"Symbole BPSK z pliku {filename}",
+                     labels={"symbols": "Wartość symbolu", "symbol_index": "Indeks symbolu"})
+    
+    # Dodanie linii łączącej symbole dla lepszej wizualizacji
+    fig.add_scatter(x=df["symbol_index"], y=df["symbols"], 
+                    mode='lines+markers', name='Symbole BPSK',
+                    line=dict(color='gray', width=1, dash='dot'))
+    
+    # Konfiguracja wyglądu wykresu
+    fig.update_layout(
+        height=500,
+        xaxis=dict(rangeslider_visible=True),
+        legend=dict(x=0.01, y=0.99)
+    )
+    
+    # Ustawienie stałej skali Y dla lepszej wizualizacji BPSK
+    fig.update_yaxes(range=[-1.5, 1.5])
+    
+    fig.show()

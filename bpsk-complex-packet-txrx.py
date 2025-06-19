@@ -22,6 +22,8 @@ verbose = False
 # Inicjalizacja plików CSV
 csv_filename_tx_waveform = "complex_tx_waveform.csv"
 csv_filename_rx_waveform = "complex_rx_waveform.csv"
+csv_filename_tx_symbols = "complex_tx_symbols.csv"
+csv_filename_rx_symbols = "complex_rx_symbols.csv"
 
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
@@ -59,16 +61,22 @@ def main():
     rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
     #offset, theta = sdr.correlate_and_estimate_phase ( rx_samples )
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
-    bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS )
+    rx_bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS )
 
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
     sdr.stop_tx_cyclic ( pluto )
 
+    csv_tx_symbols , csv_writer_tx_symbols = ops_file.open_and_write_symbols_2_csv ( csv_filename_tx_symbols , tx_bpsk_symbols )
+    csv_rx_symbols , csv_writer_rx_symbols = ops_file.open_and_write_symbols_2_csv ( csv_filename_rx_symbols , rx_bpsk_symbols )
     csv_file_tx , csv_writer_tx = ops_file.open_and_write_samples_2_csv ( csv_filename_tx_waveform , tx_samples )
     csv_file_rx , csv_writer_rx = ops_file.open_and_write_samples_2_csv ( csv_filename_rx_waveform , rx_samples_phase_corrected )
-    ops_file.flush_samples_and_close_csv ( csv_file_tx )
-    ops_file.flush_samples_and_close_csv ( csv_file_rx )
+    ops_file.flush_data_and_close_csv ( csv_tx_symbols )
+    ops_file.flush_data_and_close_csv ( csv_rx_symbols )
+    ops_file.flush_data_and_close_csv ( csv_file_tx )
+    ops_file.flush_data_and_close_csv ( csv_file_rx )
+    ops_file.plot_symbols ( csv_filename_tx_symbols )
+    ops_file.plot_symbols ( csv_filename_rx_symbols )
     ops_file.plot_samples ( csv_filename_tx_waveform )
     ops_file.plot_samples ( csv_filename_rx_waveform )
     print ( f"{acg_vaule=}" )
