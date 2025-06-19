@@ -1,4 +1,4 @@
-from modules import modulation , ops_packet 
+from modules import modulation , ops_packet , plot
 import numpy as np
 from scipy.signal import correlate
 
@@ -19,6 +19,7 @@ def phase_shift_corr ( samples ) :
 def samples_2_bpsk_symbols ( samples , sps , beta , span ) :
     # Żeby zacząć samplować w odpowiednim miejscu
     barker_waveform = modulation.modulate_bpsk ( ops_packet.BARKER13 , sps , beta , span )
+    plot.plot_complex_waveform ( barker_waveform )
     corr = np.correlate ( samples , barker_waveform , mode = 'valid' )
     peak_index = np.argmax ( np.abs ( corr ) )
     theta = np.angle ( corr[ peak_index ] )
