@@ -184,7 +184,7 @@ def apply_tx_rrc_filter ( symbols: np.ndarray , sps: int = 4 , beta: float = 0.3
     return ( filtered + 0j ) .astype ( np.complex128 )  # Wymuszenie complex128
 
 def main():
-    tx_bits = np.concatenate ( [ FAKE_BITS , BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS , BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS ] )
+    tx_bits = np.concatenate ( [ BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS , BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS ] )
     print ( f"{tx_bits=}")
     barker13_symbols = 1 - 2 * BARKER13_BITS
     print ( f"{barker13_symbols=}")
@@ -199,22 +199,22 @@ def main():
     # Receive samples
     rx_samples = tx_samples
 
-    corr = np.correlate ( rx_samples , barker13_samples , mode = 'full' )
-    peak_index = np.argmax ( np.abs ( corr ) )
-    # Przesunięcie związane z pełną korelacją
-    timing_offset = peak_index - len(barker13_samples) + 1
-
-    theta = np.angle ( corr[ peak_index ] )
-    # Korekta offsetu i fazy sygnału RX
-    aligned_rx_samples = rx_samples[ timing_offset: ] * np.exp ( -1j * theta )
-    plot_complex_waveform ( aligned_rx_samples , "aligned_rx_samples" )
     # Filtracja RRC sygnału RX
-    rx_filtered_samples = apply_tx_rrc_filter ( aligned_rx_samples , SPS , RRC_BETA , RRC_SPAN , upsample = False )
+    rx_filtered_samples = apply_tx_rrc_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , upsample = False )
     plot_complex_waveform ( rx_filtered_samples , "rx_filtered_samples" )
-
+    corr = np.correlate ( rx_filtered_samples , barker13_samples , mode = 'full' )
+    peak_index = np.argmax ( np.abs ( corr ) )
+    print ( f"{peak_index=}" )
+    # Przesunięcie związane z pełną korelacją
+    timing_offset = peak_index - len ( barker13_samples ) + 1
+    print ( f"{timing_offset=}" )
+    aligned_rx_samples = rx_filtered_samples[ timing_offset: ]
+    plot_complex_waveform ( aligned_rx_samples , "aligned_rx_samples" )
     # Odczytywanie symboli co SPS próbek, zaczynając od środka symbolu
-    symbols_rx = rx_filtered_samples [ RRC_SPAN * SPS // 2::SPS]
-    plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
+    symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
+    #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
+    bits_rx = ( symbols_rx.real < 0 ).astype ( int )
+    print ( f"{bits_rx=}" )
 
 if __name__ == "__main__":
     main ()
