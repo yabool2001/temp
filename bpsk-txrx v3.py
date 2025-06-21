@@ -226,7 +226,8 @@ def main():
     #plot_bpsk_symbols ( tx_bpsk_symbols )
     tx_samples = apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     plot_complex_waveform ( tx_samples , "tx_samples" )
-    tx_samples =  read_complex_waveform ( "complex_rx_waveform_input_for_test.csv" )
+    tx_samples =  read_complex_waveform ( "complex_rx_waveform_input_for_test_1.csv" )
+    #tx_samples =  read_complex_waveform ( "complex_rx_waveform_input_for_test_2.csv" ) # Odwrócone I z Q
     plot_complex_waveform ( tx_samples , "tx_samples" )
 
     # Receive samples
