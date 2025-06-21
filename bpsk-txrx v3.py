@@ -224,7 +224,7 @@ def main():
     barker13_symbols = create_bpsk_symbols ( BARKER13_BITS )
     print ( f"{barker13_symbols=}" )
     barker13_samples = apply_tx_rrc_filter ( barker13_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-    plot_complex_waveform ( barker13_samples , script_filename + " barker13__samples" )
+    #plot_complex_waveform ( barker13_samples , script_filename + " barker13__samples" )
     tx_bpsk_symbols = create_bpsk_symbols ( tx_bits )
     print ( f"{tx_bpsk_symbols=}" )
     plot_bpsk_symbols ( tx_bpsk_symbols  , script_filename + " tx_bpsk_symbols" )
@@ -232,7 +232,7 @@ def main():
     #tx_samples =  read_complex_waveform ( "complex_bpsk_rx_waveform_input_I_1.csv" ) # Realne dane z wejścia Pluto
     #tx_samples =  read_complex_waveform ( "complex_bpsk_rx_waveform_input_Q_1.csv" ) # Realne dane z wejścia Pluto z odwróconym I z Q
     #tx_samples =  read_complex_waveform ( "complex_bpsk_tx_waveform_input_I_1.csv" ) # Wygenerowane dane 
-    plot_complex_waveform ( tx_samples , script_filename + " tx_samples" )
+    #plot_complex_waveform ( tx_samples , script_filename + " tx_samples" )
 
     # Receive samples
     rx_samples = tx_samples
