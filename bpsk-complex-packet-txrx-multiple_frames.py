@@ -60,10 +60,10 @@ def main():
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
     print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
-    plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
+    #plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
     print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-    plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
+    #plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
     pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
     if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.tx_cyclic ( tx_samples , pluto )
@@ -81,14 +81,19 @@ def main():
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
     #plot.plot_complex_waveform ( rx_samples_phase_corrected , script_filename + " rx_samples_phase_corrected" )
     rx_samples_corr_and_filtered = filters.apply_tx_rrc_filter ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
-    corr = np.correlate ( rx_samples_corr_and_filtered , preamble_samples , mode = 'full' )
-    peak_index = np.argmax ( np.abs ( corr ) )
-    timing_offset = peak_index - len ( preamble_samples ) + 1
-    aligned_rx_samples = rx_samples_corr_and_filtered[ timing_offset: ]
-    plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
-    #print ( ops_packet.get_preamble_uint16_value ( aligned_rx_samples , RRC_SPAN , SPS ) )
-    
-    
+    while ( rx_samples_corr_and_filtered.size > 0 ) :
+        corr = np.correlate ( rx_samples_corr_and_filtered , preamble_samples , mode = 'full' )
+        peak_index = np.argmax ( np.abs ( corr ) )
+        timing_offset = peak_index - len ( preamble_samples ) + 1
+        aligned_rx_samples = rx_samples_corr_and_filtered[ timing_offset: ]
+        #plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
+        if ops_packet.is_preamble ( aligned_rx_samples , RRC_SPAN , SPS ) :
+            payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( aligned_rx_samples , RRC_SPAN , SPS )
+            print ( f"{payload_bits=}" )
+            rx_samples_corr_and_filtered = aligned_rx_samples[ int ( clip_samples_index ) ::]
+        else :
+            print ( "No expected preamble. Breaking!" )
+            break
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
     plot.plot_bpsk_symbols_v2 ( symbols_rx , script_filename + " symbols_rx" )
     bits_rx = ( symbols_rx.real > 0 ).astype ( int )
