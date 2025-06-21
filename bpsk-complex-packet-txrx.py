@@ -77,8 +77,9 @@ def main():
     aligned_rx_samples = rx_samples_corr_and_filtered[ timing_offset: ]
     plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
-    #plot.plot_bpsk_symbols ( symbols_rx , script_filename + " symbols_rx" )
+    plot.plot_bpsk_symbols_v2 ( symbols_rx , script_filename + " symbols_rx" )
     bits_rx = ( symbols_rx.real > 0 ).astype ( int )
+    plot.plot_bpsk_symbols_v2 ( bits_rx , script_filename + " bits_rx" )
     print ( f"{bits_rx=}" )
     #rx_bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN )
 

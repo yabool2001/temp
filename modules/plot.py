@@ -97,18 +97,24 @@ def plot_bpsk_symbols(symbols: np.ndarray, title: str = "Symbole BPSK", filename
     # Wyświetlenie wykresu
     fig.show()
 
-def plot_bpsk_symbols_v2(symbols: np.ndarray, title: str = "Symbole BPSK", filename: str = "–") -> None:
+import numpy as np
+import pandas as pd
+import plotly.express as px
+
+def plot_bpsk_symbols_v2(symbols: np.ndarray,
+                      title: str = "Symbole BPSK",
+                      filename: str = "–") -> None:
     """
-    Rysuje wykres symboli BPSK w postaci punktów połączonych przerywaną linią.
-    
+    Rysuje wykres symboli BPSK (np. z ADALM-Pluto) w postaci punktów połączonych przerywaną linią.
+
     Parametry:
     ----------
     symbols : np.ndarray
-        Tablica symboli BPSK (+1 / -1).
+        Tablica symboli BPSK, może być typu float, int, complex (np. complex128).
     title : str
         Tytuł wykresu.
     filename : str
-        Nazwa pliku źródłowego (do wyświetlenia w tytule, opcjonalna dekoracja).
+        Nazwa pliku źródłowego (opcjonalna dekoracja w tytule).
 
     Zwraca:
     -------
@@ -117,10 +123,13 @@ def plot_bpsk_symbols_v2(symbols: np.ndarray, title: str = "Symbole BPSK", filen
     if not isinstance(symbols, np.ndarray):
         raise TypeError("Argument 'symbols' musi być typu numpy.ndarray.")
 
+    # Obsługa symboli zespolonych – bierzemy część rzeczywistą
+    symbols_real = symbols.real if np.iscomplexobj(symbols) else symbols
+
     # Przygotowanie danych do wykresu
     df = pd.DataFrame({
-        "symbol_index": np.arange(len(symbols)),
-        "symbol": symbols
+        "symbol_index": np.arange(len(symbols_real)),
+        "symbol": symbols_real
     })
 
     # Wykres punktowy
@@ -148,8 +157,5 @@ def plot_bpsk_symbols_v2(symbols: np.ndarray, title: str = "Symbole BPSK", filen
         legend=dict(x=0.01, y=0.99)
     )
 
-    # Ustawienie skali osi Y
-    fig.update_yaxes(range=[-1.5, 1.5])
-
-    # Wyświetlenie wykresu
+    # Oś Y dopasowana dynamicznie, ale możesz wymusić np. range=[-1.5, 1.5] jeśli chcesz sztywną skalę
     fig.show()
