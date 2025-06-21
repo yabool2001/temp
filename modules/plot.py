@@ -96,3 +96,60 @@ def plot_bpsk_symbols(symbols: np.ndarray, title: str = "Symbole BPSK", filename
 
     # Wyświetlenie wykresu
     fig.show()
+
+def plot_bpsk_symbols_v2(symbols: np.ndarray, title: str = "Symbole BPSK", filename: str = "–") -> None:
+    """
+    Rysuje wykres symboli BPSK w postaci punktów połączonych przerywaną linią.
+    
+    Parametry:
+    ----------
+    symbols : np.ndarray
+        Tablica symboli BPSK (+1 / -1).
+    title : str
+        Tytuł wykresu.
+    filename : str
+        Nazwa pliku źródłowego (do wyświetlenia w tytule, opcjonalna dekoracja).
+
+    Zwraca:
+    -------
+    None
+    """
+    if not isinstance(symbols, np.ndarray):
+        raise TypeError("Argument 'symbols' musi być typu numpy.ndarray.")
+
+    # Przygotowanie danych do wykresu
+    df = pd.DataFrame({
+        "symbol_index": np.arange(len(symbols)),
+        "symbol": symbols
+    })
+
+    # Wykres punktowy
+    fig = px.scatter(
+        df,
+        x="symbol_index",
+        y="symbol",
+        title=f"{title} z pliku {filename}",
+        labels={"symbol": "Wartość symbolu", "symbol_index": "Indeks symbolu"}
+    )
+
+    # Dodanie przerywanej linii łączącej punkty
+    fig.add_scatter(
+        x=df["symbol_index"],
+        y=df["symbol"],
+        mode='lines+markers',
+        name='Symbole BPSK',
+        line=dict(color='gray', width=1, dash='dot')
+    )
+
+    # Konfiguracja osi i wyglądu
+    fig.update_layout(
+        height=500,
+        xaxis=dict(rangeslider_visible=True),
+        legend=dict(x=0.01, y=0.99)
+    )
+
+    # Ustawienie skali osi Y
+    fig.update_yaxes(range=[-1.5, 1.5])
+
+    # Wyświetlenie wykresu
+    fig.show()
