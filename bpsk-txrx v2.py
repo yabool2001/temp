@@ -188,11 +188,11 @@ def apply_tx_rrc_filter ( symbols: np.ndarray , sps: int = 4 , beta: float = 0.3
 def main():
     tx_bits = np.concatenate ( [ BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS , BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS ] )
     print ( f"{tx_bits=}" )
-    barker13_symbols = 1 - 2 * BARKER13_BITS
+    barker13_symbols = 2 * BARKER13_BITS - 1
     print ( f"{barker13_symbols=}" )
     barker13_samples = apply_tx_rrc_filter ( barker13_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     plot_complex_waveform ( barker13_samples , script_filename + " barker13__samples" )
-    tx_bpsk_symbols = 1 - 2 * tx_bits
+    tx_bpsk_symbols = 2 * tx_bits - 1
     print ( f"{tx_bpsk_symbols=}" )
     #plot_bpsk_symbols ( tx_bpsk_symbols )
     tx_samples = apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
@@ -216,7 +216,7 @@ def main():
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
     print ( f"{symbols_rx=}" )
     #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
-    bits_rx = ( symbols_rx.real < 0 ).astype ( int )
+    bits_rx = ( symbols_rx.real > 0 ).astype ( int )
     print ( f"{bits_rx=}" )
 
 if __name__ == "__main__":

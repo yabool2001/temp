@@ -21,6 +21,8 @@ BARKER13_BITS = np.array ( [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
 PADDING_BITS = np.array ( [ 0 , 0 , 0 ] , dtype = np.float64 )
 PAYLOAD_BITS = np.array ( [ 0 , 0 , 0 , 0 , 1 , 1 , 1 , 1 , 0 , 0 , 0 , 0 , 1 , 1 , 1 , 1 ] , dtype = np.float64 )
 
+def create_bpsk_symbols ( bits ) :
+    return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.int64 )
 
 def plot_complex_waveform(signal_complex: np.ndarray, title: str = "Sygnał BPSK po modulacji i filtracji") -> None:
     """
@@ -219,18 +221,19 @@ def read_complex_waveform(filename: str) -> np.ndarray:
 def main():
     tx_bits = np.concatenate ( [ BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS , BARKER13_BITS , PADDING_BITS , PAYLOAD_BITS ] )
     print ( f"{tx_bits=}" )
-    barker13_symbols = 1 - 2 * BARKER13_BITS
+    #barker13_symbols = 1 - 2 * BARKER13_BITS
+    barker13_symbols = create_bpsk_symbols ( BARKER13_BITS )
     print ( f"{barker13_symbols=}" )
     barker13_samples = apply_tx_rrc_filter ( barker13_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     plot_complex_waveform ( barker13_samples , script_filename + "  barker13__samples" )
-    tx_bpsk_symbols = 1 - 2 * tx_bits
+    #tx_bpsk_symbols = 1 - 2 * tx_bits
+    tx_bpsk_symbols = create_bpsk_symbols ( tx_bits )
     print ( f"{tx_bpsk_symbols=}" )
     #plot_bpsk_symbols ( tx_bpsk_symbols )
     tx_samples = apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-    plot_complex_waveform ( tx_samples , script_filename + " tx_samples" )
     #tx_samples =  read_complex_waveform ( "complex_bpsk_rx_waveform_input_I_1.csv" ) # Realne dane z wejścia Pluto
     #tx_samples =  read_complex_waveform ( "complex_bpsk_rx_waveform_input_Q_1.csv" ) # Realne dane z wejścia Pluto z odwróconym I z Q
-    tx_samples =  read_complex_waveform ( "complex_bpsk_tx_waveform_input_I_1.csv" ) # Wygenerowane dane 
+    #tx_samples =  read_complex_waveform ( "complex_bpsk_tx_waveform_input_I_1.csv" ) # Wygenerowane dane 
     plot_complex_waveform ( tx_samples , script_filename + " tx_samples" )
 
     # Receive samples
@@ -249,8 +252,9 @@ def main():
     plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
     # Odczytywanie symboli co SPS próbek, zaczynając od środka symbolu
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
+    print ( f"{symbols_rx=}" )
     #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
-    bits_rx = ( symbols_rx.real < 0 ).astype ( int )
+    bits_rx = ( symbols_rx.real > 0 ).astype ( int )
     print ( f"{bits_rx=}" )
 
 if __name__ == "__main__":

@@ -51,6 +51,7 @@ def main():
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
     print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
+    print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
     pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
@@ -76,7 +77,7 @@ def main():
     plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
     #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
-    bits_rx = ( symbols_rx.real < 0 ).astype ( int )
+    bits_rx = ( symbols_rx.real > 0 ).astype ( int )
     print ( f"{bits_rx=}" )
     #rx_bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN )
 
