@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.express as px
 import matplotlib as plt
 
-from modules import filters , sdr , ops_packet , ops_file , modulation , corrections
+from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
  
@@ -47,6 +47,7 @@ PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
+    print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
@@ -58,15 +59,18 @@ def main():
         raw_data = sdr.rx_samples ( pluto )
     # Receive samples
     rx_samples = sdr.rx_samples ( pluto  )
+    plot.plot_complex_waveform ( rx_samples , "rx_samples" )
     preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
     preamble_samples = filters.apply_tx_rrc_filter ( preamble_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     #rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
+    plot.plot_complex_waveform ( rx_samples_phase_corrected , "rx_samples_phase_corrected" )
     rx_samples_corr_and_filtered = filters.apply_tx_rrc_filter ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     corr = np.correlate ( rx_samples_corr_and_filtered , preamble_samples , mode = 'full' )
     peak_index = np.argmax ( np.abs ( corr ) )
     timing_offset = peak_index - len ( preamble_samples ) + 1
     aligned_rx_samples = rx_samples_corr_and_filtered[ timing_offset: ]
+    plot.plot_complex_waveform ( aligned_rx_samples , "aligned_rx_samples" )
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
     #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
     bits_rx = ( symbols_rx.real < 0 ).astype ( int )
@@ -81,15 +85,15 @@ def main():
     csv_tx_symbols , csv_writer_tx_symbols = ops_file.open_and_write_symbols_2_csv ( csv_filename_tx_symbols , tx_bpsk_symbols )
     csv_rx_symbols , csv_writer_rx_symbols = ops_file.open_and_write_symbols_2_csv ( csv_filename_rx_symbols , symbols_rx )
     csv_file_tx , csv_writer_tx = ops_file.open_and_write_samples_2_csv ( csv_filename_tx_waveform , tx_samples )
-    csv_file_rx , csv_writer_rx = ops_file.open_and_write_samples_2_csv ( csv_filename_rx_waveform , rx_samples_phase_corrected )
+    csv_file_rx , csv_writer_rx = ops_file.open_and_write_samples_2_csv ( csv_filename_rx_waveform , rx_samples )
     ops_file.flush_data_and_close_csv ( csv_tx_symbols )
     ops_file.flush_data_and_close_csv ( csv_rx_symbols )
     ops_file.flush_data_and_close_csv ( csv_file_tx )
     ops_file.flush_data_and_close_csv ( csv_file_rx )
     ops_file.plot_symbols ( csv_filename_tx_symbols )
     ops_file.plot_symbols ( csv_filename_rx_symbols )
-    ops_file.plot_samples ( csv_filename_tx_waveform )
-    ops_file.plot_samples ( csv_filename_rx_waveform )
+    #ops_file.plot_samples ( csv_filename_tx_waveform )
+    #ops_file.plot_samples ( csv_filename_rx_waveform )
     print ( f"{acg_vaule=}" )
 
 if __name__ == "__main__":
