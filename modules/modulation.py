@@ -29,3 +29,6 @@ def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
     upsampled = np.zeros ( len ( symbols ) * sps , dtype = symbols.dtype )
     upsampled[ ::sps ] = symbols
     return upsampled
+
+def bpsk_symbols_2_bits ( symbols ) :
+    return ( symbols.real > 0 ).astype ( int )

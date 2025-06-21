@@ -1,3 +1,12 @@
+# 2025.06.21 Current priority
+'''
+ Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
+preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
+header_bits     [ X ]               1 byte of payload length = header value + 1
+payload_bits    [ X , ... ]         variable length payload - max 256
+crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32 
+'''
+
 import adi
 #import csv
 import numpy as np
@@ -63,7 +72,8 @@ def main():
     for i in range ( 0 , 10 ) :
         raw_data = sdr.rx_samples ( pluto )
     # Receive samples
-    rx_samples = sdr.rx_samples ( pluto  )
+    rx_samples = sdr.rx_samples ( pluto )
+    sdr.stop_tx_cyclic ( pluto )
     #plot.plot_complex_waveform ( rx_samples , script_filename + " rx_samples" )
     preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
     preamble_samples = filters.apply_tx_rrc_filter ( preamble_symbols , SPS , RRC_BETA , RRC_SPAN , True )
@@ -75,23 +85,25 @@ def main():
     peak_index = np.argmax ( np.abs ( corr ) )
     timing_offset = peak_index - len ( preamble_samples ) + 1
     aligned_rx_samples = rx_samples_corr_and_filtered[ timing_offset: ]
-    #plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
+    plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
+    #print ( ops_packet.get_preamble_uint16_value ( aligned_rx_samples , RRC_SPAN , SPS ) )
+    
+    
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
     plot.plot_bpsk_symbols_v2 ( symbols_rx , script_filename + " symbols_rx" )
     bits_rx = ( symbols_rx.real > 0 ).astype ( int )
     plot.plot_bpsk_symbols_v2 ( bits_rx , script_filename + " bits_rx" )
-    print ( f"{bits_rx=}" )
-    #rx_bpsk_symbols = corrections.samples_2_bpsk_symbols ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN )
-
+    #print ( f"{bits_rx=}" )
+    #if ops_packet.get_preamble ( symbols_rx ) == ops_packet.BARKER13_W_PADDING_UINT16 :
+    
 
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
-    sdr.stop_tx_cyclic ( pluto )
 
     csv_tx_symbols , csv_writer_tx_symbols = ops_file.open_and_write_symbols_2_csv ( csv_filename_tx_symbols , tx_bpsk_symbols )
     csv_rx_symbols , csv_writer_rx_symbols = ops_file.open_and_write_symbols_2_csv ( csv_filename_rx_symbols , symbols_rx )
     csv_file_tx , csv_writer_tx = ops_file.open_and_write_samples_2_csv ( csv_filename_tx_waveform , tx_samples )
-    csv_file_rx , csv_writer_rx = ops_file.open_and_write_samples_2_csv ( csv_filename_rx_waveform , rx_samples )
+    csv_file_rx , csv_writer_rx = ops_file.open_and_write_samples_2_csv ( csv_filename_rx_waveform , aligned_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_tx_symbols )
     ops_file.flush_data_and_close_csv ( csv_rx_symbols )
     ops_file.flush_data_and_close_csv ( csv_file_tx )
