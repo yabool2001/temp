@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import pandas as pd
 import plotly.express as px
 from scipy.signal import lfilter, correlate , upfirdn
@@ -9,6 +10,7 @@ from numba import njit  # Dodane dla przyspieszenia obliczeń
 csv_filename_tx_waveform = "complex_tx_waveform.csv"
 csv_filename_rx_waveform = "complex_rx_waveform.csv"
 
+script_filename = os.path.basename ( __file__ )
 
 SPS = 4                 # próbek na symbol
 RRC_BETA = 0.35         # roll-off factor
@@ -189,19 +191,19 @@ def main():
     barker13_symbols = 1 - 2 * BARKER13_BITS
     print ( f"{barker13_symbols=}" )
     barker13_samples = apply_tx_rrc_filter ( barker13_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-    plot_complex_waveform ( barker13_samples , "barker13__samples" )
+    plot_complex_waveform ( barker13_samples , script_filename + " barker13__samples" )
     tx_bpsk_symbols = 1 - 2 * tx_bits
     print ( f"{tx_bpsk_symbols=}" )
     #plot_bpsk_symbols ( tx_bpsk_symbols )
     tx_samples = apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-    plot_complex_waveform ( tx_samples , "tx_samples" )
+    plot_complex_waveform ( tx_samples , script_filename + " tx_samples" )
 
     # Receive samples
     rx_samples = tx_samples
 
     # Filtracja RRC sygnału RX
     rx_filtered_samples = apply_tx_rrc_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , upsample = False )
-    plot_complex_waveform ( rx_filtered_samples , "rx_filtered_samples" )
+    plot_complex_waveform ( rx_filtered_samples , script_filename + " rx_filtered_samples" )
     corr = np.correlate ( rx_filtered_samples , barker13_samples , mode = 'full' )
     peak_index = np.argmax ( np.abs ( corr ) )
     print ( f"{peak_index=}" )
@@ -209,9 +211,10 @@ def main():
     timing_offset = peak_index - len ( barker13_samples ) + 1
     print ( f"{timing_offset=}" )
     aligned_rx_samples = rx_filtered_samples[ timing_offset: ]
-    plot_complex_waveform ( aligned_rx_samples , "aligned_rx_samples" )
+    plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
     # Odczytywanie symboli co SPS próbek, zaczynając od środka symbolu
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
+    print ( f"{symbols_rx=}" )
     #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
     bits_rx = ( symbols_rx.real < 0 ).astype ( int )
     print ( f"{bits_rx=}" )

@@ -5,6 +5,7 @@ import numpy as np
 #import time
 #import zlib
 #from scipy.signal import upfirdn
+import os
 import pandas as pd
 import plotly.express as px
 import matplotlib as plt
@@ -25,6 +26,7 @@ csv_filename_rx_waveform = "complex_rx_waveform.csv"
 csv_filename_tx_symbols = "complex_tx_symbols.csv"
 csv_filename_rx_symbols = "complex_rx_symbols.csv"
 
+script_filename = os.path.basename ( __file__ )
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
 F_C = 2900e6     # częstotliwość nośna [Hz]
@@ -50,6 +52,7 @@ def main():
     print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
+    plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
     pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
     if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.tx_cyclic ( tx_samples , pluto )
@@ -59,18 +62,18 @@ def main():
         raw_data = sdr.rx_samples ( pluto )
     # Receive samples
     rx_samples = sdr.rx_samples ( pluto  )
-    plot.plot_complex_waveform ( rx_samples , "rx_samples" )
+    plot.plot_complex_waveform ( rx_samples , script_filename + " rx_samples" )
     preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
     preamble_samples = filters.apply_tx_rrc_filter ( preamble_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     #rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
-    plot.plot_complex_waveform ( rx_samples_phase_corrected , "rx_samples_phase_corrected" )
+    plot.plot_complex_waveform ( rx_samples_phase_corrected , script_filename + " rx_samples_phase_corrected" )
     rx_samples_corr_and_filtered = filters.apply_tx_rrc_filter ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     corr = np.correlate ( rx_samples_corr_and_filtered , preamble_samples , mode = 'full' )
     peak_index = np.argmax ( np.abs ( corr ) )
     timing_offset = peak_index - len ( preamble_samples ) + 1
     aligned_rx_samples = rx_samples_corr_and_filtered[ timing_offset: ]
-    plot.plot_complex_waveform ( aligned_rx_samples , "aligned_rx_samples" )
+    plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
     symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
     #plot_bpsk_symbols ( symbols_rx , "symbols_rx    " )
     bits_rx = ( symbols_rx.real < 0 ).astype ( int )
