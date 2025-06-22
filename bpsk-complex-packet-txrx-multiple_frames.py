@@ -8,22 +8,16 @@ crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32
 '''
 
 import adi
-#import csv
 import numpy as np
-#from scipy.signal import lfilter
-#import time
-#import zlib
-#from scipy.signal import upfirdn
+import threading
+import queue
 import os
-import pandas as pd
-import plotly.express as px
-import matplotlib as plt
 
 from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
  
-
+data_queue = queue.Queue ()
 
 # App settings
 verbose = True
@@ -56,6 +50,7 @@ RRC_SPAN = 11           # długość filtru RRC w symbolach
 CYCLE_MS = 10           # opóźnienie między pakietami [ms]; <0 = liczba powtórzeń
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
+
 
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
