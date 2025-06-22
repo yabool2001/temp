@@ -1,0 +1,39 @@
+PS C:\Users\mzeml\python\temp>  c:; cd 'c:\Users\mzeml\python\temp'; & 'c:\Users\mzeml\AppData\Local\Programs\Python\Python313\python.exe' 'c:\Users\mzeml\.vscode\extensions\ms-python.debugpy-2025.8.0-win32-x64\bundled\libs\debugpy\launcher' '54929' '--' 'c:\Users\mzeml\python\temp\bpsk-complex-packet-txrx-multiple_frames.py' 
+F_S=3000000
+BARKER13_W_PADDING=[6, 80], length_byte=[3], payload=[15, 15, 15, 15], crc32_bytes=[101, 92, 137, 41]
+packet_bits=array([0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0,
+       1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1,
+       0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1],
+      dtype=uint8)
+tx_bpsk_symbols=array([-1, -1, -1, -1, -1,  1,  1, -1, -1,  1, -1,  1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1,  1,  1, -1, -1, -1, -1,  1,  1,  1,  1, -1, -1,
+       -1, -1,  1,  1,  1,  1, -1, -1, -1, -1,  1,  1,  1,  1, -1, -1, -1,
+       -1,  1,  1,  1,  1, -1,  1,  1, -1, -1,  1, -1,  1, -1,  1, -1,  1,
+        1,  1, -1, -1,  1, -1, -1, -1,  1, -1, -1,  1, -1, -1,  1, -1,  1,
+       -1, -1,  1])
+sdr.tx_cyclic_buffer=False
+rx_samples_corr_and_filtered.size=3838
+timing_offset=np.int64(1064) |
+aligned_rx_samples.size=2774
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+rx_samples_corr_and_filtered.size=2400
+timing_offset=np.int64(1064) |
+timing_offset=np.int64(1194) |
+aligned_rx_samples.size=1206
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+rx_samples_corr_and_filtered.size=832
+timing_offset=np.int64(1194) |
+timing_offset=np.int64(410) |
+aligned_rx_samples.size=422
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+rx_samples_corr_and_filtered.size=48
+timing_offset=np.int64(410) |
+timing_offset=np.int64(-2) |
+aligned_rx_samples.size=2
+No expected preamble. Breaking!
+acg_vaule=66
+PS C:\Users\mzeml\python\temp>

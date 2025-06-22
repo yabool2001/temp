@@ -1,0 +1,519 @@
+PS C:\Users\mzeml\python\temp>  c:; cd 'c:\Users\mzeml\python\temp'; & 'c:\Users\mzeml\AppData\Local\Programs\Python\Python313\python.exe' 'c:\Users\mzeml\.vscode\extensions\ms-python.debugpy-2025.8.0-win32-x64\bundled\libs\debugpy\launcher' '55471' '--' 'c:\Users\mzeml\python\temp\bpsk-complex-packet-txrx-multiple_frames.py' 
+F_S=3000000
+BARKER13_W_PADDING=[6, 80], length_byte=[3], payload=[15, 15, 15, 15], crc32_bytes=[101, 92, 137, 41]
+packet_bits=array([0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0,
+       1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1,
+       0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1],
+      dtype=uint8)
+tx_bpsk_symbols=array([-1, -1, -1, -1, -1,  1,  1, -1, -1,  1, -1,  1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1,  1,  1, -1, -1, -1, -1,  1,  1,  1,  1, -1, -1,
+       -1, -1,  1,  1,  1,  1, -1, -1, -1, -1,  1,  1,  1,  1, -1, -1, -1,
+       -1,  1,  1,  1,  1, -1,  1,  1, -1, -1,  1, -1,  1, -1,  1, -1,  1,
+        1,  1, -1, -1,  1, -1, -1, -1,  1, -1, -1,  1, -1, -1,  1, -1,  1,
+       -1, -1,  1])
+sdr.tx_cyclic_buffer=False
+corr_and_filtered_rx_samples.size=32696
+timing_offset=np.int64(280) |
+aligned_rx_samples.size=32416
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=32042
+timing_offset=np.int64(280) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=32024
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=31650
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=31632
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=31258
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=31240
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=30866
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=30848
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=30474
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=30456
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=30082
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=30064
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=29690
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=29672
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=29298
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=29280
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=28906
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=28888
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=28514
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=28496
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=28122
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=28104
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=27730
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=27712
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=27338
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=27320
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=26946
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=26928
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=26554
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=26536
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=26162
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=26144
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=25770
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=25752
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=25378
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=25360
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=24986
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=24968
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=24594
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=24576
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=24202
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=24184
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=23810
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=23792
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=23418
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=23400
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=23026
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=23008
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=22634
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=22616
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=22242
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=22224
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=21850
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=21832
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=21458
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=21440
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=21066
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=21048
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=20674
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=20656
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=20282
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=20264
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=19890
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=19872
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=19498
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=19480
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=19106
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=19088
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=18714
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=18696
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=18322
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=18304
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=17930
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=17912
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=17538
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=17520
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=17146
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=17128
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=16754
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=16736
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=16362
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=16344
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=15970
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=15952
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=15578
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=15560
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=15186
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=15168
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=14794
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=14776
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=14402
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=14384
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=14010
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=13992
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=13618
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=13600
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=13226
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=13208
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=12834
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=12816
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=12442
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=12424
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=12050
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=12032
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=11658
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=11640
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=11266
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=11248
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=10874
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=10856
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=10482
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=10464
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=10090
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=10072
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=9698
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=9680
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=9306
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=9288
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=8914
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=8896
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=8522
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=8504
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=8130
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) | 
+aligned_rx_samples.size=8112
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=7738
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=7720
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=7346
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=7328
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=6954
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=6936
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=6562
+timing_offset=np.int64(18) | 
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=6544
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=6170
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=6152
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=5778
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=5760
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=5386
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=5368
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=4994
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=4976
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=4602
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=4584
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=4210
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=4192
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=3818
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=3800
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=3426
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=3408
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=3034
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=3016
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=2642
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=2624
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=2250
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=2232
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=1858
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=1840
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=1466
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=1448
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=1074
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=1056
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=682
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=664
+payload_bits=array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
+       1, 1, 0, 0, 0, 0, 1, 1, 1, 1])
+corr_and_filtered_rx_samples.size=290
+timing_offset=np.int64(18) |
+timing_offset=np.int64(18) |
+aligned_rx_samples.size=272
+Traceback (most recent call last):
+  File "c:\Users\mzeml\python\temp\bpsk-complex-packet-txrx-multiple_frames.py", line 125, in <module>
+    main ()
+    ~~~~~^^
+  File "c:\Users\mzeml\python\temp\bpsk-complex-packet-txrx-multiple_frames.py", line 96, in main
+    payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( aligned_rx_samples , RRC_SPAN , SPS )
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: cannot unpack non-iterable NoneType object
+PS C:\Users\mzeml\python\temp>
