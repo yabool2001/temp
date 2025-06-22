@@ -94,30 +94,29 @@ def main():
         #plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
         if ops_packet.is_preamble ( aligned_rx_samples , RRC_SPAN , SPS ) :
             payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( aligned_rx_samples , RRC_SPAN , SPS )
-            print ( f"{payload_bits=}" )
-            corr_and_filtered_rx_samples = aligned_rx_samples[ int ( clip_samples_index ) ::]
-            print ( f"{corr_and_filtered_rx_samples.size=}")
+            if payload_bits is not None and clip_samples_index is not None :
+                print ( f"{payload_bits=}" )
+                corr_and_filtered_rx_samples = aligned_rx_samples[ int ( clip_samples_index ) ::]
+                print ( f"{corr_and_filtered_rx_samples.size=}")
+            else :
+                print ( "No payload. Leftovers saved to add to next samples. Breaking!" )
+                leftovers = corr_and_filtered_rx_samples
+                break
         else :
-            print ( "No preamble. Breaking!" )
+            print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
+            leftovers = corr_and_filtered_rx_samples
             break
         print ( f"{timing_offset=} | ")
-    symbols_rx = aligned_rx_samples [ RRC_SPAN * SPS // 2::SPS]
-    #plot.plot_bpsk_symbols_v2 ( symbols_rx , script_filename + " symbols_rx" )
-    bits_rx = ( symbols_rx.real > 0 ).astype ( int )
-    #plot.plot_bpsk_symbols_v2 ( bits_rx , script_filename + " bits_rx" )
-    #print ( f"{bits_rx=}" )
-    #if ops_packet.get_preamble ( symbols_rx ) == ops_packet.BARKER13_W_PADDING_UINT16 :
-    
 
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
 
-    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_symbols_2_csv ( csv_filename_corr_and_filtered_rx_samples , corr_and_filtered_rx_samples )
-    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_symbols_2_csv ( csv_filename_aligned_rx_samples , aligned_rx_samples )
+    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_corr_and_filtered_rx_samples , corr_and_filtered_rx_samples )
+    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_aligned_rx_samples , aligned_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_corr_and_filtered_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_aligned_rx_samples )
-    ops_file.plot_symbols ( csv_filename_corr_and_filtered_rx_samples )
-    ops_file.plot_symbols ( csv_filename_aligned_rx_samples )
+    ops_file.plot_samples ( csv_filename_corr_and_filtered_rx_samples )
+    ops_file.plot_samples ( csv_filename_aligned_rx_samples )
 
     print ( f"{acg_vaule=}" )
 

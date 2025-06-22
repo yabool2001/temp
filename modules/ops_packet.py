@@ -99,10 +99,15 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
     payload_start_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
     symbols = samples [ payload_start_index : payload_start_index + ( payload_length * 8 * sps ) : sps ]
     payload_bits = ( symbols.real > 0 ).astype ( int )
-    crc32_calculated = zlib.crc32 ( bytes ( bits_2_byte_list ( payload_bits ) ) )
-    crc32__start_index = payload_start_index + ( payload_length * 8 * sps )
-    symbols = samples [ crc32__start_index : crc32__start_index + ( CRC32_BITS_LEN * sps ) : sps ]
+    try :
+        crc32_calculated = zlib.crc32 ( bytes ( bits_2_byte_list ( payload_bits ) ) )
+    except :
+        print ( f"Brak całej ramki." )
+        return None , None
+    # Tu możesz też zapisać błąd do loga lub podjąć inne działanie
+    crc32_start_index = payload_start_index + ( payload_length * 8 * sps )
+    symbols = samples [ crc32_start_index : crc32_start_index + ( CRC32_BITS_LEN * sps ) : sps ]
     bits = ( symbols.real > 0 ).astype ( int )
     crc32_received = bits_2_int ( bits )
     if crc32_calculated == crc32_received :
-        return payload_bits , crc32__start_index + ( CRC32_BITS_LEN * sps )
+        return payload_bits , crc32_start_index + ( CRC32_BITS_LEN * sps )
