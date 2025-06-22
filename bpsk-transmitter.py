@@ -1,7 +1,7 @@
 # 2025.06.22 Current priority:
 # Split project for transmitting & receiving
 # In receiver split thread for frames receiving and processing 
-# This is receiving script 
+# This is a script for transmitting frames
 '''
  Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
