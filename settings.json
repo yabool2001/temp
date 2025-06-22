@@ -1,0 +1,28 @@
+{
+    "ADALM-Pluto": {
+        "F_C": 2900000000,
+        "F_S": 3000000,
+        "BW": 1000000,
+        "TX_GAIN": -10,
+        "RX_GAIN": 70,
+        "GAIN_CONTROL": "slow_attack",
+        "SAMPLES_BUFFER": 32768,
+        "URI": {
+            "IP": "ip:192.168.2.1",
+            "USB": "usb:"
+        }
+    },
+    "bpsk": {
+        "SPS": 4
+    },
+    "rrc_filter": {
+        "BETA": 0.35,
+        "SPAN": 11
+    },
+    "log": {
+        "tx_samples":                   "logs/tx_samples.csv",
+        "tx_symbols":                   "logs/tx_symbols.csv",
+        "corr_and_filtered_rx_samples": "logs/corr_and_filtered_rx_samples.csv",
+        "aligned_rx_samples":           "logs/aligned_rx_samples.csv"
+    }
+}

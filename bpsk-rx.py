@@ -1,7 +1,7 @@
 # 2025.06.22 Current priority:
 # Split project for transmitting & receiving
 # In receiver split thread for frames receiving and processing 
-# This is a script for transmitting frames
+# This is receiving script 
 '''
  Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
@@ -11,6 +11,7 @@ crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32
 '''
 
 import adi
+import json
 import numpy as np
 import threading
 import queue
@@ -19,7 +20,11 @@ import os
 from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
- 
+
+# Wczytaj plik JSON z konfiguracją
+with open ( "settings.json" , "r" ) as settings_file :
+    settings = json.load ( settings_file )
+
 data_queue = queue.Queue ()
 
 # App settings
@@ -109,13 +114,12 @@ def main():
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
 
-    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_corr_and_filtered_rx_samples , corr_and_filtered_rx_samples )
-    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_aligned_rx_samples , aligned_rx_samples )
+    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["corr_and_filtered_rx_samples"] , corr_and_filtered_rx_samples )
+    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["aligned_rx_samples"] , aligned_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_corr_and_filtered_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_aligned_rx_samples )
-    ops_file.plot_samples ( csv_filename_corr_and_filtered_rx_samples )
-    ops_file.plot_samples ( csv_filename_aligned_rx_samples )
-
+    
+    if verbose : ops_file.plot_samples ( settings["log"]["corr_and_filtered_rx_samples"] ) , ops_file.plot_samples ( settings["log"]["aligned_rx_samples"] )
     print ( f"{acg_vaule=}" )
 
 if __name__ == "__main__":

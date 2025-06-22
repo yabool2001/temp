@@ -1,7 +1,7 @@
 # 2025.06.22 Current priority:
 # Split project for transmitting & receiving
 # In receiver split thread for frames receiving and processing 
-# This is receiving script 
+# This is a script for transmitting frames
 '''
  Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
@@ -11,19 +11,20 @@ crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32
 '''
 
 import adi
+import json
 import numpy as np
 import threading
 import queue
 import os
 
 from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
-#from modules.rrc import rrc_filter
-#from modules.clock_sync import polyphase_clock_sync
- 
-data_queue = queue.Queue ()
+
+# Wczytaj plik JSON z konfiguracją
+with open ( "settings.json" , "r" ) as settings_file :
+    settings = json.load ( settings_file )
 
 # App settings
-verbose = True
+#verbose = True
 verbose = False
 
 # Inicjalizacja plików CSV
@@ -37,11 +38,7 @@ csv_filename_aligned_rx_samples = "aligned_rx_samples.csv"
 script_filename = os.path.basename ( __file__ )
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
-F_C = 2900e6     # częstotliwość nośna [Hz]
-#F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
-BW  = 1_000_000         # szerokość pasma [Hz]
-#F_S = 521100     # częstotliwość próbkowania [Hz] >= 521e3 && <
-F_S = BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100
+F_S = settings["ADALM-Pluto"]["BW"] * 3 if ( settings["ADALM-Pluto"]["BW"] * 3 ) >= 521100 and ( settings["ADALM-Pluto"]["BW"] * 3 ) <= 61440000 else 521100
 print (f"{F_S=}")
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
@@ -59,13 +56,13 @@ PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 def main():
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
     print ( f"{packet_bits=}" )
-    tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
+    tx_symbols = modulation.create_bpsk_symbols ( packet_bits )
     #plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
-    print ( f"{tx_bpsk_symbols=}" )
-    tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
+    print ( f"{tx_symbols=}" )
+    tx_samples = filters.apply_tx_rrc_filter ( tx_symbols , settings["bpsk"]["SPS"] , settings["rrc_filter"]["BETA"] , settings["rrc_filter"]["SPAN"] , True )
     #plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
-    pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
-    if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+    pluto = sdr.init_pluto ( settings["ADALM-Pluto"]["URI"]["USB"] , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] , settings["ADALM-Pluto"]["TX_GAIN"] )
+    # if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.tx_cyclic ( tx_samples , pluto )
 
     # Clear buffer just to be safe
@@ -108,14 +105,12 @@ def main():
 
     acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
-
-    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_corr_and_filtered_rx_samples , corr_and_filtered_rx_samples )
-    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_aligned_rx_samples , aligned_rx_samples )
-    ops_file.flush_data_and_close_csv ( csv_corr_and_filtered_rx_samples )
-    ops_file.flush_data_and_close_csv ( csv_aligned_rx_samples )
-    ops_file.plot_samples ( csv_filename_corr_and_filtered_rx_samples )
-    ops_file.plot_samples ( csv_filename_aligned_rx_samples )
-
+    
+    csv_tx_samples , csv_writer_tx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["tx_samples"] , tx_samples )
+    csv_tx_bpsk_symbols , csv_writer_tx_bpsk_symbols = ops_file.open_and_write_symbols_2_csv ( settings["log"]["tx_symbols"] , tx_symbols )
+    ops_file.flush_data_and_close_csv ( csv_tx_samples )
+    ops_file.flush_data_and_close_csv ( tx_symbols )
+    if verbose : ops_file.plot_samples ( settings["log"]["tx_samples"] ) , ops_file.plot_samples ( settings["log"]["tx_symbols"] )
     print ( f"{acg_vaule=}" )
 
 if __name__ == "__main__":

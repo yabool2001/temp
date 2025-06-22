@@ -12,15 +12,11 @@ crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32
 
 import adi
 import numpy as np
-import threading
-import queue
 import os
 
 from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
- 
-data_queue = queue.Queue ()
 
 # App settings
 verbose = True
