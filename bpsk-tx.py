@@ -3,7 +3,7 @@
 # In receiver split thread for frames receiving and processing 
 # This is a script for transmitting frames
 '''
- Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
+Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
 header_bits     [ X ]               1 byte of payload length = header value + 1
 payload_bits    [ X , ... ]         variable length payload - max 256
