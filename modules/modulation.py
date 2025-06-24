@@ -32,3 +32,24 @@ def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
 
 def bpsk_symbols_2_bits ( symbols ) :
     return ( symbols.real > 0 ).astype ( int )
+
+def signal_correlation(samples, lag=1):
+    """
+    Detekcja obecności sygnału na podstawie korelacji między sąsiednimi próbkami.
+
+    samples  : kompleksowe próbki z RX (np. z PyADI)
+    lag      : opóźnienie w próbkach (1 = sąsiednie)
+
+    Zwraca: (float) wartość korelacji (0–1 przy szumie, wyżej przy sygnale)
+    """
+    if len(samples) <= lag:
+        return 0.0
+
+    x = samples[:-lag]
+    y = samples[lag:]
+
+    corr = np.vdot(x, y)
+    norm = np.sqrt(np.vdot(x, x).real * np.vdot(y, y).real)
+
+    corr_norm = np.abs(corr) / (norm + 1e-12)
+    return corr_norm

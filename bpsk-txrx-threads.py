@@ -65,17 +65,18 @@ def tx_thread () :
         tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
         if verbose : plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
         if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
-        sdr.tx_cyclic ( tx_samples , pluto )
+        sdr.tx_once ( tx_samples , pluto )
         print ( f"{packet_bits=} sent" )
 
 # Wątek RX – odbiór danych
 def rx_thread () :
     while True:
-        samples = sdr.rx_samples ( pluto )t
+        samples = sdr.rx_samples ( pluto )
         rx_queue.put ( samples )
 
 def dsp_thread () :
     while True :
+        frame_detected = False
         rx_samples = rx_queue.get ()
         sdr.stop_tx_cyclic ( pluto )
         #plot.plot_complex_waveform ( rx_samples , script_filename + " rx_samples" )
@@ -85,14 +86,14 @@ def dsp_thread () :
         rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
         #plot.plot_complex_waveform ( rx_samples_phase_corrected , script_filename + " rx_samples_phase_corrected" )
         corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
-        print ( f"{corr_and_filtered_rx_samples.size=}")
+        if verbose : print ( f"{corr_and_filtered_rx_samples.size=}")
         while ( corr_and_filtered_rx_samples.size > 0 ) :
             corr = np.correlate ( corr_and_filtered_rx_samples , preamble_samples , mode = 'full' )
             peak_index = np.argmax ( np.abs ( corr ) )
             timing_offset = peak_index - len ( preamble_samples ) + 1
-            print ( f"{timing_offset=} | ")
+            if verbose : print ( f"{timing_offset=} | ")
             aligned_rx_samples = corr_and_filtered_rx_samples[ timing_offset: ]
-            print ( f"{aligned_rx_samples.size=}")
+            if verbose : print ( f"{aligned_rx_samples.size=}")
             #plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
             if ops_packet.is_preamble ( aligned_rx_samples , RRC_SPAN , SPS ) :
                 payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( aligned_rx_samples , RRC_SPAN , SPS )
@@ -100,26 +101,27 @@ def dsp_thread () :
                     print ( f"{payload_bits=}" )
                     corr_and_filtered_rx_samples = aligned_rx_samples[ int ( clip_samples_index ) ::]
                     print ( f"{corr_and_filtered_rx_samples.size=}")
+                    frame_detected = True
                 else :
                     print ( "No payload. Leftovers saved to add to next samples. Breaking!" )
                     leftovers = corr_and_filtered_rx_samples
                     break
             else :
-                print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
+                if verbose : print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
                 leftovers = corr_and_filtered_rx_samples
                 break
-            print ( f"{timing_offset=} | ")
-        acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
-
-        csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["corr_and_filtered_rx_samples"] , corr_and_filtered_rx_samples )
-        csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["aligned_rx_samples"] , aligned_rx_samples )
-        ops_file.flush_data_and_close_csv ( csv_corr_and_filtered_rx_samples )
-        ops_file.flush_data_and_close_csv ( csv_aligned_rx_samples )
+            #print ( f"{timing_offset=}" )
+        if frame_detected : 
+            acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
+            print ( f"{acg_vaule=}" )
+            csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["corr_and_filtered_rx_samples"] , corr_and_filtered_rx_samples )
+            csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["aligned_rx_samples"] , aligned_rx_samples )
+            ops_file.flush_data_and_close_csv ( csv_corr_and_filtered_rx_samples )
+            ops_file.flush_data_and_close_csv ( csv_aligned_rx_samples )
+            ops_file.plot_samples ( settings["log"]["corr_and_filtered_rx_samples"] ) , ops_file.plot_samples ( settings["log"]["aligned_rx_samples"] )
+            ops_file.plot_samples ( settings["log"]["tx_samples"] ) , ops_file.plot_samples ( settings["log"]["tx_symbols"] )
+            frame_detected = False
     
-        if verbose : ops_file.plot_samples ( settings["log"]["corr_and_filtered_rx_samples"] ) , ops_file.plot_samples ( settings["log"]["aligned_rx_samples"] )
-        if verbose : ops_file.plot_samples ( settings["log"]["tx_samples"] ) , ops_file.plot_samples ( settings["log"]["tx_symbols"] )
-        acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
-        print ( f"{acg_vaule=}" )
 
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():

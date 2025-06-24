@@ -1,4 +1,5 @@
 import adi
+import matplotlib.pyplot as plt
 from modules import filters
 import numpy as np
 import time 
@@ -27,6 +28,9 @@ def init_pluto ( uri , f_c , f_s , bw ) :
     time.sleep ( 0.2 ) #delay after setting device parameters
     return sdr
 
+def tx_once ( samples , sdr ) :
+    samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
+    sdr.tx ( samples )
 
 def tx_cyclic ( samples , sdr ) :
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
@@ -36,10 +40,21 @@ def tx_cyclic ( samples , sdr ) :
 def stop_tx_cyclic ( sdr ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
-    print ( f"{sdr.tx_cyclic_buffer=}" )
+    #print ( f"{sdr.tx_cyclic_buffer=}" )
 
 def rx_samples ( sdr ) :
     return sdr.rx ()
 
 def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
     return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )
+
+def analyze_rx_signal ( samples ) :
+    plt.plot(samples.real[:500])
+    plt.plot(samples.imag[:500])
+    plt.title("Real vs Imag")
+    plt.grid()
+    plt.scatter(samples.real, samples.imag, alpha=0.3)
+    plt.axis('equal')
+    plt.title("Constellation")
+    plt.hist(np.abs(samples), bins=100)
+    plt.title("Histogram amplitudy")
