@@ -87,7 +87,10 @@ def main():
         print ( f"{aligned_rx_samples.size=}")
         #plot.plot_complex_waveform ( aligned_rx_samples , script_filename + " aligned_rx_samples" )
         if ops_packet.is_preamble ( aligned_rx_samples , RRC_SPAN , SPS ) :
-            payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( aligned_rx_samples , RRC_SPAN , SPS )
+            try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
+                payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( aligned_rx_samples , RRC_SPAN , SPS )
+            except :
+                pass
             if payload_bits is not None and clip_samples_index is not None :
                 print ( f"{payload_bits=}" )
                 corr_and_filtered_rx_samples = aligned_rx_samples[ int ( clip_samples_index ) ::]
