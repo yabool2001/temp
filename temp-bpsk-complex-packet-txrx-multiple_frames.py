@@ -33,7 +33,7 @@ csv_filename_aligned_rx_samples = "aligned_rx_samples.csv"
 script_filename = os.path.basename ( __file__ )
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
-F_C = 2900e6     # częstotliwość nośna [Hz]
+F_C = 820e6     # częstotliwość nośna [Hz]
 #F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
 BW  = 1_000_000         # szerokość pasma [Hz]
 #F_S = 521100     # częstotliwość próbkowania [Hz] >= 521e3 && <
@@ -53,6 +53,12 @@ PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
+    uri_tx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
+    print ( f"{uri_tx=}" )
+    pluto_tx = sdr.init_pluto ( uri_tx , F_C , F_S , BW )
+    uri_rx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
+    print ( f"{uri_rx=}" )
+    pluto_rx = sdr.init_pluto ( uri_rx , F_C , F_S , BW )
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
     print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
@@ -60,22 +66,21 @@ def main():
     print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     #plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
-    pluto = sdr.init_pluto ( URI , F_C , F_S , BW )
     if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
-    sdr.tx_cyclic ( tx_samples , pluto )
+    sdr.tx_cyclic ( tx_samples , pluto_tx )
 
     # Clear buffer just to be safe
     for i in range ( 0 , 10 ) :
-        raw_data = sdr.rx_samples ( pluto )
+        raw_data = sdr.rx_samples ( pluto_rx )
     # Receive samples
-    rx_samples = sdr.rx_samples ( pluto )
-    sdr.stop_tx_cyclic ( pluto )
+    rx_samples = sdr.rx_samples ( pluto_rx )
+    sdr.stop_tx_cyclic ( pluto_tx )
     #plot.plot_complex_waveform ( rx_samples , script_filename + " rx_samples" )
     preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
     preamble_samples = filters.apply_tx_rrc_filter ( preamble_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     #rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
-    plot.plot_complex_waveform ( rx_samples_phase_corrected , script_filename + " rx_samples_phase_corrected" )
+    #plot.plot_complex_waveform ( rx_samples_phase_corrected , script_filename + " rx_samples_phase_corrected" )
     corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{corr_and_filtered_rx_samples.size=}")
     while ( corr_and_filtered_rx_samples.size > 0 ) :
@@ -105,7 +110,7 @@ def main():
             break
         print ( f"{timing_offset=} | ")
 
-    acg_vaule = pluto._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
+    acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
 
     csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_corr_and_filtered_rx_samples , corr_and_filtered_rx_samples )
