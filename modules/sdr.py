@@ -5,11 +5,11 @@ from modules import filters
 import numpy as np
 import time 
 
-TX_GAIN = -10
-RX_GAIN = 70
-GAIN_CONTROL = "slow_attack"
+TX_GAIN = -1
+RX_GAIN = 50
+#GAIN_CONTROL = "slow_attack"
 #GAIN_CONTROL = "fast_attack"
-#GAIN_CONTROL = "manual"
+GAIN_CONTROL = "manual"
 #NUM_SAMPLES = 32768
 NUM_SAMPLES = 32768
 

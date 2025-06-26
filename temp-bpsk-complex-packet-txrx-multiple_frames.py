@@ -11,12 +11,17 @@ crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32
 '''
 
 import adi
+import json
 import numpy as np
 import os
 
 from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
+
+# Wczytaj plik JSON z konfiguracją
+with open ( "settings.json" , "r" ) as settings_file :
+    settings = json.load ( settings_file )
 
 # App settings
 verbose = True
@@ -54,18 +59,15 @@ PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main():
     uri_tx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
-    print ( f"{uri_tx=}" )
-    pluto_tx = sdr.init_pluto ( uri_tx , F_C , F_S , BW )
     uri_rx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
-    print ( f"{uri_rx=}" )
-    pluto_rx = sdr.init_pluto ( uri_rx , F_C , F_S , BW )
+    pluto_tx = sdr.init_pluto ( uri_tx , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] )
+    pluto_rx = sdr.init_pluto ( uri_rx , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] )
+    if verbose : print ( f"{uri_tx=}" ) ; print ( f"{uri_rx=}" )
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
-    print ( f"{packet_bits=}" )
+    if verbose : print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
-    #plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
-    print ( f"{tx_bpsk_symbols=}" )
+    if verbose : print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-    #plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
     if verbose : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.tx_cyclic ( tx_samples , pluto_tx )
 
@@ -75,13 +77,13 @@ def main():
     # Receive samples
     rx_samples = sdr.rx_samples ( pluto_rx )
     sdr.stop_tx_cyclic ( pluto_tx )
-    #plot.plot_complex_waveform ( rx_samples , script_filename + " rx_samples" )
     preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
     preamble_samples = filters.apply_tx_rrc_filter ( preamble_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     #rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
-    rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
-    plot.plot_complex_waveform ( rx_samples_phase_corrected , script_filename + " rx_samples_phase_corrected" )
-    corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_phase_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
+    #rx_samples_corrected = corrections.phase_shift_corr ( rx_samples )
+    rx_samples_corrected = corrections.full_compensation ( rx_samples , F_S )
+    plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" full_compensation , {rx_samples_corrected.size=}" )
+    corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{corr_and_filtered_rx_samples.size=}")
     while ( corr_and_filtered_rx_samples.size > 0 ) :
         corr = np.correlate ( corr_and_filtered_rx_samples , preamble_samples , mode = 'full' )
@@ -113,12 +115,17 @@ def main():
     acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
 
-    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_corr_and_filtered_rx_samples , corr_and_filtered_rx_samples )
-    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( csv_filename_aligned_rx_samples , aligned_rx_samples )
+    #plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
+    plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
+    plot.plot_complex_waveform ( rx_samples , script_filename + f" rx_samples , {rx_samples.size=}" )
+    plot.plot_complex_waveform ( aligned_rx_samples , script_filename + f" aligned_rx_samples , {aligned_rx_samples.size=}" )
+
+    csv_rx_samples , csv_writer_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples"] , rx_samples )
+    csv_corr_and_filtered_rx_samples , csv_writer_corr_and_filtered_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["corr_and_filtered_rx_samples"] , corr_and_filtered_rx_samples )
+    csv_aligned_rx_samples , csv_writer_aligned_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["aligned_rx_samples"] , aligned_rx_samples )
+    ops_file.flush_data_and_close_csv ( csv_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_corr_and_filtered_rx_samples )
     ops_file.flush_data_and_close_csv ( csv_aligned_rx_samples )
-    ops_file.plot_samples ( csv_filename_corr_and_filtered_rx_samples )
-    ops_file.plot_samples ( csv_filename_aligned_rx_samples )
 
     print ( f"{acg_vaule=}" )
 
