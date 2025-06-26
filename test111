@@ -1,0 +1,52 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parametry
+fs = 1000  # Hz
+f_offset = 20  # sztuczny CFO w Hz
+N = 1000  # liczba próbek
+t = np.arange(N) / fs
+
+# Sygnał BPSK z fazą i offsetem częstotliwości
+bits = np.random.choice([-1, 1], size=N)
+bpsk = bits.astype(np.complex128)
+rx = bpsk * np.exp(1j * 2 * np.pi * f_offset * t)  # sztuczny obrót fazy
+
+# PLL
+def pll(rx_samples, fs, loop_bw=2*np.pi*50):
+    alpha = loop_bw
+    beta = alpha**2 / 4
+
+    phase_estimate = 0.0
+    freq_estimate = 0.0
+    phase_correction = []
+    corrected = []
+
+    for sample in rx_samples:
+        # Korekta aktualnej próbki
+        rotated = sample * np.exp(-1j * phase_estimate)
+        corrected.append(rotated)
+
+        # Detekcja błędu fazy (dla BPSK – Imag nosi info o błędzie)
+        error = np.sign(np.real(rotated)) * np.imag(rotated)
+
+        # Aktualizacja estymacji częstotliwości i fazy
+        freq_estimate += beta * error
+        phase_estimate += freq_estimate + alpha * error
+        phase_correction.append(phase_estimate)
+
+    return np.array(corrected), np.unwrap(phase_correction)
+
+# Zastosowanie PLL
+corrected, phase_track = pll(rx, fs)
+
+# Wykres
+plt.figure(figsize=(10, 4))
+plt.plot(np.real(rx), label='Przed PLL (I)', alpha=0.5)
+plt.plot(np.real(corrected), label='Po PLL (I)')
+plt.title("PLL – kompensacja CFO i fazy (BPSK)")
+plt.xlabel("Numer próbki")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
