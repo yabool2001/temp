@@ -1,7 +1,7 @@
 import zlib
 import numpy as np
 
-BARKER13 = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
+BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
 PADDING_BITS = [ 0 , 0 , 0 ]
 BARKER13_W_PADDING = [ 6 , 80 ]
 BARKER13_W_PADDING_INT = 1616

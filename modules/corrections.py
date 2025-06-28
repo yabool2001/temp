@@ -41,6 +41,23 @@ def correct_phase_offset_v2 ( rx_samples , preamble_samples ) :
 
     return rx_samples * np.exp(-1j * phase_offset)
 
+def correct_phase_offset_v3 ( samples , preamble_samples ) :
+    # Korelacja bez sprzężenia (dla detekcji offsetu fazowego)
+    correlation = np.correlate( samples, preamble_samples, mode='valid')
+    max_corr = correlation[np.argmax(np.abs(correlation))]
+    phase_offset = np.angle(max_corr)
+
+    # Korekcja rotacji fazowej
+    rx_corrected = samples * np.exp(-1j * phase_offset)
+
+    # Detekcja lustrzanego odbicia (poprzez porównanie energii korelacji dla oryginalnej i sprzężonej preambuły)
+    corr_normal = np.max(np.abs(np.correlate(rx_corrected, preamble_samples, mode='valid')))
+    corr_conj = np.max(np.abs(np.correlate(rx_corrected, np.conj(preamble_samples), mode='valid')))
+
+    if corr_conj > corr_normal:
+        rx_corrected = np.conj(rx_corrected)
+
+    return rx_corrected
 
 def iq_balance ( samples ) :
     I = np.real ( samples )
@@ -57,7 +74,7 @@ def full_compensation ( samples, fs , preamble_samples ) :
     rx_pll_corrected = pll ( samples, fs, freq_offset_initial=0.0)
 
     # 2. Korekcja offsetu fazowego (na podstawie korelacji z wzorcem)
-    rx_phase_corrected = correct_phase_offset_v2 ( rx_pll_corrected , preamble_samples )
+    rx_phase_corrected = correct_phase_offset_v3 ( rx_pll_corrected , preamble_samples )
 
     # 3. IQ imbalance (opcjonalne, ale zalecane)
     rx_final_corrected = iq_balance(rx_phase_corrected)
