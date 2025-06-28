@@ -5,7 +5,7 @@ from scipy.signal import correlate , butter, lfilter
 def pll ( rx_samples , fs , freq_offset_initial ) :
     phase_estimate = 0.0
     freq_estimate = freq_offset_initial
-    loop_bw = 2 * np.pi * 150 / fs  # szerokość pasma pętli (np. 50 Hz)
+    loop_bw = 2 * np.pi * 100 / fs  # szerokość pasma pętli (np. 50 Hz)
     alpha = loop_bw
     beta = alpha**2 / 4
     corrected_samples = np.zeros_like ( rx_samples , dtype = complex )
