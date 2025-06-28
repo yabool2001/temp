@@ -5,7 +5,7 @@ from scipy.signal import correlate , butter, lfilter
 def pll ( rx_samples , fs , freq_offset_initial ) :
     phase_estimate = 0.0
     freq_estimate = freq_offset_initial
-    loop_bw = 2 * np.pi * 75 / fs  # szerokość pasma pętli (np. 50 Hz)
+    loop_bw = 2 * np.pi * 100 / fs  # szerokość pasma pętli (np. 50 Hz)
     alpha = loop_bw
     beta = alpha**2 / 4
     corrected_samples = np.zeros_like ( rx_samples , dtype = complex )
@@ -24,18 +24,14 @@ def pll ( rx_samples , fs , freq_offset_initial ) :
     return corrected_samples
 
 # Korekcja offsetu fazowego:
-def correct_phase_offset(rx_samples ) :
-    barker13_symbols = [ 1 if b == 0 else -1 for b in ops_packet.BARKER13 ]
-    bpsk_waveform = np.array ( barker13_symbols , dtype = np.complex128 )
+def correct_phase_offset ( rx_samples , preamble_samples ) :
 
-    correlation = np.correlate(rx_samples, bpsk_waveform, mode='valid')
+    correlation = np.correlate(rx_samples, preamble_samples , mode='valid')
     phase_offset = np.angle(correlation[np.argmax(np.abs(correlation))])
     return rx_samples * np.exp(-1j * phase_offset)
 
-def correct_phase_offset_v2(rx_samples ) :
-    barker13_symbols = [ 1 if b == 0 else -1 for b in ops_packet.BARKER13 ]
-    bpsk_waveform = np.array ( barker13_symbols , dtype = np.complex128 )
-    correlation = np.correlate(rx_samples, bpsk_waveform, mode='valid')
+def correct_phase_offset_v2 ( rx_samples , preamble_samples ) :
+    correlation = np.correlate(rx_samples, preamble_samples , mode='valid')
     max_corr = correlation[np.argmax(np.abs(correlation))]
     phase_offset = np.angle(max_corr)
 
@@ -55,52 +51,18 @@ def iq_balance ( samples ) :
     return I + 1j * Q
 
 # Pipeline kompensacji CFO, fazy, IQ
-def full_compensation ( samples, fs ) :
+def full_compensation ( samples, fs , preamble_samples ) :
     
     # 1. CFO compensation (PLL-based)
     rx_pll_corrected = pll ( samples, fs, freq_offset_initial=0.0)
 
     # 2. Korekcja offsetu fazowego (na podstawie korelacji z wzorcem)
-    rx_phase_corrected = correct_phase_offset_v2(rx_pll_corrected )
+    rx_phase_corrected = correct_phase_offset_v2 ( rx_pll_corrected , preamble_samples )
 
     # 3. IQ imbalance (opcjonalne, ale zalecane)
     rx_final_corrected = iq_balance(rx_phase_corrected)
 
     return rx_final_corrected
-
-
-def compensate_cfo ( rx_samples , fs ) :
-    # Estymację CFO na podstawie jednorazowego okna korelacji
-    barker13_symbols = [ 1 if b == 0 else -1 for b in ops_packet.BARKER13 ]
-    bpsk_waveform = np.array ( barker13_symbols , dtype = np.complex128 )
-    corr = np.correlate(rx_samples, bpsk_waveform, mode='valid')
-    max_index = np.argmax(np.abs(corr))
-    
-    # wyznacz częstotliwość offsetu przez analizę różnic fazowych kolejnych punktów
-    window = corr[max_index:max_index + 10]  # np. 10 próbek dla estymacji
-    delta_phases = np.angle(window[1:] * np.conj(window[:-1]))
-    mean_delta_phase = np.mean(delta_phases)
-    
-    freq_offset = mean_delta_phase / (2 * np.pi) * fs
-    print(f"Estimated freq offset: {freq_offset:.2f} Hz")
-    
-    t = np.arange(len(rx_samples) - max_index) / fs
-    corrected_samples = rx_samples[max_index:] * np.exp(-1j * 2 * np.pi * freq_offset * t)
-    
-    return corrected_samples
-def correlate_and_estimate_phase ( rx_samples ) :
-    barker13_symbols = [ 1 if b == 0 else -1 for b in ops_packet.BARKER13 ]
-    bpsk_waveform = np.array ( barker13_symbols , dtype = np.complex128 )
-    # Korelacja w oknie
-    corr = np.correlate ( rx_samples , bpsk_waveform , mode = 'valid' )
-    max_index = np.argmax ( np.abs ( corr ) )
-    peak_phase = np.angle ( corr[max_index] )
-    return max_index , peak_phase
-
-def phase_shift_corr ( samples ) :
-    # Żeby I i Q się nie zmieniały
-    offset , theta = correlate_and_estimate_phase ( samples )
-    return samples[offset:] * np.exp ( -1j * theta )
 
 def samples_2_bpsk_symbols ( samples , sps , beta , span ) :
     # Żeby zacząć samplować w odpowiednim miejscu
@@ -116,3 +78,10 @@ def samples_2_bpsk_symbols ( samples , sps , beta , span ) :
     symbol_samples = aligned_rx_samples[start::sps]
     # 5. Decyzja BPSK
     return symbol_samples
+
+def simple_correlation ( rx_samples , preamble_samples ) :
+    # Korelacja w oknie
+    corr = np.correlate ( rx_samples , preamble_samples , mode = 'valid' )
+    max_index = np.argmax ( np.abs ( corr ) )
+    peak_phase = np.angle ( corr[max_index] )
+    return rx_samples[max_index:] * np.exp ( -1j * peak_phase )

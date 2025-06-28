@@ -1,5 +1,5 @@
 import numpy as np
-from modules import filters
+from modules import ops_packet , filters
 
 from scipy.signal import upfirdn
 
@@ -53,3 +53,8 @@ def signal_correlation(samples, lag=1):
 
     corr_norm = np.abs(corr) / (norm + 1e-12)
     return corr_norm
+
+def get_barker13_bpsk_samples ( sps , rrc_beta , rrc_span ) :
+    symbols = create_bpsk_symbols ( ops_packet.BARKER13 )
+    samples = filters.apply_tx_rrc_filter ( symbols , sps , rrc_beta , rrc_span , True )
+    return samples

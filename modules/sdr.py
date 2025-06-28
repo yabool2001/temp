@@ -6,12 +6,12 @@ import numpy as np
 import time 
 
 TX_GAIN = -10
-RX_GAIN = 50
+RX_GAIN = 70
 GAIN_CONTROL = "slow_attack"
 #GAIN_CONTROL = "fast_attack"
 #GAIN_CONTROL = "manual"
+NUM_SAMPLES = 10000
 #NUM_SAMPLES = 32768
-NUM_SAMPLES = 32768
 
 def init_pluto_v2 ( uri , f_c , f_s , bw , tx_gain) :
     sdr = adi.Pluto ( uri )
