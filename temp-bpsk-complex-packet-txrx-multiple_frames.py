@@ -60,6 +60,8 @@ PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 def main():
     uri_tx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
     uri_rx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
+    #uri_tx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
+    #uri_rx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
     pluto_tx = sdr.init_pluto ( uri_tx , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] )
     pluto_rx = sdr.init_pluto ( uri_rx , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] )
     if verbose : print ( f"{uri_tx=}" ) ; print ( f"{uri_rx=}" )
