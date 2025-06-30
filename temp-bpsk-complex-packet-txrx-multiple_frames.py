@@ -15,7 +15,7 @@ import json
 import numpy as np
 import os
 
-from modules import filters , sdr , ops_packet , ops_file , modulation , corrections , plot
+from modules import filters , sdr , ops_packet , ops_file , modulation , monitor , corrections , plot
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
 
@@ -68,6 +68,7 @@ def main():
     # Clear buffer just to be safe
     for i in range ( 0 , 10 ) :
         raw_data = sdr.rx_samples ( pluto_rx )
+        if verbose : monitor.plot_fft_p2 ( raw_data , F_S )
     # Receive samples
     rx_samples = sdr.rx_samples ( pluto_rx )
     sdr.stop_tx_cyclic ( pluto_tx )
@@ -77,6 +78,7 @@ def main():
     #rx_samples_simple_correlated = corrections.simple_correlation ( rx_samples_filtered , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN ) )
     #plot.plot_complex_waveform ( rx_samples_simple_correlated , script_filename + f" rx_samples_simple_correlated , {rx_samples_simple_correlated.size=}" )
     #rx_samples_corrected = corrections.full_compensation ( rx_samples_simple_correlated , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN ) )
+    #rx_samples_corrected = corrections.costas_loop ( rx_samples_filtered , F_S )
     rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
     rx_samples_corrected = modulation.zero_quadrature ( rx_samples_corrected )
     plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" full_compensation , {rx_samples_corrected.size=}" )

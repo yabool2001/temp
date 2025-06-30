@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from modules import modulation , ops_packet , plot
 import numpy as np
 from scipy.signal import correlate , butter, lfilter
@@ -7,7 +8,9 @@ def pll ( rx_samples , fs , freq_offset_initial ) :
     freq_estimate = freq_offset_initial
     loop_bw = 2 * np.pi * 100 / fs  # szerokość pasma pętli (np. 50 Hz)
     alpha = loop_bw
+    #alpha = 0.132 # wstawiłem z costas loop z pysdr ale okazało się klapą
     beta = alpha**2 / 4
+    #beta = 0.00932 # wstawiłem z costas loop z pysdr ale okazało się klapą
     corrected_samples = np.zeros_like ( rx_samples , dtype = complex )
 
     for n, sample in enumerate ( rx_samples ) :
@@ -102,3 +105,32 @@ def simple_correlation ( rx_samples , preamble_samples ) :
     max_index = np.argmax ( np.abs ( corr ) )
     peak_phase = np.angle ( corr[max_index] )
     return rx_samples[max_index:] * np.exp ( -1j * peak_phase )
+
+def costas_loop ( samples , f_s ) :
+    N = len ( samples )
+    phase = 0
+    freq = 0
+    # These next two params is what to adjust, to make the feedback loop faster or slower (which impacts stability)
+    alpha = 0.132
+    beta = 0.00932
+    out = np.zeros ( N , dtype = np.complex64 )
+    freq_log = []
+    for i in range ( N ) :
+        out[i] = samples[i] * np.exp ( -1j * phase ) # adjust the input sample by the inverse of the estimated phase offset
+        error = np.real ( out[i] ) * np.imag ( out[i] ) # This is the error formula for 2nd order Costas Loop (e.g. for BPSK)
+
+        # Advance the loop (recalc phase and freq offset)
+        freq += ( beta * error )
+        freq_log.append ( freq * f_s /  ( 2 * np.pi ) ) # convert from angular velocity to Hz for logging
+        phase += freq + (alpha * error)
+
+        # Optional: Adjust phase so its always between 0 and 2pi, recall that phase wraps around every 2pi
+        while phase >= 2 * np.pi :
+            phase -= 2 * np.pi
+        while phase < 0 :
+            phase += 2 * np.pi
+
+    # Plot freq over time to see how long it takes to hit the right offset
+    plt.plot ( freq_log , '.-' )
+    plt.show ()
+    return out
