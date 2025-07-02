@@ -27,7 +27,7 @@
         "rx_samples":                   "logs/rx_samples.csv",
         "tx_symbols":                   "logs/tx_symbols.csv",
         "rx_symbols":                   "logs/rx_symbols.csv",
-        "rx_samples_simple_correlated": "logs/rx_samples_simple_correlated.csv",
+        "rx_samples_filtered":          "logs/rx_samples_filtered.csv",
         "rx_samples_corrected":         "logs/rx_samples_corrected.csv",
         "rx_samples_aligned":           "logs/rx_samples_aligned.csv"
     }

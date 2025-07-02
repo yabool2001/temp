@@ -72,7 +72,7 @@ def main():
     # Receive samples
     rx_samples = sdr.rx_samples ( pluto_rx )
     sdr.stop_tx_cyclic ( pluto_tx )
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" rx_samples , {rx_samples.size=}" )
+    
     preamble_samples = modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True )
     rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False )
     #rx_samples_simple_correlated = corrections.simple_correlation ( rx_samples_filtered , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN ) )
@@ -81,7 +81,7 @@ def main():
     #rx_samples_corrected = corrections.costas_loop ( rx_samples_filtered , F_S )
     rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
     rx_samples_corrected = modulation.zero_quadrature ( rx_samples_corrected )
-    plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" full_compensation , {rx_samples_corrected.size=}" )
+    rx_samples_corrected_temp = rx_samples_corrected.copy ()
     #corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{rx_samples_corrected.size=}")
     while ( rx_samples_corrected.size > 0 ) :
@@ -114,21 +114,23 @@ def main():
     if settings["log"]["verbose_2"] : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False )
     # Stop transmitting
 
-    #plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( tx_samples , script_filename + " tx_samples")
-    #plot.plot_complex_waveform ( rx_samples , script_filename + f" rx_samples , {rx_samples.size=}" )
-    #plot.plot_complex_waveform ( rx_samples_simple_correlated , script_filename + f" rx_samples_simple_correlated , {rx_samples_simple_correlated.size=}" )
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_aligned , script_filename + f" rx_samples_aligned , {rx_samples_aligned.size=}" )
+    plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" {rx_samples.size=}" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_filtered , script_filename + f" {rx_samples_filtered.size=}" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected_temp , script_filename + f" {rx_samples_corrected_temp.size=}" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_aligned , script_filename + f" {rx_samples_aligned.size=}" )
 
     csv_rx_samples , csv_writer_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples"] , rx_samples )
-    #csv_rx_samples_simple_correlated , csv_writer_rx_samples_simple_correlated = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_simple_correlated"] , rx_samples_simple_correlated )
-    csv_rx_samples_corrected , csv_writer_rx_samples_corrected = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected )
+    csv_rx_samples_filtered , csv_writer_rx_samples_filtered = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_filtered"] , rx_samples_filtered )
+    ops_file.write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected_temp )
     csv_rx_samples_aligned , csv_writer_rx_samples_aligned = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_aligned"] , rx_samples_aligned )
     ops_file.flush_data_and_close_csv ( csv_rx_samples )
-    #ops_file.flush_data_and_close_csv ( csv_rx_samples_simple_correlated )
-    ops_file.flush_data_and_close_csv ( csv_rx_samples_corrected )
+    ops_file.flush_data_and_close_csv ( csv_rx_samples_filtered )
     ops_file.flush_data_and_close_csv ( csv_rx_samples_aligned )
 
+    corrections.estimate_cfo_drit ( rx_samples , F_S )
+    corrections.estimate_cfo_drit ( rx_samples_corrected_temp , F_S )
     print ( f"{acg_vaule=}" )
 
 if __name__ == "__main__":

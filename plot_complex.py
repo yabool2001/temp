@@ -16,7 +16,7 @@ import plotly.express as px
 
 # Inicjalizacja pliku CSV
 #csv_filename_waveform = "complex_tx_waveform.csv"
-csv_filename_waveform = "aligned_rx_samples.csv"
+csv_filename_waveform = "logs/rx_samples.csv"
 
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print ( "Rysuję wykres..." )
@@ -26,7 +26,7 @@ signal = df["real"].values + 1j * df["imag"].values
 # Przygotuj dane do wykresu
 df["index"] = df.index
 # Wykres Plotly Express – wersja liniowa z filtrowanym sygnałem
-fig = px.line(df, x="index", y="real", title="Sygnał BPSK raw: I i Q")
+fig = px.line(df, x="index", y="real", title="Sygnał BPSK raw: I i Q. Size " + f"{signal.size}")
 fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag filtrowane)", line=dict(dash="dash"))
 fig.update_layout(
     xaxis_title="Numer próbki",

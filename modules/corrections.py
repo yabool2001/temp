@@ -1,7 +1,55 @@
 import matplotlib.pyplot as plt
 from modules import modulation , ops_packet , plot
 import numpy as np
+import pandas as pd
+import plotly.express as px
 from scipy.signal import correlate , butter, lfilter
+
+def estimate_cfo_drit ( samples , f_s ) :
+    N = len(samples)
+    # --- DRYFT FAZY ---
+    phases = np.angle(samples[1:] * np.conj(samples[:-1]))  # Δφ
+    time_axis = np.arange(1, N) / f_s
+    delta_phi_unwrapped = np.unwrap(phases)
+    instantaneous_freq = delta_phi_unwrapped * f_s / (2 * np.pi)  # Hz
+
+    # --- WYNIKI ---
+    print(f"Samples no.: {N}")
+    print(f"Average drift CFO: {np.mean(instantaneous_freq):.2f} Hz")
+    print(f"Rozrzut: min {np.min(instantaneous_freq):.2f} Hz, max {np.max(instantaneous_freq):.2f} Hz")
+
+    # --- PRZYGOTOWANIE DANYCH DO WYKRESU ---
+    plot_df = pd.DataFrame({
+        "time_s": time_axis,
+        "instantaneous_freq_Hz": instantaneous_freq
+    })
+
+    # --- WYKRES W PLOTLY ---
+    fig = px.line(plot_df,
+                x="time_s",
+                y="instantaneous_freq_Hz",
+                title="Estimated Carrier Frequency Offset (CFO) over time",
+                labels={"time_s": "Czas [s]", "instantaneous_freq_Hz": "Częstotliwość [Hz]"}
+                )
+
+    fig.update_layout(template="simple_white")
+    fig.show()
+
+    # Okno Hann (redukuje przecieki widmowe)
+    window = np.hanning(N)
+    windowed_signal = samples * window
+
+    # FFT i przesunięcie zerowej częstotliwości do środka
+    spectrum = np.fft.fftshift(np.fft.fft(windowed_signal))
+    freqs = np.fft.fftshift(np.fft.fftfreq(N, d=1/f_s))
+
+    # Obliczanie mocy widma
+    power_spectrum = np.abs(spectrum) ** 2
+
+    # Wyszukanie częstotliwości o maksymalnej mocy (największy pik)
+    peak_index = np.argmax(power_spectrum)
+    estimated_cfo = freqs[peak_index]
+    print ( f"{estimated_cfo=}" )
 
 def pll ( rx_samples , fs , freq_offset_initial ) :
     phase_estimate = 0.0

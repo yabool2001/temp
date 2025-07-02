@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 import pandas as pd
 import plotly.express as px
 
@@ -25,6 +26,18 @@ def open_and_write_samples_2_csv ( name , samples ) :
     for sample in samples :
         csv_writer.writerow ( [ sample.real , sample.imag ] )
     return csv_file , csv_writer
+
+def write_samples_2_csv ( filename , samples ) :
+    with open ( filename , mode = 'w' , newline = '') as file :
+        writer = csv.writer ( file )
+        writer.writerow ( [ 'real' , 'imag' ] )  # nagłówki kolumn
+        for sample in samples :
+            writer.writerow ( [ sample.real , sample.imag ] )
+
+def open_csv_and_load_np_complex128 ( filename ) :
+    data = np.loadtxt ( filename , delimiter = ',' , skiprows=1 )  # pomija nagłówek
+    samples = data[ : , 0 ] + 1j * data[ : , 1 ]
+    return samples.astype ( np.complex128 )
 
 def append_symbols_2_csv ( csv_writer , symbols ) :
     for symbol in symbols :
