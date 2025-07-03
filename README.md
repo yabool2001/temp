@@ -6,6 +6,6 @@ Key functions:
 
 
 If you want to analyse saved samples there are 2 sets:
-1. `rx_samples_10k.csv` containg 10 000 samples
-1. `rx_samples_32768.csv` containg 32 768 samples
-Sets contain result of cyclic transmitt of packet saved in `tx_samples_393.csv`
+1. `logs/rx_samples_10k.csv` containg 10 000 samples
+1. `logs/rx_samples_32768.csv` containg 32 768 samples
+Sets contain result of cyclic transmitt of packet saved in `logs/tx_samples_393.csv`
