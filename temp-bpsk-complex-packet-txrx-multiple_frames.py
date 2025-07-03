@@ -121,6 +121,7 @@ def main():
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected_temp , script_filename + f" {rx_samples_corrected_temp.size=}" )
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_aligned , script_filename + f" {rx_samples_aligned.size=}" )
 
+    ops_file.write_samples_2_csv ( settings["log"]["tx_samples"] , tx_samples )
     csv_rx_samples , csv_writer_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples"] , rx_samples )
     csv_rx_samples_filtered , csv_writer_rx_samples_filtered = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_filtered"] , rx_samples_filtered )
     ops_file.write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected_temp )
