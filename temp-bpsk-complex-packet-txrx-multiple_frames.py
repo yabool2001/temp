@@ -2,6 +2,7 @@
 # Split project for transmitting & receiving
 # In receiver split thread for frames receiving and processing 
 # This is receiving script 
+# Sygnał odebrany (sample) jest wartością zespoloną, której reprezentacja zawiera informację o amplitudzie i fazie. W praktyce, zwłaszcza w komunikacji radiowej, sygnał odbierany może mieć zmienną fazę wynikającą z różnicy częstotliwości lokalnych oscylatorów (LO) nadajnika i odbiornika oraz dryftów częstotliwości.
 '''
  Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
@@ -35,7 +36,6 @@ F_C = 820e6     # częstotliwość nośna [Hz]
 BW  = 1_000_000         # szerokość pasma [Hz]
 #F_S = 521100     # częstotliwość próbkowania [Hz] >= 521e3 && <
 F_S = BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100
-print (f"{F_S=}")
 SPS = 4                 # próbek na symbol
 TX_GAIN = -10.0
 URI = "ip:192.168.2.1"
@@ -43,9 +43,9 @@ URI = "ip:192.168.2.1"
 
 RRC_BETA = 0.35         # roll-off factor
 RRC_SPAN = 11           # długość filtru RRC w symbolach
-CYCLE_MS = 10           # opóźnienie między pakietami [ms]; <0 = liczba powtórzeń
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
+if settings["log"]["verbose_2"] : print (f"{F_C=} {F_S=} {BW=} {SPS=} {RRC_BETA=} {RRC_SPAN=}")
 
 
 # ------------------------ KONFIGURACJA SDR ------------------------
