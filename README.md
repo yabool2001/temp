@@ -8,4 +8,4 @@ Key functions:
 If you want to analyse saved samples there are 2 sets:
 1. `logs/rx_samples_10k.csv` containg 10 000 samples
 1. `logs/rx_samples_32768.csv` containg 32 768 samples
-Sets contain result of cyclic transmitt of packet saved in `logs/tx_samples_393.csv`
+Sets contain result of cyclic transmitt of packet saved in `logs/tx_samples_393.csv`. If you want to load this data to samples use `ops_file.open_csv_and_load_np_complex128 ( filename )` function.
