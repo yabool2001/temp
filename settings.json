@@ -21,7 +21,7 @@
     },
     "log": {
         "verbose_0":                    "False",
-        "verbose_1":                    "True",
+        "verbose_1":                    "False",
         "verbose_2":                    "True",
         "tx_samples":                   "logs/tx_samples.csv",
         "rx_samples":                   "logs/rx_samples.csv",
