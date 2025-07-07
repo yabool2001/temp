@@ -92,16 +92,22 @@ def main() :
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected_temp , script_filename + f" {rx_samples_corrected_temp.size=}" )
     #corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{rx_samples_corrected.size=} ")
-    corr = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
-    mean_corr = np.mean ( np.abs ( corr ) )
-    std_corr = np.std ( np.abs ( corr ) )
-    threshold = mean_corr + 3 * std_corr
-    detected_peaks = np.where ( np.abs ( corr ) >= threshold ) [0]
     counter = 0
-    
     while ( rx_samples_corrected.size > 0 ) :
+        counter += 1
         if settings["log"]["verbose_1"] : print ( f"{counter=}" )
-        timing_offset = detected_peaks[ counter ] - len ( preamble_samples ) + 1
+        corr = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
+        '''
+        peak_index = np.argmax ( np.abs ( corr ) )
+        timing_offset = peak_index - len ( preamble_samples ) + 1
+        '''
+        # Alternatywa dla powyższego bloku
+        mean_corr = np.mean ( np.abs ( corr ) )
+        std_corr = np.std ( np.abs ( corr ) )
+        threshold = mean_corr + 3 * std_corr
+        detected_peaks = np.where ( np.abs ( corr ) >= threshold ) [0]
+        first_index = detected_peaks[0]
+        timing_offset = first_index - len ( preamble_samples ) + 1
         rx_samples_aligned = rx_samples_corrected[ timing_offset: ]
         if settings["log"]["verbose_1"] : print ( f"{timing_offset=} | {rx_samples_aligned.size=}")
         #plot.plot_complex_waveform ( rx_samples_aligned , script_filename + " rx_samples_aligned" )
@@ -122,8 +128,7 @@ def main() :
             if settings["log"]["verbose_2"] : print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
             leftovers = rx_samples_corrected
             break
-        counter += 1
-    
+
     if settings["log"]["verbose_2"] and real_rx : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
     # Stop transmitting
 
