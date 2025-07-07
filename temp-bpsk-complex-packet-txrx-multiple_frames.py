@@ -48,7 +48,7 @@ RRC_SPAN = 11           # długość filtru RRC w symbolach
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 if settings["log"]["verbose_2"] : print (f"{F_C=} {F_S=} {BW=} {SPS=} {RRC_BETA=} {RRC_SPAN=}")
-
+test = settings["log"]["verbose_0"]
 
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main() :
@@ -97,14 +97,11 @@ def main() :
         counter += 1
         if settings["log"]["verbose_1"] : print ( f"{counter=}" )
         corr = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
-        '''
         peak_index = np.argmax ( np.abs ( corr ) )
-        timing_offset = peak_index - len ( preamble_samples ) + 1
-        '''
-        # Alternatywa dla powyższego bloku
-        mean_corr = np.mean ( np.abs ( corr ) )
-        std_corr = np.std ( np.abs ( corr ) )
-        threshold = mean_corr + 3 * std_corr
+        #mean_corr = np.mean ( np.abs ( corr ) )
+        #std_corr = np.std ( np.abs ( corr ) )
+        #threshold = mean_corr + 3 * std_corr
+        threshold = 0.99 * peak_index
         detected_peaks = np.where ( np.abs ( corr ) >= threshold ) [0]
         first_index = detected_peaks[0]
         timing_offset = first_index - len ( preamble_samples ) + 1

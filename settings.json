@@ -20,9 +20,9 @@
         "SPAN": 11
     },
     "log": {
-        "verbose_0":                    "False",
-        "verbose_1":                    "False",
-        "verbose_2":                    "True",
+        "verbose_0":                    0,
+        "verbose_1":                    0,
+        "verbose_2":                    1,
         "tx_samples":                   "logs/tx_samples.csv",
         "rx_samples":                   "logs/rx_samples.csv",
         "tx_symbols":                   "logs/tx_symbols.csv",
