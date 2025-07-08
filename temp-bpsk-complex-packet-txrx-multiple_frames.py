@@ -96,15 +96,20 @@ def main() :
     while ( rx_samples_corrected.size > 0 ) :
         counter += 1
         if settings["log"]["verbose_1"] : print ( f"{counter=}" )
-        corr = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
+        corr0 = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
+        corr = modulation.normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
         peak_index = np.argmax (  corr  )
         #mean_corr = np.mean ( np.abs ( corr ) )
         #std_corr = np.std ( np.abs ( corr ) )
         #threshold = mean_corr + 3 * std_corr
-        threshold = 0.99 * peak_index
-        detected_peaks = np.where ( corr  >= threshold ) [0]
+        #threshold = 0.70 * peak_index
+        #detected_peaks = np.where ( corr  >= threshold ) [0]
+        threshold = np.mean(corr) + 3 * np.std(corr)
+        detected_peaks = np.where(corr >= threshold)[0]
+
         first_index = detected_peaks[0]
-        timing_offset = first_index - len ( preamble_samples ) + 1
+        #timing_offset = first_index - len ( preamble_samples ) + 1
+        timing_offset = first_index
         rx_samples_aligned = rx_samples_corrected[ timing_offset: ]
         if settings["log"]["verbose_1"] : print ( f"{timing_offset=} | {rx_samples_aligned.size=}")
         #plot.plot_complex_waveform ( rx_samples_aligned , script_filename + " rx_samples_aligned" )

@@ -68,3 +68,19 @@ def zero_quadrature ( samples ) :
     Zeruje składową Q (urojoną) sygnału zespolonego, pozostawiając tylko składową I (rzeczywistą).
     """
     return np.real ( samples ) + 0j
+
+def normalized_cross_correlation ( signal , template ) :
+    template = (template - np.mean(template)) / np.std(template)
+    n = len(template)
+    corr = []
+
+    for i in range(len(signal) - n + 1):
+        window = signal[i:i+n]
+        if np.std(window) == 0:  # unikanie dzielenia przez 0
+            corr.append(0)
+            continue
+        window_norm = (window - np.mean(window)) / np.std(window)
+        corr.append(np.sum(window_norm * template))
+
+    return np.array(corr)
+
