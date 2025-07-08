@@ -97,12 +97,12 @@ def main() :
         counter += 1
         if settings["log"]["verbose_1"] : print ( f"{counter=}" )
         corr = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
-        peak_index = np.argmax ( np.abs ( corr ) )
+        peak_index = np.argmax (  corr  )
         #mean_corr = np.mean ( np.abs ( corr ) )
         #std_corr = np.std ( np.abs ( corr ) )
         #threshold = mean_corr + 3 * std_corr
         threshold = 0.99 * peak_index
-        detected_peaks = np.where ( np.abs ( corr ) >= threshold ) [0]
+        detected_peaks = np.where ( corr  >= threshold ) [0]
         first_index = detected_peaks[0]
         timing_offset = first_index - len ( preamble_samples ) + 1
         rx_samples_aligned = rx_samples_corrected[ timing_offset: ]
