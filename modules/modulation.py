@@ -84,3 +84,29 @@ def normalized_cross_correlation ( signal , template ) :
 
     return np.array(corr)
 
+def group_peaks_by_distance(peaks, corr, min_distance=3):
+    """
+    Redukuje listę peaków do pojedynczych wartości w każdej grupie sąsiadujących indeksów.
+    
+    peaks: np.array z indeksami wykryć
+    corr: np.array z wartościami korelacji w tych punktach
+    min_distance: maksymalna różnica indeksów w jednej grupie
+    """
+    grouped = []
+    current_group = [peaks[0]]
+
+    for i in range(1, len(peaks)):
+        if peaks[i] - peaks[i-1] <= min_distance:
+            current_group.append(peaks[i])
+        else:
+            grouped.append(current_group)
+            current_group = [peaks[i]]
+    grouped.append(current_group)
+
+    # Wybierz najlepszy (największa wartość korelacji) z każdej grupy
+    selected = []
+    for group in grouped:
+        best_index = group[np.argmax(corr[group])]
+        selected.append(best_index)
+
+    return np.array(selected)

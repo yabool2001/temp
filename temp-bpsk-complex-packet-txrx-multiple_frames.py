@@ -82,60 +82,43 @@ def main() :
     
     preamble_samples = modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True )
     rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False )
-    #rx_samples_simple_correlated = corrections.simple_correlation ( rx_samples_filtered , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN ) )
-    #plot.plot_complex_waveform ( rx_samples_simple_correlated , script_filename + f" rx_samples_simple_correlated , {rx_samples_simple_correlated.size=}" )
-    #rx_samples_corrected = corrections.full_compensation ( rx_samples_simple_correlated , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN ) )
-    #rx_samples_corrected = corrections.costas_loop ( rx_samples_filtered , F_S )
     rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
     rx_samples_corrected = modulation.zero_quadrature ( rx_samples_corrected )
-    rx_samples_corrected_temp = rx_samples_corrected.copy ()
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected_temp , script_filename + f" {rx_samples_corrected_temp.size=}" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" {rx_samples_corrected.size=}" )
     #corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{rx_samples_corrected.size=} ")
-    counter = 0
-    while ( rx_samples_corrected.size > 0 ) :
-        counter += 1
-        if settings["log"]["verbose_1"] : print ( f"{counter=}" )
-        corr0 = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
-        corr = modulation.normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
-        peak_index = np.argmax (  corr  )
-        #mean_corr = np.mean ( np.abs ( corr ) )
-        #std_corr = np.std ( np.abs ( corr ) )
-        #threshold = mean_corr + 3 * std_corr
-        #threshold = 0.70 * peak_index
-        #detected_peaks = np.where ( corr  >= threshold ) [0]
-        threshold = np.mean(corr) + 3 * np.std(corr)
-        detected_peaks = np.where(corr >= threshold)[0]
-
-        first_index = detected_peaks[0]
-        #timing_offset = first_index - len ( preamble_samples ) + 1
-        timing_offset = first_index
-        rx_samples_aligned = rx_samples_corrected[ timing_offset: ]
-        if settings["log"]["verbose_1"] : print ( f"{timing_offset=} | {rx_samples_aligned.size=}")
+    corr = modulation.normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
+    threshold = np.mean ( corr ) + 3 * np.std ( corr )
+    detected_peaks = np.where(corr >= threshold)[0]
+    peaks = modulation.group_peaks_by_distance ( detected_peaks , corr , min_distance = 2 )
+    rx_samples_aligned = rx_samples_corrected.copy ()
+    for peak in peaks :
+        #rx_samples_aligned = rx_samples_aligned[ peak: ]
+        if settings["log"]["verbose_1"] : print ( f"{peak=} | {rx_samples_aligned.size=}")
         #plot.plot_complex_waveform ( rx_samples_aligned , script_filename + " rx_samples_aligned" )
-        if ops_packet.is_preamble ( rx_samples_aligned , RRC_SPAN , SPS ) :
+        if ops_packet.is_preamble ( rx_samples_aligned[ peak: ] , RRC_SPAN , SPS ) :
             try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
-                payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( rx_samples_aligned , RRC_SPAN , SPS )
+                payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( rx_samples_aligned[ peak: ] , RRC_SPAN , SPS )
             except :
                 pass
             if payload_bits is not None and clip_samples_index is not None :
                 if settings["log"]["verbose_1"] : print ( f"{payload_bits=}" )
-                rx_samples_corrected = rx_samples_aligned[ int ( clip_samples_index ) ::]
-                if settings["log"]["verbose_1"] : print ( f"{rx_samples_corrected.size=}")
+                #rx_samples_aligned = rx_samples_aligned[ int ( clip_samples_index ) ::]
+                if settings["log"]["verbose_1"] : print ( f"{rx_samples_aligned.size=}")
             else :
                 if settings["log"]["verbose_2"] : print ( "No payload. Leftovers saved to add to next samples. Breaking!" )
-                leftovers = rx_samples_corrected
+                leftovers = rx_samples_aligned
                 break
         else :
             if settings["log"]["verbose_2"] : print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
-            leftovers = rx_samples_corrected
+            leftovers = rx_samples_aligned
             break
 
     if settings["log"]["verbose_2"] and real_rx : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
     # Stop transmitting
 
     corrections.estimate_cfo_drit ( rx_samples , F_S )
-    corrections.estimate_cfo_drit ( rx_samples_corrected_temp , F_S )
+    corrections.estimate_cfo_drit ( rx_samples_corrected , F_S )
 
     plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
@@ -148,7 +131,7 @@ def main() :
         ops_file.write_samples_2_csv ( settings["log"]["tx_samples"] , tx_samples )
         csv_rx_samples , csv_writer_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples"] , rx_samples )
         csv_rx_samples_filtered , csv_writer_rx_samples_filtered = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_filtered"] , rx_samples_filtered )
-        ops_file.write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected_temp )
+        ops_file.write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected )
         csv_rx_samples_aligned , csv_writer_rx_samples_aligned = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_aligned"] , rx_samples_aligned )
         ops_file.flush_data_and_close_csv ( csv_rx_samples )
         ops_file.flush_data_and_close_csv ( csv_rx_samples_filtered )
