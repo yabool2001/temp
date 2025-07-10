@@ -15,6 +15,7 @@ import adi
 import json
 import numpy as np
 import os
+import time as t
 
 from modules import filters , sdr , ops_packet , ops_file , modulation , monitor , corrections , plot
 #from modules.rrc import rrc_filter
@@ -33,15 +34,14 @@ rx_saved_filename = "logs/rx_samples_10k.csv"
 script_filename = os.path.basename ( __file__ )
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
-F_C = 820e6     # częstotliwość nośna [Hz]
-#F_S = 2e6     # częstotliwość próbkowania [Hz] >= 521e3 && <
-BW  = 1_000_000         # szerokość pasma [Hz]
+F_C = settings["ADALM-Pluto"]["F_C"]     # częstotliwość nośna [Hz]
+BW  = settings["ADALM-Pluto"]["BW"]         # szerokość pasma [Hz]
 #F_S = 521100     # częstotliwość próbkowania [Hz] >= 521e3 && <
 F_S = BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100
-SPS = 4                 # próbek na symbol
-TX_GAIN = -10.0
-URI = "ip:192.168.2.1"
-#URI = "usb:"
+SPS = settings["bpsk"]["SPS"]                 # próbek na symbol
+TX_GAIN = settings["ADALM-Pluto"]["TX_GAIN"]
+URI = settings["ADALM-Pluto"]["URI"]["IP"]
+#URI = settings["ADALM-Pluto"]["URI"]["USB"]"
 
 RRC_BETA = 0.35         # roll-off factor
 RRC_SPAN = 11           # długość filtru RRC w symbolach
@@ -64,8 +64,8 @@ def main() :
         uri_rx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
         #uri_tx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
         #uri_rx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
-        pluto_tx = sdr.init_pluto ( uri_tx , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] )
-        pluto_rx = sdr.init_pluto ( uri_rx , settings["ADALM-Pluto"]["F_C"] , F_S , settings["ADALM-Pluto"]["BW"] )
+        pluto_tx = sdr.init_pluto ( uri_tx , settings["ADALM-Pluto"]["F_C"] , F_S , BW )
+        pluto_rx = sdr.init_pluto ( uri_rx , settings["ADALM-Pluto"]["F_C"] , F_S , BW )
         if settings["log"]["verbose_0"] : print ( f"{uri_tx=}" ) ; print ( f"{uri_rx=}" )
         if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
         sdr.tx_cyclic ( tx_samples , pluto_tx )
@@ -87,8 +87,15 @@ def main() :
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" {rx_samples_corrected.size=}" )
     #corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{rx_samples_corrected.size=} ")
-    corr = modulation.normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
+    start = t.perf_counter ()
+    #corr = modulation.normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
+    #corr = np.correlate ( rx_samples_corrected , preamble_samples , mode = 'full' )
+    corr = modulation.fast_normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
+    #corr = modulation.fft_normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
+    end = t.perf_counter ()
     threshold = np.mean ( corr ) + 3 * np.std ( corr )
+    #threshold = 0.7  # ustalony eksperymentalnie, np. 0.5–0.8 i wymaga znormalizowanych danych
+    #threshold = np.percentile ( corr, 99.5 ) # lub adaptacyjnie
     detected_peaks = np.where(corr >= threshold)[0]
     peaks = modulation.group_peaks_by_distance ( detected_peaks , corr , min_distance = 2 )
     rx_samples_aligned = rx_samples_corrected.copy ()
@@ -137,5 +144,6 @@ def main() :
         ops_file.flush_data_and_close_csv ( csv_rx_samples_filtered )
         ops_file.flush_data_and_close_csv ( csv_rx_samples_aligned )
 
+    print ( f"Czas wykonania funkcji corr: {end - start:.6f} sekundy" )
 if __name__ == "__main__":
     main ()

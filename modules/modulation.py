@@ -1,7 +1,7 @@
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 from modules import ops_packet , filters , plot
-
-from scipy.signal import upfirdn
+from scipy.signal import upfirdn , correlate
 
 def bpsk_modulation ( bpsk_symbols ) :
     zeros = np.zeros_like ( bpsk_symbols )
@@ -83,6 +83,82 @@ def normalized_cross_correlation ( signal , template ) :
         corr.append(np.sum(window_norm * template))
 
     return np.array(corr)
+
+def fast_normalized_cross_correlation ( signal , template ) :
+    template = (template - np.mean(template)) / np.std(template)
+    n = len(template)
+
+    # Użycie sliding_window_view do uzyskania wszystkich okien naraz
+    windows = sliding_window_view(signal, n)  # shape: (len(signal)-n+1, n)
+
+    # Normalizacja każdego okna
+    windows_mean = np.mean(windows, axis=1, keepdims=True)
+    windows_std = np.std(windows, axis=1, keepdims=True)
+    windows_std[windows_std == 0] = 1  # unikanie dzielenia przez zero
+
+    windows_norm = (windows - windows_mean) / windows_std
+
+    # Korelacja przez iloczyn skalarny każdego okna z template
+    corr = np.dot(windows_norm, template)
+
+    return corr
+
+
+import numpy as np
+
+def fft_normalized_cross_correlation(signal, template):
+    """
+    Superszybka znormalizowana korelacja w trybie 'full' z wykorzystaniem FFT i rolling sum.
+    Zakłada sygnał i template jako realne 1D tablice.
+
+    Zwraca:
+    - norm_corr: korelacja znormalizowana (float64), długość = len(signal) + len(template) - 1
+    """
+    signal = np.real(np.asarray(signal, dtype=np.float64))
+    template = np.real(np.asarray(template, dtype=np.float64))
+    n = len(template)
+    m = len(signal)
+
+    # --- 1. Normalizacja szablonu
+    template = (template - np.mean(template)) / np.std(template)
+
+    # --- 2. Cross-korelacja przez FFT (szablon musi być odwrócony!)
+    size = m + n - 1
+    fft_size = 1 << (size - 1).bit_length()  # najbliższa potęga 2 dla FFT
+
+    template_padded = np.zeros(fft_size)
+    signal_padded = np.zeros(fft_size)
+    template_padded[:n] = template[::-1]
+    signal_padded[:m] = signal
+
+    fft_template = np.fft.fft(template_padded)
+    fft_signal = np.fft.fft(signal_padded)
+
+    corr = np.fft.ifft(fft_template * fft_signal).real[:size]
+
+    # --- 3. Rolling mean and std of signal (dla okien przesuwanych)
+    # rolling sum and sum of squares
+    signal_sq = signal ** 2
+    cumsum = np.zeros(m + 1)
+    cumsum2 = np.zeros(m + 1)
+    cumsum[1:] = np.cumsum(signal)
+    cumsum2[1:] = np.cumsum(signal_sq)
+
+    window_sum = cumsum[n:] - cumsum[:-n]
+    window_sum2 = cumsum2[n:] - cumsum2[:-n]
+
+    mean = window_sum / n
+    std = np.sqrt(window_sum2 / n - mean**2)
+    std[std == 0] = 1
+
+    # --- 4. Dociągnij std do rozmiaru korelacji ('full')
+    std_full = np.pad(std, (n - 1, size - len(std) - (n - 1)), constant_values=1)
+
+    # --- 5. Znormalizowana korelacja
+    norm_corr = corr / (std_full * n)
+
+    return norm_corr
+
 
 def group_peaks_by_distance(peaks, corr, min_distance=3):
     """
