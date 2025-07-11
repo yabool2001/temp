@@ -98,41 +98,40 @@ def main() :
     #threshold = np.percentile ( corr, 99.5 ) # lub adaptacyjnie
     detected_peaks = np.where(corr >= threshold)[0]
     peaks = modulation.group_peaks_by_distance ( detected_peaks , corr , min_distance = 2 )
-    rx_samples_aligned = rx_samples_corrected.copy ()
+    clip_samples_index = 0
+    samples_size = rx_samples_corrected.size
     for peak in peaks :
-        #rx_samples_aligned = rx_samples_aligned[ peak: ]
-        if settings["log"]["verbose_1"] : print ( f"{peak=} | {rx_samples_aligned.size=}")
-        #plot.plot_complex_waveform ( rx_samples_aligned , script_filename + " rx_samples_aligned" )
-        if ops_packet.is_preamble ( rx_samples_aligned[ peak: ] , RRC_SPAN , SPS ) :
+        #rx_samples_corrected = rx_samples_corrected[ peak: ]
+        if settings["log"]["verbose_1"] : print ( f"{peak=} | {rx_samples_corrected.size=}")
+        #plot.plot_complex_waveform ( rx_samples_corrected , script_filename + " rx_samples_corrected" )
+        if ops_packet.is_preamble ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS ) :
             try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
-                payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( rx_samples_aligned[ peak: ] , RRC_SPAN , SPS )
+                payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS , samples_size )
             except :
                 pass
             if payload_bits is not None and clip_samples_index is not None :
-                if settings["log"]["verbose_1"] : print ( f"{payload_bits=}" )
-                #rx_samples_aligned = rx_samples_aligned[ int ( clip_samples_index ) ::]
-                if settings["log"]["verbose_1"] : print ( f"{rx_samples_aligned.size=}")
+                if settings["log"]["verbose_1"] : print ( f"{payload_bits=} {rx_samples_corrected.size=}, {clip_samples_index=}" )
+                #rx_samples_corrected = rx_samples_corrected[ int ( clip_samples_index ) ::]
             else :
                 if settings["log"]["verbose_2"] : print ( "No payload. Leftovers saved to add to next samples. Breaking!" )
-                leftovers = rx_samples_aligned
                 break
         else :
             if settings["log"]["verbose_2"] : print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
-            leftovers = rx_samples_aligned
             break
+    rx_samples_leftovers = rx_samples_corrected[ int ( clip_samples_index ): ].copy ()
 
-    if settings["log"]["verbose_2"] and real_rx : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
+    if settings["log"]["verbose_1"] and real_rx : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
     # Stop transmitting
 
     corrections.estimate_cfo_drit ( rx_samples , F_S )
     corrections.estimate_cfo_drit ( rx_samples_corrected , F_S )
 
     plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( preamble_samples , script_filename + f" {preamble_samples.size=}" )
+    if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
+    if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( preamble_samples , script_filename + f" {preamble_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" {rx_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples_filtered , script_filename + f" {rx_samples_filtered.size=}" )
-    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_aligned , script_filename + f" {rx_samples_aligned.size=}" )
+    if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_leftovers , script_filename + f" {rx_samples_leftovers.size=}" )
 
     if real_rx :
         ops_file.write_samples_2_csv ( settings["log"]["tx_samples"] , tx_samples )
