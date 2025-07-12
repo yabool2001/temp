@@ -29,7 +29,10 @@ with open ( "settings.json" , "r" ) as settings_file :
 #real_rx = True  # Pobieranie żywych danych z Pluto 
 real_rx = False # Ładowanie danych zapisanych w pliku:
 
-rx_saved_filename = "logs/rx_samples_10k.csv"
+#rx_saved_filename = "logs/rx_samples_10k.csv"
+rx_saved_filename = "logs/rx_samples_1255-no_payload.csv"
+rx_saved_filename = "logs/rx_samples_1255-no_preamble.csv"
+#rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
 
 script_filename = os.path.basename ( __file__ )
 
@@ -102,7 +105,7 @@ def main() :
     samples_size = rx_samples_corrected.size
     for peak in peaks :
         #rx_samples_corrected = rx_samples_corrected[ peak: ]
-        if settings["log"]["verbose_1"] : print ( f"{peak=} | {rx_samples_corrected.size=}")
+        if settings["log"]["verbose_1"] : print ( f"\n{peak=} | {rx_samples_corrected.size=}")
         #plot.plot_complex_waveform ( rx_samples_corrected , script_filename + " rx_samples_corrected" )
         if ops_packet.is_preamble ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS ) :
             try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
@@ -135,13 +138,10 @@ def main() :
 
     if real_rx :
         ops_file.write_samples_2_csv ( settings["log"]["tx_samples"] , tx_samples )
-        csv_rx_samples , csv_writer_rx_samples = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples"] , rx_samples )
-        csv_rx_samples_filtered , csv_writer_rx_samples_filtered = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_filtered"] , rx_samples_filtered )
+        ops_file.write_samples_2_csv ( settings["log"]["rx_samples"] , rx_samples )
+        ops_file.write_samples_2_csv ( settings["log"]["rx_samples_filtered"] , rx_samples_filtered )
         ops_file.write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected )
-        csv_rx_samples_aligned , csv_writer_rx_samples_aligned = ops_file.open_and_write_samples_2_csv ( settings["log"]["rx_samples_aligned"] , rx_samples_aligned )
-        ops_file.flush_data_and_close_csv ( csv_rx_samples )
-        ops_file.flush_data_and_close_csv ( csv_rx_samples_filtered )
-        ops_file.flush_data_and_close_csv ( csv_rx_samples_aligned )
+        ops_file.write_samples_2_csv ( settings["log"]["rx_samples_leftovers"] , rx_samples_leftovers )
 
     print ( f"Czas wykonania funkcji corr: {end - start:.6f} sekundy" )
 if __name__ == "__main__":

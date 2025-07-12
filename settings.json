@@ -29,6 +29,6 @@
         "rx_symbols":                   "logs/rx_symbols.csv",
         "rx_samples_filtered":          "logs/rx_samples_filtered.csv",
         "rx_samples_corrected":         "logs/rx_samples_corrected.csv",
-        "rx_samples_aligned":           "logs/rx_samples_aligned.csv"
+        "rx_samples_leftovers":         "logs/rx_samples_leftovers.csv"
     }
 }
