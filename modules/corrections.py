@@ -17,7 +17,7 @@ def estimate_cfo_drit ( samples , f_s ) :
     print(f"Samples no.: {N}")
     print(f"Average drift CFO: {np.mean(instantaneous_freq):.2f} Hz")
     print(f"Rozrzut: min {np.min(instantaneous_freq):.2f} Hz, max {np.max(instantaneous_freq):.2f} Hz")
-
+    '''
     # --- PRZYGOTOWANIE DANYCH DO WYKRESU ---
     plot_df = pd.DataFrame({
         "time_s": time_axis,
@@ -34,7 +34,7 @@ def estimate_cfo_drit ( samples , f_s ) :
 
     fig.update_layout(template="simple_white")
     fig.show()
-
+    '''
     # Okno Hann (redukuje przecieki widmowe)
     window = np.hanning(N)
     windowed_signal = samples * window

@@ -91,7 +91,7 @@ def is_preamble ( samples , rrc_span , sps ) :
         return True
     return False
 
-def get_payload_bytes ( samples , rrc_span , sps , samples_size ) :
+def get_payload_bytes ( samples , rrc_span , sps ) :
     payload_length_start_index = ( rrc_span * sps // 2 ) + ( PREAMBLE_BITS_LEN * sps )
     symbols = samples [ payload_length_start_index : payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps ) : sps ]
     bits = ( symbols.real > 0 ).astype ( int )
@@ -103,14 +103,14 @@ def get_payload_bytes ( samples , rrc_span , sps , samples_size ) :
         crc32_calculated = zlib.crc32 ( bytes ( bits_2_byte_list ( payload_bits ) ) )
     except :
         print ( f"Brak całej ramki." )
-        return None , samples_size - samples.size
+        return None
     # Tu możesz też zapisać błąd do loga lub podjąć inne działanie
     crc32_start_index = payload_start_index + ( payload_length * 8 * sps )
     symbols = samples [ crc32_start_index : crc32_start_index + ( CRC32_BITS_LEN * sps ) : sps ]
     bits = ( symbols.real > 0 ).astype ( int )
     crc32_received = bits_2_int ( bits )
     if crc32_calculated == crc32_received :
-        return payload_bits , samples_size - samples.size + crc32_start_index + ( CRC32_BITS_LEN * sps )
+        return payload_bits
     else :
         print ( f"Brak całej ramki." )
-        return None , samples_size - samples.size
+        return None

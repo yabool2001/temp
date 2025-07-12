@@ -31,7 +31,7 @@ real_rx = False # Ładowanie danych zapisanych w pliku:
 
 #rx_saved_filename = "logs/rx_samples_10k.csv"
 rx_saved_filename = "logs/rx_samples_1255-no_payload.csv"
-rx_saved_filename = "logs/rx_samples_1255-no_preamble.csv"
+#rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
 #rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
 
 script_filename = os.path.basename ( __file__ )
@@ -101,7 +101,6 @@ def main() :
     #threshold = np.percentile ( corr, 99.5 ) # lub adaptacyjnie
     detected_peaks = np.where(corr >= threshold)[0]
     peaks = modulation.group_peaks_by_distance ( detected_peaks , corr , min_distance = 2 )
-    clip_samples_index = 0
     samples_size = rx_samples_corrected.size
     for peak in peaks :
         #rx_samples_corrected = rx_samples_corrected[ peak: ]
@@ -109,19 +108,17 @@ def main() :
         #plot.plot_complex_waveform ( rx_samples_corrected , script_filename + " rx_samples_corrected" )
         if ops_packet.is_preamble ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS ) :
             try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
-                payload_bits , clip_samples_index = ops_packet.get_payload_bytes ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS , samples_size )
+                payload_bits = ops_packet.get_payload_bytes ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS )
             except :
                 pass
-            if payload_bits is not None and clip_samples_index is not None :
-                if settings["log"]["verbose_1"] : print ( f"{payload_bits=} {rx_samples_corrected.size=}, {clip_samples_index=}" )
+            if payload_bits is not None :
+                if settings["log"]["verbose_1"] : print ( f"{payload_bits=} {rx_samples_corrected.size=}, {peak=}" )
                 #rx_samples_corrected = rx_samples_corrected[ int ( clip_samples_index ) ::]
             else :
                 if settings["log"]["verbose_2"] : print ( "No payload. Leftovers saved to add to next samples. Breaking!" )
-                break
         else :
             if settings["log"]["verbose_2"] : print ( "No preamble. Leftovers saved to add to next samples. Breaking!" )
-            break
-    rx_samples_leftovers = rx_samples_corrected[ int ( clip_samples_index ): ].copy ()
+    rx_samples_leftovers = rx_samples_corrected[ int ( peak ): ].copy ()
 
     if settings["log"]["verbose_1"] and real_rx : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
     # Stop transmitting
@@ -129,7 +126,7 @@ def main() :
     corrections.estimate_cfo_drit ( rx_samples , F_S )
     corrections.estimate_cfo_drit ( rx_samples_corrected , F_S )
 
-    plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
+    if settings["log"]["verbose_0"] : plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( preamble_samples , script_filename + f" {preamble_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" {rx_samples.size=}" )
