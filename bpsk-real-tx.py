@@ -63,7 +63,7 @@ def main() :
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
     if settings["log"]["verbose_2"] : print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
-    if settings["log"]["verbose_1tt"] : print ( f"{tx_bpsk_symbols=}" )
+    if settings["log"]["verbose_1"] : print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
 
     uri_tx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
