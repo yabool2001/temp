@@ -93,6 +93,27 @@ def is_preamble ( samples , rrc_span , sps ) :
         return True
     return False
 
+def is_sync_seq ( samples , sync_seq ) :
+    # Korelacja z surowymi próbkami (na magnitude)
+    corr = np.abs ( np.correlate ( samples , sync_seq , mode='full' ) )
+    if len ( corr ) == 0 :
+        return False
+    # Próg na podstawie uśrednionej energii
+    max_index = np.argmax ( corr )
+    window = samples[ max_index : max_index + len ( sync_seq ) ]
+    mean_amplitude = np.mean ( np.abs ( window ) )
+    print ( f"{mean_amplitude=}" )
+    return mean_amplitude > 100
+
+def fast_energy_gate ( samples , power_threshold_dB = -30 ) :
+    # użyj tylko energii w pasmach, bez korelacji:
+    # Zlicz średnią moc w całym buforze,
+    # Jeśli energia przekracza ustalony próg → prawdopodobnie transmisja.
+    avg_power = np.mean ( np.abs ( samples ) **2 )
+    power_db = 10 * np.log10 ( avg_power + 1e-12 )
+    print ( f"{power_db=}")
+    return power_db > power_threshold_dB
+
 def get_payload_bytes ( samples , rrc_span , sps ) :
     payload_length_start_index = ( rrc_span * sps // 2 ) + ( PREAMBLE_BITS_LEN * sps )
     payload_length_end_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )

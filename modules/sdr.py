@@ -57,7 +57,7 @@ def tx_cyclic ( samples , sdr ) :
 def stop_tx_cyclic ( sdr ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
-    #print ( f"{sdr.tx_cyclic_buffer=}" )
+    print ( f"{sdr.tx_cyclic_buffer=}" )
 
 def rx_samples ( sdr ) :
     return sdr.rx ()
