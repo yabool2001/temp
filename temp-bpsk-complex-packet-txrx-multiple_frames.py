@@ -32,24 +32,24 @@ real_rx = False # Ładowanie danych zapisanych w pliku:
 #rx_saved_filename = "logs/rx_samples_10k.csv"
 #rx_saved_filename = "logs/rx_samples_1255-barely_payload.csv"
 #rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
-#rx_saved_filename = "logs/rx_samples_987-no_crc32.csv"
-rx_saved_filename = "logs/rx_samples_1073-no_preamble.csv"
+rx_saved_filename = "logs/rx_samples_987-no_crc32.csv"
+#rx_saved_filename = "logs/rx_samples_702-no_preamble.csv"
 #rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
 
 script_filename = os.path.basename ( __file__ )
 
 # ------------------------ PARAMETRY KONFIGURACJI ------------------------
-F_C = settings["ADALM-Pluto"]["F_C"]     # częstotliwość nośna [Hz]
-BW  = settings["ADALM-Pluto"]["BW"]         # szerokość pasma [Hz]
+F_C = int ( settings["ADALM-Pluto"]["F_C"] )    # częstotliwość nośna [Hz]
+BW  = int ( settings["ADALM-Pluto"]["BW"] )        # szerokość pasma [Hz]
 #F_S = 521100     # częstotliwość próbkowania [Hz] >= 521e3 && <
-F_S = BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100
-SPS = settings["bpsk"]["SPS"]                 # próbek na symbol
-TX_GAIN = settings["ADALM-Pluto"]["TX_GAIN"]
+F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 )
+SPS = int ( settings["bpsk"]["SPS"] )                # próbek na symbol
+TX_GAIN = float ( settings["ADALM-Pluto"]["TX_GAIN"] )
 URI = settings["ADALM-Pluto"]["URI"]["IP"]
 #URI = settings["ADALM-Pluto"]["URI"]["USB"]"
 
-RRC_BETA = 0.35         # roll-off factor
-RRC_SPAN = 11           # długość filtru RRC w symbolach
+RRC_BETA = float ( settings["rrc_filter"]["BETA"] )    # roll-off factor
+RRC_SPAN = int ( settings["rrc_filter"]["SPAN"] )    # długość filtru RRC w symbolach
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 if settings["log"]["verbose_2"] : print (f"{F_C=} {F_S=} {BW=} {SPS=} {RRC_BETA=} {RRC_SPAN=}")
@@ -86,9 +86,18 @@ def main() :
         rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_saved_filename )
     
     preamble_samples = modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True )
+    start = t.perf_counter ()
     rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False )
+    end = t.perf_counter ()
+    print ( f"apply_rrc_rx_filter perf: {end - start:.6f} sekundy" )
+    start = t.perf_counter ()
     rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
+    end = t.perf_counter ()
+    print ( f"full_compensation perf: {end - start:.6f} sekundy" )
+    start = t.perf_counter ()
     rx_samples_corrected = modulation.zero_quadrature ( rx_samples_corrected )
+    end = t.perf_counter ()
+    print ( f"zero_quadrature perf: {end - start:.6f} sekundy" )
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" {rx_samples_corrected.size=}" )
     #corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
     print ( f"{rx_samples_corrected.size=} ")
@@ -98,15 +107,15 @@ def main() :
     corr = modulation.fast_normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
     #corr = modulation.fft_normalized_cross_correlation ( rx_samples_corrected , preamble_samples )
     end = t.perf_counter ()
+    print ( f"corr perf: {end - start:.6f} sekundy" )
     threshold = np.mean ( corr ) + 3 * np.std ( corr )
     #threshold = 0.7  # ustalony eksperymentalnie, np. 0.5–0.8 i wymaga znormalizowanych danych
     #threshold = np.percentile ( corr, 99.5 ) # lub adaptacyjnie
     detected_peaks = np.where(corr >= threshold)[0]
     peaks = modulation.group_peaks_by_distance ( detected_peaks , corr , min_distance = 2 )
-    samples_size = rx_samples_corrected.size
+    if settings["log"]["verbose_1"] : print ( f"\n{peaks.size=} | {rx_samples_corrected.size=}")
     for peak in peaks :
         #rx_samples_corrected = rx_samples_corrected[ peak: ]
-        if settings["log"]["verbose_1"] : print ( f"\n{peak=} | {rx_samples_corrected.size=}")
         #plot.plot_complex_waveform ( rx_samples_corrected , script_filename + " rx_samples_corrected" )
         if ops_packet.is_preamble ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS ) :
             try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
@@ -142,6 +151,5 @@ def main() :
         ops_file.write_samples_2_csv ( settings["log"]["rx_samples_corrected"] , rx_samples_corrected )
         ops_file.write_samples_2_csv ( settings["log"]["rx_samples_leftovers"] , rx_samples_leftovers )
 
-    print ( f"Czas wykonania funkcji corr: {end - start:.6f} sekundy" )
 if __name__ == "__main__":
     main ()

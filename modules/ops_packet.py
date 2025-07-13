@@ -85,20 +85,24 @@ def create_doubled_payload_packet_bits ( payload ) :
 
 def is_preamble ( samples , rrc_span , sps ) :
     preamble_start = rrc_span * sps // 2
-    symbols = samples [ preamble_start : preamble_start + ( PREAMBLE_BITS_LEN * sps ) : sps ]
+    preamble_end = preamble_start + ( PREAMBLE_BITS_LEN * sps )
+    symbols = samples [ preamble_start : preamble_end : sps ]
     bits = ( symbols.real > 0 ).astype ( int )
-    if bits_2_int ( bits ) == BARKER13_W_PADDING_INT :
+    preamble_int = bits_2_int ( bits )
+    if preamble_int == BARKER13_W_PADDING_INT :
         return True
     return False
 
 def get_payload_bytes ( samples , rrc_span , sps ) :
     payload_length_start_index = ( rrc_span * sps // 2 ) + ( PREAMBLE_BITS_LEN * sps )
-    symbols = samples [ payload_length_start_index : payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps ) : sps ]
+    payload_length_end_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
+    symbols = samples [ payload_length_start_index : payload_length_end_index : sps ]
     bits = ( symbols.real > 0 ).astype ( int )
     payload_length = bits_2_int ( bits ) + 1
     payload_start_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
-    # Zauważyłem, że oblicza bity i próbuje liczyć dla nicj crc32 nawet jak ramka jest ucięta i brakuje ostatniego bajtu i nie ma 4 bajtów, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Oblicza bity payload, rzeczywista długość payload 3 bajty nie zgadza sie z wartością długości payload 3+1=4 w nagłówku.
-    symbols = samples [ payload_start_index : payload_start_index + ( payload_length * 8 * sps ) : sps ]
+    payload_end_index = payload_start_index + ( payload_length * 8 * sps )
+    # Zauważyłem, że oblicza bity i próbuje liczyć dla niej crc32 nawet jak ramka jest ucięta i brakuje ostatniego bajtu i nie ma 4 bajtów, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Oblicza bity payload, rzeczywista długość payload 3 bajty nie zgadza sie z wartością długości payload 3+1=4 w nagłówku.
+    symbols = samples [ payload_start_index : payload_end_index : sps ]
     payload_bits = ( symbols.real > 0 ).astype ( int )
     try :
         crc32_calculated = zlib.crc32 ( bytes ( bits_2_byte_list ( payload_bits ) ) )
@@ -107,8 +111,9 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
         return None
     # Tu możesz też zapisać błąd do loga lub podjąć inne działanie
     crc32_start_index = payload_start_index + ( payload_length * 8 * sps )
+    crc32_end_index = crc32_start_index + ( CRC32_BITS_LEN * sps )
     # Zauważyłem, że oblicza jakieś crc nawet jak ramka jest delikatnie ucięta i brakuje ostatniego symbolu, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Nie widać tego problemu, bo oblicza crc32, które nie zgadza sie z prawidłowym crc32 dla całego payload.
-    symbols = samples [ crc32_start_index : crc32_start_index + ( CRC32_BITS_LEN * sps ) : sps ]
+    symbols = samples [ crc32_start_index : crc32_end_index : sps ]
     bits = ( symbols.real > 0 ).astype ( int )
     crc32_received = bits_2_int ( bits )
     if crc32_calculated == crc32_received :

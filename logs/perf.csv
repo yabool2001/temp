@@ -1,0 +1,3 @@
+samples,size,apply_rrc_rx_filter,full_compensation perf,zero_quadrature,fast_normalized_cross_correlation
+rx_samples_702-no_preamble,702,0.000648,0.003603,0.000060,0.003473
+rx_samples_987-no_crc32,987,0.001199,0.013865,0.000207,0.004542
