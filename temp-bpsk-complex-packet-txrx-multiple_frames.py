@@ -30,9 +30,9 @@ with open ( "settings.json" , "r" ) as settings_file :
 real_rx = False # Ładowanie danych zapisanych w pliku:
 
 #rx_saved_filename = "logs/rx_samples_10k.csv"
-rx_saved_filename = "logs/rx_samples_32768.csv"
+#rx_saved_filename = "logs/rx_samples_32768.csv"
 #rx_saved_filename = "logs/rx_samples_1255-barely_payload.csv"
-#rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
+rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
 #rx_saved_filename = "logs/rx_samples_987-no_crc32.csv"
 #rx_saved_filename = "logs/rx_samples_702-no_preamble.csv"
 #rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
