@@ -21,7 +21,7 @@
     },
     "log": {
         "verbose_0":                    0,
-        "verbose_1":                    1,
+        "verbose_1":                    0,
         "verbose_2":                    1,
         "tx_samples":                   "logs/tx_samples.csv",
         "rx_samples":                   "logs/rx_samples.csv",
