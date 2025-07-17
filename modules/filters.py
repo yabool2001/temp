@@ -155,7 +155,7 @@ def apply_tx_rrc_filter ( symbols: np.ndarray , sps: int = 4 , beta: float = 0.3
     else:
         filtered = lfilter ( rrc_taps , 1.0 , symbols )     # Tylko filtracja
     
-    return ( filtered + 0j ) .astype ( np.complex128 )  # Wymuszenie complex128
+    return ( filtered + 0j ) .astype ( np.complex128 )  
 
 def apply_rrc_rx_filter ( rx_samples: np.ndarray , sps: int = 4 , beta: float = 0.35 , span: int = 11 , downsample: bool = True ) -> np.ndarray :
     """

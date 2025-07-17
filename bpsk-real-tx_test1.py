@@ -56,6 +56,8 @@ t.sleep ( 0.2 ) #delay after setting device parameters
 sdr.tx_destroy_buffer ()
 sdr.tx_cyclic_buffer = False
 print ( f"{sdr.tx_cyclic_buffer=}" )
+print ( "Max scaled value:", np.max ( np.abs ( samples ) ) )
+
 
 print ( "Naciśnij:" )
 print ( " - 't' aby wysłać pakiet jednorazowo" )
