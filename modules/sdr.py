@@ -1,9 +1,12 @@
 import adi
+import csv
 import iio
 import matplotlib.pyplot as plt
 from modules import filters
 import numpy as np
+import os
 import time 
+
 
 TX_GAIN = -10
 RX_GAIN = 70
@@ -46,10 +49,13 @@ def init_pluto ( uri , f_c , f_s , bw ) :
     return sdr
 
 def tx_once ( samples , sdr ) :
+    sdr.tx_destroy_buffer ()
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
+    sdr.tx_cyclic_buffer = False
     sdr.tx ( samples )
 
 def tx_cyclic ( samples , sdr ) :
+    sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = True
     sdr.tx ( samples )
@@ -106,3 +112,61 @@ def get_uri ( serial: str , type_preference: str = "usb" ) -> str | None :
         return usb_match
 
     return None
+
+def validate_samples ( samples: np.ndarray ) :
+    if not isinstance ( samples , np.ndarray ) :
+        raise ValueError("tx_samples is not a numpy array")
+    if not np.issubdtype(samples.dtype, np.complexfloating):
+        raise ValueError(f"tx_samples dtype {samples.dtype} is not a complex float")
+    if np.isnan(samples).any():
+        raise ValueError("tx_samples contains NaN values")
+    if np.isinf(samples).any():
+        raise ValueError("tx_samples contains Inf values")
+    if samples.ndim != 1:
+        raise ValueError("tx_samples must be 1D array")
+
+import numpy as np
+import os
+import csv
+
+def validate_samples(samples: np.ndarray, filename="logs/tx_samples_warning.csv"):
+    os.makedirs("logs", exist_ok=True)
+    validation = True
+
+    # Walidacja: typ danych
+    if not isinstance(samples, np.ndarray):
+        raise ValueError("❌ tx_samples is not a numpy array")
+        validation = False
+
+    if samples.dtype != np.complex128:
+        raise ValueError(f"❌ tx_samples must be np.complex128, but got {samples.dtype}")
+        validation = False
+
+    # Walidacja: wymiar
+    if samples.ndim != 1:
+        raise ValueError("❌ tx_samples must be a 1D array")
+        validation = False
+
+    # Walidacja: zawartość
+    if np.isnan(samples).any():
+        raise ValueError("❌ tx_samples contains NaN values")
+        validation = False
+
+    if np.isinf(samples).any():
+        raise ValueError("❌ tx_samples contains Inf values")
+        validation = False
+    
+    # Zapisz próbki do pliku CSV zawsze, niezależnie od błędów
+    if validation == False :
+        try:
+            with open(filename, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["I", "Q"])
+                for s in samples:
+                    writer.writerow([s.real, s.imag])
+            print(f"📝 Zapisano próbki TX do: {filename}")
+        except Exception as e:
+            print(f"❌ Błąd zapisu do pliku {filename}: {e}")
+
+    return validation
+

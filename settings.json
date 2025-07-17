@@ -3,7 +3,7 @@
         "F_C": 2900000000,
         "F_S": 3000000,
         "BW": 1000000,
-        "TX_GAIN": -10,
+        "TX_GAIN": -10.0,
         "RX_GAIN": 70,
         "GAIN_CONTROL": "slow_attack",
         "SAMPLES_BUFFER": 32768,

@@ -65,6 +65,7 @@ def main() :
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
     if settings["log"]["verbose_1"] : print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
+    if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
 
     uri_tx = sdr.get_uri ( "1044739a470b000a090018007ecf7f5ea8" , "usb" )
     #uri_rx = sdr.get_uri ( "10447318ac0f00091e002400454e18b77d" , "usb" )
@@ -75,17 +76,28 @@ def main() :
     if settings["log"]["verbose_1"] : print ( f"{uri_tx=}" )
     if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     sdr.stop_tx_cyclic ( pluto_tx )
+    print ( "Naciśnij:" )
+    print ( " - 't' aby wysłać pakiet jednorazowo" )
+    print ( " - 'c' aby rozpocząć transmisję cykliczną" )
+    print ( " - 's' aby zatrzymać transmisję cykliczną" )
     while True :
-        print ( "Naciśnij klawisz 't', aby wysłać pakiet.")
-        keyboard.wait ( "t" )
-        packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
-        tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
-        #if settings["log"]["verbose_0"] : plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + " tx_bpsk_symbols" )
-        if settings["log"]["verbose_0"] : print ( f"{tx_bpsk_symbols=}" )
-        tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-        if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
-        sdr.tx_once ( tx_samples , pluto_tx )
-        if settings["log"]["verbose_1"] : print ( f"{packet_bits=} sent" )
+        
+        if keyboard.is_pressed ( "t" ) :
+            t.sleep ( 1 )  # anty-dubler
+            sdr.tx_once ( tx_samples , pluto_tx )
+            if settings["log"]["verbose_2"] : print ( f"{packet_bits=} sent" )
+            
+        elif keyboard.is_pressed ( "c" ) :
+            t.sleep ( 1 )
+            sdr.tx_cyclic ( tx_samples , pluto_tx )
+            if settings["log"]["verbose_2"] : print ( "[c] TX CYCLIC started..." )
+            
+        elif keyboard.is_pressed ( "s" ) :
+            t.sleep ( 1 )
+            sdr.stop_tx_cyclic ( pluto_tx )
+            print ( "[s] TX CYCLIC stopped" )
+
+        t.sleep ( 0.05 )  # odciążenie CPU
 
 if __name__ == "__main__":
     main ()
