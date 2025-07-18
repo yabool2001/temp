@@ -16,7 +16,8 @@ import plotly.express as px
 
 # Inicjalizacja pliku CSV
 #csv_filename_waveform = "complex_tx_waveform.csv"
-csv_filename_waveform = "logs/rx_samples.csv"
+#csv_filename_waveform = "logs/rx_samples.csv"
+csv_filename_waveform = "logs/tx_samples_barker13_clipped_74.csv"
 
 # Wczytanie danych i wyświetlenie wykresu w Plotly
 print ( "Rysuję wykres..." )
