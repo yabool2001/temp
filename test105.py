@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from scipy.signal import correlate, find_peaks
+import plotly.express as px
 
 from modules import ops_file
 
@@ -12,11 +13,7 @@ sps = 4                     # samples per symbol
 tx_samples_barker13 = ops_file.open_csv_and_load_np_complex128 ( tx_samples_barker13_filename )
 rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_samples_filename )
 
-import numpy as np
-from scipy.signal import correlate, find_peaks
-import plotly.express as px
-
-def analyze_cfo(rx_samples, tx_samples_barker13, sps=4, fs=1e6, corr_threshold_factor=0.5, min_peak_distance_factor=0.5):
+def analyze_cfo(rx_samples, tx_samples_barker13, sps=4, fs=3e6, corr_threshold_factor=0.5, min_peak_distance_factor=0.5):
     """
     Analizuje sygnał RX w celu estymacji przesunięcia częstotliwości nośnej (CFO) dla każdej ramki.
     
@@ -95,3 +92,6 @@ def analyze_cfo(rx_samples, tx_samples_barker13, sps=4, fs=1e6, corr_threshold_f
 # Zakładając, że masz rx_samples i tx_samples_barker13 załadowane
 # fs = 1000000  # Dostosuj do swojego sample rate w Hz (np. z ADALM-PLUTO)
 # cfo_list, times = analyze_cfo(rx_samples, tx_samples_barker13, sps=4, fs=fs)
+
+cfo_list, times = analyze_cfo ( rx_samples , tx_samples_barker13 , sps=4 , fs=f_s )
+pass
