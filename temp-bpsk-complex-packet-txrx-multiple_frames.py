@@ -32,9 +32,9 @@ real_rx = False # Ładowanie danych zapisanych w pliku:
 #rx_saved_filename = "logs/rx_samples_10k.csv"
 #rx_saved_filename = "logs/rx_samples_32768.csv"
 #rx_saved_filename = "logs/rx_samples_1255-barely_payload.csv"
-rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
+#rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
 #rx_saved_filename = "logs/rx_samples_987-no_crc32.csv"
-#rx_saved_filename = "logs/rx_samples_702-no_preamble.csv"
+rx_saved_filename = "logs/rx_samples_702-no_preamble.csv"
 #rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
 
 script_filename = os.path.basename ( __file__ )
@@ -138,7 +138,7 @@ def main() :
     corrections.estimate_cfo_drit ( rx_samples , F_S )
     corrections.estimate_cfo_drit ( rx_samples_corrected , F_S )
 
-    if settings["log"]["verbose_0"] : plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
+    if settings["log"]["verbose_1"] : plot.plot_bpsk_symbols_v2 ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( preamble_samples , script_filename + f" {preamble_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" {rx_samples.size=}" )

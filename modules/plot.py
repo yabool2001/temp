@@ -2,6 +2,29 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
+def plot_complex_waveform_v2 (samples: np.ndarray, title: str = "Sygnał mPSK") -> None:
+    if not np.iscomplexobj ( samples ) :
+        raise ValueError ( "Wejściowy sygnał musi być zespolony (np.ndarray typu complex)." )
+
+    # Tworzenie DataFrame do wykresu
+    df = pd.DataFrame ( { "index": np.arange ( len ( samples ) ) , "real": samples.real , "imag": samples.imag } )
+    fig = px.line(df, x="index", y=["real", "imag"], labels={"variable": f"{title} ( {samples.size=} )"} )
+
+    # Modyfikacja nazw, stylu i włączenie legendy
+    fig.update_traces(selector=dict(name="real"), name="I (real)" )
+    fig.update_traces(selector=dict(name="imag"), name="Q (imag)", line=dict(dash="dash") )
+
+    # Ustawienia osi    
+    fig.update_layout(
+        xaxis_title="Numer próbki",
+        yaxis_title="Amplituda",
+        xaxis = dict ( rangeslider_visible = True ) ,
+        #legend = dict ( orientation="h" , yanchor="bottom" , xanchor="center" , x = 0.01 , y = 0.99 ) ,
+        legend = dict ( orientation="h" , yanchor = "bottom" , y = 1.02 , xanchor = "center" , x = 0.5 ) ,
+        height = 400
+    )
+    fig.show()
+
 def plot_complex_waveform(signal_complex: np.ndarray, title: str = "Sygnał BPSK po modulacji i filtracji") -> None:
     """
     Rysuje wykres rzeczywistej i urojonej części sygnału zespolonego.
@@ -96,10 +119,6 @@ def plot_bpsk_symbols(symbols: np.ndarray, title: str = "Symbole BPSK", filename
 
     # Wyświetlenie wykresu
     fig.show()
-
-import numpy as np
-import pandas as pd
-import plotly.express as px
 
 def plot_bpsk_symbols_v2(symbols: np.ndarray,
                       title: str = "Symbole BPSK",
