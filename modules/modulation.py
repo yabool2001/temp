@@ -3,6 +3,17 @@ from numpy.lib.stride_tricks import sliding_window_view
 from modules import ops_packet , filters , plot
 from scipy.signal import upfirdn , correlate
 
+import adi  # pyadi-iio
+import numpy as np
+import time  # Opcjonalnie, do pauzy
+
+def cw ( buffer_size , scale: str ) -> np.complex128 :
+
+    # ADALM-Pluto full scale for 16-bit DAC 2^15 - 1
+    # ADALM-Pluto secure scale 2^14 
+    iq = np.ones ( buffer_size ) * scale + 0j  # Stała wartość kompleksowa (DC na I, Q=0)
+    return iq
+
 def bpsk_modulation ( bpsk_symbols ) :
     zeros = np.zeros_like ( bpsk_symbols )
     zeros[bpsk_symbols == -1] = 180
