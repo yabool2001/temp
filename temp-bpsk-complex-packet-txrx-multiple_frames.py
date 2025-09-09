@@ -26,8 +26,8 @@ with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
 
 ### App settings ###
-#real_rx = True  # Pobieranie żywych danych z Pluto 
-real_rx = False # Ładowanie danych zapisanych w pliku:
+real_rx = True  # Pobieranie żywych danych z Pluto 
+#real_rx = False # Ładowanie danych zapisanych w pliku:
 
 #rx_saved_filename = "logs/rx_samples_10k.csv"
 #rx_saved_filename = "logs/rx_samples_32768.csv"

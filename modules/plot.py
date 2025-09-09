@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-def plot_complex_waveform_v2 (samples: np.ndarray, title: str = "Sygnał mPSK") -> None:
+def plot_complex_waveform_v2 (samples: np.ndarray, title: str = "Samples") -> None:
     if not np.iscomplexobj ( samples ) :
         raise ValueError ( "Wejściowy sygnał musi być zespolony (np.ndarray typu complex)." )
 
