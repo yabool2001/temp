@@ -39,7 +39,7 @@ usb_match = None
 for uri, description in contexts.items():
     if "1044739a470b000a090018007ecf7f5ea8" in description:
         uri_tx = uri
-sdr = adi.Pluto ( uri_tx )
+tsdr = adi.Pluto ( uri_tx )
 sdr.tx_lo = int ( 2900000000 )
 sdr.rx_lo = int ( 2900000000 )
 sdr.sample_rate = int ( 3000000 )
