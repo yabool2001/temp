@@ -99,16 +99,58 @@ def is_preamble ( samples , rrc_span , sps ) :
     return False
 
 def is_sync_seq ( samples , sync_seq ) :
-    # Korelacja z surowymi próbkami (na magnitude)
-    corr = np.abs ( np.correlate ( samples , sync_seq , mode='full' ) )
-    if len ( corr ) == 0 :
+    """
+    Detect presence of sync sequence using normalized cross-correlation and a power gate.
+
+    This replaces the previous fragile amplitude-only test which used a hard-coded
+    threshold (mean_amplitude > 100) and produced false positives when the
+    received samples had different scaling. The new method computes a normalized
+    correlation (0..1) and also checks the mean power (dB) in the best-matching
+    window to avoid detecting low-energy noise.
+
+    Returns:
+        bool
+    """
+    x = np.asarray(samples)
+    tpl = np.asarray(sync_seq)
+    n = len(tpl)
+    m = len(x)
+    if m < n or n == 0:
         return False
-    # Próg na podstawie uśrednionej energii
-    max_index = np.argmax ( corr )
-    window = samples[ max_index : max_index + len ( sync_seq ) ]
-    mean_amplitude = np.mean ( np.abs ( window ) )
-    print ( f"{mean_amplitude=}" )
-    return mean_amplitude > 100
+
+    # valid cross-correlation (tpl reversed) -> length m-n+1
+    # use complex conjugate on template for proper correlation with complex samples
+    corr = np.abs(np.correlate(x, tpl.conj()[::-1], mode='valid'))
+    if corr.size == 0:
+        return False
+
+    # template energy
+    tpl_energy = np.sum(np.abs(tpl) ** 2)
+
+    # rolling window energy for received samples (efficient via cumsum)
+    x_sq = np.abs(x) ** 2
+    cumsum = np.concatenate(([0.0], np.cumsum(x_sq)))
+    window_energy = cumsum[n:] - cumsum[:-n]
+
+    # normalized correlation: corr / (sqrt(E_window * E_template))
+    norm_corr = corr / (np.sqrt(window_energy * tpl_energy) + 1e-12)
+
+    peak_idx = int(np.argmax(norm_corr))
+    peak_val = float(norm_corr[peak_idx])
+
+    # compute mean power in dB for the best window (helps to reject tiny noise peaks)
+    mean_power = window_energy[peak_idx] / float(n)
+    mean_power_db = 10 * np.log10(mean_power + 1e-12)
+
+    # Diagnostic print (keeps previous behaviour of printing a diagnostic)
+    print(f"is_sync_seq: peak_corr={peak_val:.4f}, mean_power_db={mean_power_db:.2f} dB")
+
+    # Decision thresholds (tunable): require reasonably high normalized correlation
+    # and a minimum power level. These defaults are conservative; adjust to taste.
+    MIN_CORR = 0.55      # normalized correlation (0..1)
+    MIN_POWER_DB = -40.0 # minimum mean power (dB) to accept as signal
+
+    return (peak_val >= MIN_CORR) and (mean_power_db >= MIN_POWER_DB)
 
 def fast_energy_gate ( samples , power_threshold_dB = -30 ) :
     # użyj tylko energii w pasmach, bez korelacji:

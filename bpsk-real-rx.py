@@ -75,7 +75,7 @@ def main() :
     if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     #sdr.tx_cyclic ( tx_samples , pluto_tx )
     # Clear buffer just to be safe
-    for i in range ( 0 , 10 ) :
+    for i in range ( 0 , 100 ) :
         raw_data = sdr.rx_samples ( pluto_rx )
         if settings["log"]["verbose_0"] : monitor.plot_fft_p2 ( raw_data , F_S )
     # Receive and process samples
