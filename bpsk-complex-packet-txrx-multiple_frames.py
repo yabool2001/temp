@@ -71,7 +71,7 @@ def main():
     rx_samples = sdr.rx_samples ( pluto )
     sdr.stop_tx_cyclic ( pluto )
     #plot.plot_complex_waveform ( rx_samples , script_filename + " rx_samples" )
-    preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13 )
+    preamble_symbols = modulation.create_bpsk_symbols ( ops_packet.BARKER13_W_PADDING_BITS )
     preamble_samples = filters.apply_tx_rrc_filter ( preamble_symbols , SPS , RRC_BETA , RRC_SPAN , True )
     #rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) # W przyszłości rozważyć implementację tego filtrowania sampli rx
     rx_samples_phase_corrected = corrections.phase_shift_corr ( rx_samples )
