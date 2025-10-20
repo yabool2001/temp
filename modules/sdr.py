@@ -1,20 +1,45 @@
 import adi
 import csv
 import iio
+import json
 import matplotlib.pyplot as plt
 from modules import filters
 import numpy as np
 import os
 import time 
 
+with open ( "settings.json" , "r" ) as settings_file :
+    settings = json.load ( settings_file )
 
-TX_GAIN = -10
-RX_GAIN = 70
-GAIN_CONTROL = "slow_attack"
-#GAIN_CONTROL = "fast_attack"
-#GAIN_CONTROL = "manual"
-#NUM_SAMPLES = 10000
-NUM_SAMPLES = 32768
+F_C = int ( settings[ "ADALM-Pluto" ][ "F_C" ] )    # Carrier frequency [Hz]
+BW  = int ( settings[ "ADALM-Pluto" ][ "BW" ] )     # BandWidth [Hz]
+#F_S = 521100     # Sampling frequency [Hz] >= 521e3 && <
+F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 ) # Sampling frequency [Hz]
+TX_GAIN = float ( settings[ "ADALM-Pluto" ][ "TX_GAIN" ] )
+RX_GAIN = int ( settings[ "ADALM-Pluto" ][ "RX_GAIN" ] )
+GAIN_CONTROL = settings[ "ADALM-Pluto" ][ "GAIN_CONTROL" ]
+SAMPLES_BUFFER_SIZE = int ( settings[ "ADALM-Pluto" ][ "SAMPLES_BUFFER_SIZE" ] )
+SPS = int ( settings["bpsk"]["SPS"] )                # próbek na symbol
+RRC_BETA = float ( settings["rrc_filter"]["BETA"] )    # roll-off factor
+RRC_SPAN = int ( settings["rrc_filter"]["SPAN"] )    # długość filtru RRC w symbolach
+
+def init_pluto_v3 ( uri ) :
+    sdr = adi.Pluto ( uri )
+    sdr.tx_lo = int ( F_C )
+    sdr.rx_lo = int ( F_C )
+    sdr.sample_rate = int ( F_S )
+    sdr.rx_rf_bandwidth = int ( BW )
+    sdr.rx_buffer_size = int ( SAMPLES_BUFFER_SIZE )
+    sdr.tx_hardwaregain_chan0 = float ( TX_GAIN )
+    sdr.gain_control_mode_chan0 = GAIN_CONTROL
+    sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
+    sdr.rx_output_type = "SI"
+    sdr.tx_destroy_buffer ()
+    sdr.tx_cyclic_buffer = False
+    time.sleep ( 0.2 ) #delay after setting device parameters
+    if settings["log"]["verbose_2"] : print (f"{F_C=} {BW=} {F_S=} {SPS=} {RRC_BETA=} {RRC_SPAN=}")
+    return sdr
+
 
 def init_pluto_v2 ( uri , f_c , f_s , bw , tx_gain) :
     sdr = adi.Pluto ( uri )
@@ -22,7 +47,7 @@ def init_pluto_v2 ( uri , f_c , f_s , bw , tx_gain) :
     sdr.rx_lo = int ( f_c )
     sdr.sample_rate = int ( f_s )
     sdr.rx_rf_bandwidth = int ( bw )
-    sdr.rx_buffer_size = int ( NUM_SAMPLES )
+    sdr.rx_buffer_size = int ( SAMPLES_BUFFER_SIZE )
     sdr.tx_hardwaregain_chan0 = float ( tx_gain )
     sdr.gain_control_mode_chan0 = GAIN_CONTROL
     sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
@@ -38,7 +63,7 @@ def init_pluto ( uri , f_c , f_s , bw ) :
     sdr.rx_lo = int ( f_c )
     sdr.sample_rate = int ( f_s )
     sdr.rx_rf_bandwidth = int ( bw )
-    sdr.rx_buffer_size = int ( NUM_SAMPLES )
+    sdr.rx_buffer_size = int ( SAMPLES_BUFFER_SIZE )
     sdr.tx_hardwaregain_chan0 = float ( TX_GAIN )
     sdr.gain_control_mode_chan0 = GAIN_CONTROL
     sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
