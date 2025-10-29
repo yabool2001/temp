@@ -1,4 +1,5 @@
 # 2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
+# 2025.10.29 Wprowadzić obsługę zmiennej App setting: cuda
 '''
  Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
@@ -23,6 +24,7 @@ with open ( "settings.json" , "r" ) as settings_file :
 
 ### App settings ###
 real_rx = True  # Pobieranie żywych danych z Pluto 
+cuda = True
 #real_rx = False # Ładowanie danych zapisanych w pliku:
 
 #rx_saved_filename = "logs/rx_samples_10k.csv"
@@ -46,26 +48,21 @@ SPS = int ( settings["bpsk"]["SPS"] )                # próbek na symbol
 RRC_BETA = float ( settings["rrc_filter"]["BETA"] )    # roll-off factor
 RRC_SPAN = int ( settings["rrc_filter"]["SPAN"] )    # długość filtru RRC w symbolach
 
-
-
-
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
 
 test = settings["log"]["verbose_0"]
 
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main() :
-
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
-    if settings["log"]["verbose_2"] : print ( f"{packet_bits=}" )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
-    if settings["log"]["verbose_2"] : print ( f"{tx_bpsk_symbols=}" )
     tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
-
-    pluto_rx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_RX"] )
-    if settings["log"]["verbose_0"] : print ( f"{settings["ADALM-Pluto"]["URI"]["SN_RX"]=}" )
-    
-    if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+    if real_rx :
+        pluto_rx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_RX"] )
+        if settings["log"]["verbose_0"] : print ( f"{settings["ADALM-Pluto"]["URI"]["SN_RX"]=}" )
+        if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+    else :
+        rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_saved_filename )
     #sdr.tx_cyclic ( tx_samples , pluto_tx )
     # Clear buffer just to be safe
     for i in range ( 0 , 100 ) :
