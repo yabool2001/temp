@@ -23,7 +23,7 @@ with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
 
 ### App settings ###
-real_rx = True  # Pobieranie żywych danych z Pluto 
+real_rx = False  # Pobieranie żywych danych z Pluto 
 cuda = True
 #real_rx = False # Ładowanie danych zapisanych w pliku:
 
@@ -61,18 +61,18 @@ def main() :
         pluto_rx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_RX"] )
         if settings["log"]["verbose_0"] : print ( f"{settings["ADALM-Pluto"]["URI"]["SN_RX"]=}" )
         if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+        # Clear buffer just to be safe
+        for i in range ( 0 , 100 ) :
+            raw_data = sdr.rx_samples ( pluto_rx )
+        if settings["log"]["verbose_0"] : monitor.plot_fft_p2 ( raw_data , F_S )
     else :
         rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_saved_filename )
-    #sdr.tx_cyclic ( tx_samples , pluto_tx )
-    # Clear buffer just to be safe
-    for i in range ( 0 , 100 ) :
-        raw_data = sdr.rx_samples ( pluto_rx )
-        if settings["log"]["verbose_0"] : monitor.plot_fft_p2 ( raw_data , F_S )
     # Receive and process samples
     barker13_samples = modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True )
     print ( "Start Rx!" ) 
     while True :
-        rx_samples = sdr.rx_samples ( pluto_rx )
+        if real_rx :
+            rx_samples = sdr.rx_samples ( pluto_rx )
         #if ops_packet.is_sync_seq ( filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) , barker13_samples ) :
         if ops_packet.is_sync_seq ( rx_samples ,barker13_samples ) :
             print ( "Yes!" ) 
