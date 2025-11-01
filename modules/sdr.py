@@ -2,7 +2,8 @@ import adi
 import csv
 import iio
 import json
-import matplotlib.pyplot as plt
+import plotly.express as px
+#import matplotlib.pyplot as plt
 from modules import filters
 import numpy as np
 import os
@@ -23,7 +24,8 @@ SPS = int ( settings["bpsk"]["SPS"] )                # próbek na symbol
 RRC_BETA = float ( settings["rrc_filter"]["BETA"] )    # roll-off factor
 RRC_SPAN = int ( settings["rrc_filter"]["SPAN"] )    # długość filtru RRC w symbolach
 
-def init_pluto_v3 ( uri ) :
+def init_pluto_v3 ( sn ) :
+    uri = get_uri ( sn )
     sdr = adi.Pluto ( uri )
     sdr.tx_lo = int ( F_C )
     sdr.rx_lo = int ( F_C )
@@ -97,6 +99,25 @@ def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
     return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )
 
 def analyze_rx_signal ( samples ) :
+    # Real vs Imag plot
+    real = samples.real[:500]
+    imag = samples.imag[:500]
+    fig1 = px.line(y=[real, imag], title="Real vs Imag")
+    fig1.update_traces(name='Real', selector=dict(name='0'))
+    fig1.update_traces(name='Imag', selector=dict(name='1'))
+    fig1.update_layout(showlegend=True, xaxis_showgrid=True, yaxis_showgrid=True)
+    fig1.show()
+
+    # Constellation plot
+    fig2 = px.scatter(x=samples.real, y=samples.imag, opacity=0.3, title="Constellation")
+    fig2.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
+    fig2.show()
+
+    # Histogram amplitudy
+    fig3 = px.histogram(x=np.abs(samples), nbins=100, title="Histogram amplitudy")
+    fig3.show()
+"""
+def analyze_rx_signal_old ( samples ) :
     plt.plot(samples.real[:500])
     plt.plot(samples.imag[:500])
     plt.title("Real vs Imag")
@@ -106,7 +127,7 @@ def analyze_rx_signal ( samples ) :
     plt.title("Constellation")
     plt.hist(np.abs(samples), bins=100)
     plt.title("Histogram amplitudy")
-
+"""
 def get_uri ( serial: str , type_preference: str = "usb" ) -> str | None :
     """
     Zwraca URI kontekstu IIO dla danego numeru seryjnego.
