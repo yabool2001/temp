@@ -4,7 +4,7 @@ import iio
 import json
 import plotly.express as px
 #import matplotlib.pyplot as plt
-from modules import filters
+#from modules import filters
 import numpy as np
 import os
 import time 
@@ -95,8 +95,8 @@ def stop_tx_cyclic ( sdr ) :
 def rx_samples ( sdr ) :
     return sdr.rx ()
 
-def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
-    return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )
+#def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
+#    return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )
 
 def analyze_rx_signal ( samples ) :
     # Real vs Imag plot
