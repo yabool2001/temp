@@ -1,10 +1,12 @@
 # Prerequisites:
+`python -m pip install pylibiio`
+`python -m pip install pyadi-iio`
+`python -m pip install numba`
+To support CUDA with newest version of Python, you may need to run newest beta numba, e.g. 0.63.0b1 : python -m pip install numba==0.63.0b1
+Check for a newest version at: https://pypi.org/project/numba/#history
 
-## To support CUDA with Python ≥ 3.14.0, you need to run:
-python -m pip install numba==0.63.0b1
-Alternatively, check for a newer version at: https://pypi.org/project/numba/#history
-
-AD9361 block diagram
+# Hardware description
+## AD9361 transceiver block diagram
 ![image](https://github.com/user-attachments/assets/aa3e2089-f667-406d-b144-5c89a048f7e0)
 
 Key functions:
