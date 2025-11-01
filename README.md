@@ -1,7 +1,10 @@
 # Prerequisites:
 `python -m pip install pylibiio`
+
 `python -m pip install pyadi-iio`
+
 `python -m pip install numba`
+
 To support CUDA with newest version of Python, you may need to run newest beta numba, e.g. 0.63.0b1 : python -m pip install numba==0.63.0b1
 Check for a newest version at: https://pypi.org/project/numba/#history
 
