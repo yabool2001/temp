@@ -1,3 +1,9 @@
+Prerequisites:
+
+# To support CUDA with Python ≥ 3.14.0, you need to run:
+python -m pip install numba==0.63.0b1
+Alternatively, check for a newer version at: https://pypi.org/project/numba/#history
+
 AD9361 block diagram
 ![image](https://github.com/user-attachments/assets/aa3e2089-f667-406d-b144-5c89a048f7e0)
 
