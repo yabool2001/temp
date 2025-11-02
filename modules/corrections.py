@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from modules import modulation , ops_packet , plot
+from modules import modulation , ops_packet , plot , sdr
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -51,10 +51,11 @@ def estimate_cfo_drit ( samples , f_s ) :
     estimated_cfo = freqs[peak_index]
     print ( f"{estimated_cfo=}" )
 
-def pll ( rx_samples , fs , freq_offset_initial ) :
+def pll_v0_1_3 ( rx_samples , freq_offset_initial ) :
+
     phase_estimate = 0.0
     freq_estimate = freq_offset_initial
-    loop_bw = 2 * np.pi * 100 / fs  # szerokość pasma pętli (np. 50 Hz)
+    loop_bw = 2 * np.pi * 100 / sdr.F_S  # szerokość pasma pętli (np. 50 Hz)
     alpha = loop_bw
     #alpha = 0.132 # wstawiłem z costas loop z pysdr ale okazało się klapą
     beta = alpha**2 / 4
@@ -94,16 +95,16 @@ def correct_phase_offset_v2 ( rx_samples , preamble_samples ) :
 
 def correct_phase_offset_v3 ( samples , preamble_samples ) :
     # Korelacja bez sprzężenia (dla detekcji offsetu fazowego)
-    correlation = np.correlate( samples, preamble_samples, mode='valid')
-    max_corr = correlation[np.argmax(np.abs(correlation))]
-    phase_offset = np.angle(max_corr)
+    correlation = np.correlate ( samples , preamble_samples , mode='valid' )
+    max_corr = correlation[ np.argmax ( np.abs ( correlation ) ) ]
+    phase_offset = np.angle ( max_corr )
 
     # Korekcja rotacji fazowej
-    rx_corrected = samples * np.exp(-1j * phase_offset)
+    rx_corrected = samples * np.exp ( -1j * phase_offset )
 
     # Detekcja lustrzanego odbicia (poprzez porównanie energii korelacji dla oryginalnej i sprzężonej preambuły)
-    corr_normal = np.max(np.abs(np.correlate(rx_corrected, preamble_samples, mode='valid')))
-    corr_conj = np.max(np.abs(np.correlate(rx_corrected, np.conj(preamble_samples), mode='valid')))
+    corr_normal = np.max ( np.abs ( np.correlate ( rx_corrected , preamble_samples , mode = 'valid' ) ) )
+    corr_conj = np.max ( np.abs ( np.correlate ( rx_corrected , np.conj ( preamble_samples ) , mode = 'valid' ) ) )
 
     if corr_conj > corr_normal:
         rx_corrected = np.conj(rx_corrected)
@@ -119,10 +120,24 @@ def iq_balance ( samples ) :
     return I + 1j * Q
 
 # Pipeline kompensacji CFO, fazy, IQ
+def full_compensation_v0_1_3 ( samples , preamble_samples ) :
+    
+    # 1. CFO compensation (PLL-based)
+    rx_pll_corrected = pll_v0_1_3 ( samples, freq_offset_initial = 0.0 )
+
+    # 2. Korekcja offsetu fazowego (na podstawie korelacji z wzorcem)
+    rx_phase_corrected = correct_phase_offset_v3 ( rx_pll_corrected , preamble_samples )
+
+    # 3. IQ imbalance (opcjonalne, ale zalecane)
+    rx_final_corrected = iq_balance ( rx_phase_corrected )
+
+    return rx_final_corrected
+
+# Pipeline kompensacji CFO, fazy, IQ
 def full_compensation ( samples, fs , preamble_samples ) :
     
     # 1. CFO compensation (PLL-based)
-    rx_pll_corrected = pll ( samples, fs, freq_offset_initial=0.0)
+    rx_pll_corrected = pll_v0_1_3 ( samples, freq_offset_initial=0.0)
 
     # 2. Korekcja offsetu fazowego (na podstawie korelacji z wzorcem)
     rx_phase_corrected = correct_phase_offset_v3 ( rx_pll_corrected , preamble_samples )

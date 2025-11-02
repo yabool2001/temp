@@ -23,7 +23,7 @@ with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
 
 ### App settings ###
-real_rx = True # Pobieranie żywych danych z Pluto 
+real_rx = False # Pobieranie żywych danych z Pluto 
 cuda = True
 #real_rx = False # Ładowanie danych zapisanych w pliku:
 
@@ -37,26 +37,13 @@ rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
 
 script_filename = os.path.basename ( __file__ )
 
-# ------------------------ PARAMETRY KONFIGURACJI ------------------------
-TX_GAIN = float ( settings["ADALM-Pluto"]["TX_GAIN"] )
-URI = settings["ADALM-Pluto"]["URI"]["IP"]
-#URI = settings["ADALM-Pluto"]["URI"]["USB"]"
-#F_S = 521100     # Sampling frequency [Hz] >= 521e3 && <
-BW  = int ( settings[ "ADALM-Pluto" ][ "BW" ] )     # BandWidth [Hz]
-F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 ) # Sampling frequency [Hz]
-SPS = int ( settings["bpsk"]["SPS"] )                # próbek na symbol
-RRC_BETA = float ( settings["rrc_filter"]["BETA"] )    # roll-off factor
-RRC_SPAN = int ( settings["rrc_filter"]["SPAN"] )    # długość filtru RRC w symbolach
-
-PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # można zmieniać dynamicznie
-
-test = settings["log"]["verbose_0"]
+PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # aktualnie statyczny 4-bajtowy ładunek używany do testów
 
 # ------------------------ KONFIGURACJA SDR ------------------------
 def main() :
     packet_bits = ops_packet.create_packet_bits ( PAYLOAD )
     tx_bpsk_symbols = modulation.create_bpsk_symbols ( packet_bits )
-    tx_samples = filters.apply_tx_rrc_filter ( tx_bpsk_symbols , SPS , RRC_BETA , RRC_SPAN , True )
+    tx_samples = filters.apply_tx_rrc_filter_v0_1_3 ( tx_bpsk_symbols , True )
     if real_rx :
         pluto_rx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_RX"] )
         if settings["log"]["verbose_0"] : print ( f"{settings["ADALM-Pluto"]["URI"]["SN_RX"]=}" )
@@ -64,25 +51,25 @@ def main() :
         # Clear buffer just to be safe
         for i in range ( 0 , 100 ) :
             raw_data = sdr.rx_samples ( pluto_rx )
-        if settings["log"]["verbose_0"] : monitor.plot_fft_p2 ( raw_data , F_S )
+        if settings["log"]["verbose_0"] : monitor.plot_fft_p2 ( raw_data , sdr.F_S )
     else :
         rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_saved_filename )
     # Receive and process samples
-    barker13_samples = modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True )
+    barker13_samples = modulation.get_barker13_bpsk_samples_v0_1_3 ( True )
     print ( "Start Rx!" ) 
     while True :
         if real_rx :
             rx_samples = sdr.rx_samples ( pluto_rx )
         #if ops_packet.is_sync_seq ( filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) , barker13_samples ) :
-        if ops_packet.is_sync_seq ( rx_samples ,barker13_samples ) :
+        if ops_packet.is_sync_seq ( rx_samples , barker13_samples ) :
             print ( "Yes!" ) 
             #sdr.stop_tx_cyclic ( pluto_tx )
             start = t.perf_counter ()
-            rx_samples_filtered = filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False )
+            rx_samples_filtered = filters.apply_rrc_rx_filter_v0_1_3 ( rx_samples , False )
             end = t.perf_counter ()
             print ( f"apply_rrc_rx_filter perf: {end - start:.6f} sekundy" )
             start = t.perf_counter ()
-            rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
+            rx_samples_corrected = corrections.full_compensation_v0_1_3 ( rx_samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) )
             end = t.perf_counter ()
             print ( f"full_compensation perf: {end - start:.6f} sekundy" )
             start = t.perf_counter ()
@@ -108,11 +95,13 @@ def main() :
             for peak in peaks :
                 #rx_samples_corrected = rx_samples_corrected[ peak: ]
                 #plot.plot_complex_waveform ( rx_samples_corrected , script_filename + " rx_samples_corrected" )
-                if ops_packet.is_preamble ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS ) :
-                    try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object i nie wiem czy się sprawdzic
-                        payload_bits = ops_packet.get_payload_bytes ( rx_samples_corrected[ peak: ] , RRC_SPAN , SPS )
-                    except :
-                        pass
+                if ops_packet.is_preamble_v0_1_3 ( rx_samples_corrected[ peak: ] ) :
+                    # Upewnij się, że payload_bits jest zawsze zainicjowane, bo w przypadku wyjątku poniżej zmienna mogłaby nie istnieć i byłby błąd
+                    payload_bits = None
+                    try: # Wstawiłem to 24.06.2025, żeby rozkminić błąd TypeError: cannot unpack non-iterable NoneType object
+                        payload_bits = ops_packet.get_payload_bytes_v0_1_3 ( rx_samples_corrected[ peak: ] )
+                    except Exception as e:
+                        if settings["log"]["verbose_2"]: print ( f"get_payload_bytes error: {e}" )
                     if payload_bits is not None :
                         if settings["log"]["verbose_1"] : print ( f"{payload_bits=} {rx_samples_corrected.size=}, {peak=}" )
                         #rx_samples_corrected = rx_samples_corrected[ int ( clip_samples_index ) ::]
@@ -125,9 +114,6 @@ def main() :
 
     if settings["log"]["verbose_1"] and real_rx : acg_vaule = pluto_rx._get_iio_attr ( 'voltage0' , 'hardwaregain' , False ) ; print ( f"{acg_vaule=}" )
     # Stop transmitting
-
-    #corrections.estimate_cfo_drit ( rx_samples , F_S )
-    #corrections.estimate_cfo_drit ( rx_samples_corrected , F_S )
 
     if settings["log"]["verbose_0"] : plot.plot_bpsk_symbols ( tx_bpsk_symbols , script_filename + f" {tx_bpsk_symbols.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_samples , script_filename + f" {tx_samples.size=}" )

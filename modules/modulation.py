@@ -1,3 +1,4 @@
+import json
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 from modules import ops_packet , filters , plot
@@ -6,6 +7,13 @@ from scipy.signal import upfirdn , correlate
 import adi  # pyadi-iio
 import numpy as np
 import time  # Opcjonalnie, do pauzy
+
+with open ( "settings.json" , "r" ) as settings_file :
+    settings = json.load ( settings_file )
+    modulation = settings[ "bpsk" ]
+    filter = settings[ "rrc_filter" ]
+
+SPS  = int ( modulation[ "SPS" ] )
 
 def cw ( buffer_size , scale: str ) -> np.complex128 :
 
@@ -64,6 +72,15 @@ def signal_correlation(samples, lag=1):
 
     corr_norm = np.abs(corr) / (norm + 1e-12)
     return corr_norm
+
+def get_barker13_bpsk_samples_v0_1_3 ( clipped = False ) :
+    symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
+    samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
+    if clipped :
+        samples = samples[ :72 ]
+        #samples = samples[ 18:72 ]
+    #plot.plot_complex_waveform ( samples , "  barker13 samples")
+    return samples
 
 def get_barker13_bpsk_samples ( sps , rrc_beta , rrc_span , clipped = False ) :
     symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )

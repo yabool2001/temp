@@ -1,5 +1,4 @@
 import adi
-import csv
 import iio
 import json
 import plotly.express as px
@@ -11,18 +10,18 @@ import time
 
 with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
+    pluto = settings[ "ADALM-Pluto" ]
 
-F_C = int ( settings[ "ADALM-Pluto" ][ "F_C" ] )    # Carrier frequency [Hz]
-BW  = int ( settings[ "ADALM-Pluto" ][ "BW" ] )     # BandWidth [Hz]
+TX_SN = pluto[ "URI" ][ "SN_TX" ]
+RX_SN = pluto[ "URI" ][ "SN_RX" ]
+F_C = int ( pluto[ "F_C" ] )    # Carrier frequency [Hz]
+BW  = int ( pluto[ "BW" ] )     # BandWidth [Hz]
 #F_S = 521100     # Sampling frequency [Hz] >= 521e3 && <
 F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 ) # Sampling frequency [Hz]
-TX_GAIN = float ( settings[ "ADALM-Pluto" ][ "TX_GAIN" ] )
-RX_GAIN = int ( settings[ "ADALM-Pluto" ][ "RX_GAIN" ] )
-GAIN_CONTROL = settings[ "ADALM-Pluto" ][ "GAIN_CONTROL" ]
-SAMPLES_BUFFER_SIZE = int ( settings[ "ADALM-Pluto" ][ "SAMPLES_BUFFER_SIZE" ] )
-SPS = int ( settings["bpsk"]["SPS"] )                # próbek na symbol
-RRC_BETA = float ( settings["rrc_filter"]["BETA"] )    # roll-off factor
-RRC_SPAN = int ( settings["rrc_filter"]["SPAN"] )    # długość filtru RRC w symbolach
+TX_GAIN = float ( pluto[ "TX_GAIN" ] )
+RX_GAIN = int ( pluto[ "RX_GAIN" ] )
+GAIN_CONTROL = pluto[ "GAIN_CONTROL" ]
+SAMPLES_BUFFER_SIZE = int ( pluto[ "SAMPLES_BUFFER_SIZE" ] )
 
 def init_pluto_v3 ( sn ) :
     uri = get_uri ( sn )
@@ -39,7 +38,7 @@ def init_pluto_v3 ( sn ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
     time.sleep ( 0.2 ) #delay after setting device parameters
-    if settings["log"]["verbose_2"] : print (f"{F_C=} {BW=} {F_S=} {SPS=} {RRC_BETA=} {RRC_SPAN=}")
+    if settings["log"]["verbose_2"] : print ( f"{F_C=} {BW=} {F_S=}" )
     return sdr
 
 
@@ -94,9 +93,6 @@ def stop_tx_cyclic ( sdr ) :
 
 def rx_samples ( sdr ) :
     return sdr.rx ()
-
-#def rx_samples_filtered ( sdr , sps = 8 , beta = 0.35 , span = 11 ) :
-#    return filters.apply_rrc_filter ( rx_samples ( sdr ) , sps , beta , span )
 
 def analyze_rx_signal ( samples ) :
     # Real vs Imag plot
