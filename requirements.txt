@@ -1,7 +1,7 @@
 matplotlib
 numba
 pandas
-plotly
+plotly.express
 pyadi-iio
 pylibiio
 scipy
