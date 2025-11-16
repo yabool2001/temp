@@ -1,5 +1,5 @@
 '''
-Najlepiej działa z bpsk-real-rx_v3-curses.py
+Najlepiej działa z bpsk-real-tx_v3-curses.py
 2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
 2025.10.29 Wprowadzić obsługę zmiennej App setting: cuda
 
