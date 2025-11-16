@@ -1,6 +1,8 @@
-# 2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
-# 2025.10.29 Wprowadzić obsługę zmiennej App setting: cuda
 '''
+Najlepiej działa z bpsk-real-rx_v3-curses.py
+2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
+2025.10.29 Wprowadzić obsługę zmiennej App setting: cuda
+
  Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
 header_bits     [ X ]               1 byte of payload length = header value + 1
@@ -23,7 +25,7 @@ with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
 
 ### App settings ###
-real_rx = False # Pobieranie żywych danych z Pluto 
+real_rx = True # Pobieranie żywych danych z Pluto 
 cuda = True
 #real_rx = False # Ładowanie danych zapisanych w pliku:
 
@@ -62,7 +64,8 @@ def main() :
             rx_samples = sdr.rx_samples ( pluto_rx )
         #if ops_packet.is_sync_seq ( filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) , barker13_samples ) :
         if ops_packet.is_sync_seq ( rx_samples , barker13_samples ) :
-            print ( "Yes!" ) 
+            print ( "Yes!" )
+            monitor.show_spectrum_occupancy_with_obw ( rx_samples , nperseg = 1024 )
             #sdr.stop_tx_cyclic ( pluto_tx )
             start = t.perf_counter ()
             rx_samples_filtered = filters.apply_rrc_rx_filter_v0_1_3 ( rx_samples , False )

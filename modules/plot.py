@@ -54,12 +54,12 @@ def plot_complex_waveform(signal_complex: np.ndarray, title: str = "Sygnał BPSK
     # Rysowanie wykresu
     fig = px.line(df, x="index", y="real", title=title)
     fig.add_scatter(x=df["index"], y=df["imag"], mode="lines", name="Q (imag)", line=dict(dash="dash"))
-    fig.update_layout(
-        xaxis_title="Numer próbki",
-        yaxis_title="Amplituda",
-        xaxis=dict(rangeslider_visible=True),
-        legend=dict(x=0.01, y=0.99),
-        height=500
+    fig.update_layout (
+        xaxis_title = "Numer próbki" ,
+        yaxis_title = "Amplituda" ,
+        xaxis = dict ( rangeslider_visible = True ) ,
+        legend = dict ( x = 0.01 , y = 0.99 ) ,
+        height = 500
     )
     fig.show()
 

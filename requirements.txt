@@ -5,3 +5,4 @@ plotly.express
 pyadi-iio
 pylibiio
 scipy
+pynput
