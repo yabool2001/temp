@@ -3,7 +3,7 @@ Najlepiej działa z bpsk-real-tx_v3-curses.py
 2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
 2025.10.29 Wprowadzić obsługę zmiennej App setting: cuda
 
- Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
+Frame structure: [ preamble_bits , header_bits , payload_bits , crc32_bits ]
 preamble_bit    [ 6 , 80 ]          2 bytes of fixed value preamble: 13 bits of BARKER 13 + 3 bits of padding
 header_bits     [ X ]               1 byte of payload length = header value + 1
 payload_bits    [ X , ... ]         variable length payload - max 256
@@ -25,7 +25,7 @@ with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
 
 ### App settings ###
-real_rx = True # Pobieranie żywych danych z Pluto 
+real_rx = False # Pobieranie żywych danych z Pluto 
 cuda = True
 #real_rx = False # Ładowanie danych zapisanych w pliku:
 
@@ -48,21 +48,17 @@ def main() :
     tx_samples = filters.apply_tx_rrc_filter_v0_1_3 ( tx_bpsk_symbols , True )
     if real_rx :
         pluto_rx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_RX"] )
-        if settings["log"]["verbose_0"] : print ( f"{settings["ADALM-Pluto"]["URI"]["SN_RX"]=}" )
-        if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
-        # Clear buffer just to be safe
-        for i in range ( 0 , 100 ) :
+        for i in range ( 0 , 100 ) : # Clear buffer just to be safe
             raw_data = sdr.rx_samples ( pluto_rx )
         if settings["log"]["verbose_0"] : monitor.plot_fft_p2 ( raw_data , sdr.F_S )
     else :
-        rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_saved_filename )
+        rx_samples = ops_file.open_csv_and_load_np_complex128 ( rx_saved_filename ) # Nie powinno w pętli.
     # Receive and process samples
     barker13_samples = modulation.get_barker13_bpsk_samples_v0_1_3 ( True )
     print ( "Start Rx!" ) 
     while True :
         if real_rx :
             rx_samples = sdr.rx_samples ( pluto_rx )
-        #if ops_packet.is_sync_seq ( filters.apply_rrc_rx_filter ( rx_samples , SPS , RRC_BETA , RRC_SPAN , False ) , barker13_samples ) :
         if ops_packet.is_sync_seq ( rx_samples , barker13_samples ) :
             print ( "Yes!" )
             monitor.show_spectrum_occupancy_with_obw ( rx_samples , nperseg = 1024 )
@@ -80,24 +76,16 @@ def main() :
             end = t.perf_counter ()
             print ( f"zero_quadrature perf: {end - start:.6f} sekundy" )
             if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" {rx_samples_corrected.size=}" )
-            #corr_and_filtered_rx_samples = filters.apply_tx_rrc_filter ( rx_samples_corrected , SPS , RRC_BETA , RRC_SPAN , upsample = False ) # Może zmienić na apply_rrc_rx_filter
             if settings["log"]["verbose_1"] : print ( f"{rx_samples_corrected.size=} ")
             start = t.perf_counter ()
-            #corr = modulation.normalized_cross_correlation ( rx_samples_corrected , barker13_samples )
-            #corr = np.correlate ( rx_samples_corrected , barker13_samples , mode = 'full' )
             corr = modulation.fast_normalized_cross_correlation ( rx_samples_corrected , barker13_samples )
-            #corr = modulation.fft_normalized_cross_correlation ( rx_samples_corrected , barker13_samples )
             end = t.perf_counter ()
             print ( f"corr perf: {end - start:.6f} sekundy" )
             threshold = np.mean ( corr ) + 3 * np.std ( corr )
-            #threshold = 0.7  # ustalony eksperymentalnie, np. 0.5–0.8 i wymaga znormalizowanych danych
-            #threshold = np.percentile ( corr, 99.5 ) # lub adaptacyjnie
             detected_peaks = np.where(corr >= threshold)[0]
             peaks = modulation.group_peaks_by_distance ( detected_peaks , corr , min_distance = 2 )
             if settings["log"]["verbose_1"] : print ( f"\n{peaks.size=} | {rx_samples_corrected.size=}")
             for peak in peaks :
-                #rx_samples_corrected = rx_samples_corrected[ peak: ]
-                #plot.plot_complex_waveform ( rx_samples_corrected , script_filename + " rx_samples_corrected" )
                 if ops_packet.is_preamble_v0_1_3 ( rx_samples_corrected[ peak: ] ) :
                     # Upewnij się, że payload_bits jest zawsze zainicjowane, bo w przypadku wyjątku poniżej zmienna mogłaby nie istnieć i byłby błąd
                     payload_bits = None

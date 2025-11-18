@@ -38,7 +38,10 @@ def init_pluto_v3 ( sn ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
     time.sleep ( 0.2 ) #delay after setting device parameters
+    print ( "SDR initialized:" )
     if settings["log"]["verbose_2"] : print ( f"{F_C=} {BW=} {F_S=}" )
+    if settings["log"]["verbose_0"] : print ( f"{sn=}" )
+    if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     return sdr
 
 
