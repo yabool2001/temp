@@ -137,7 +137,7 @@ def rrc_filter_v4 ( beta , sps , span ) :
             h[i] = numerator / denominator
 
     # Bezpieczna obsługa NaN/Inf i normalizacja
-    h[np.isnan ( h ) | np.isinf ( h )] = 0
+    h[ np.isnan ( h ) | np.isinf ( h ) ] = 0
     h = h / np.sqrt ( np.sum ( h ** 2 ) )  # Normalizacja
 
     return h
@@ -213,7 +213,7 @@ def apply_rrc_rx_filter_v0_1_3 ( rx_samples: np.ndarray , downsample: bool = Tru
 
     # Downsampling (opcjonalny)
     if downsample :
-        filtered = filtered[::modulation.SPS]  # Wybierz 1 próbkę na symbol
+        filtered = filtered[ : : modulation.SPS ] # Wybierz 1 próbkę na symbol
     
     return filtered.astype ( np.complex128 )  # Gwarancja complex128
 

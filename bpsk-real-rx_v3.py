@@ -20,6 +20,7 @@ from modules import filters , sdr , ops_packet , ops_file , modulation , monitor
 #from modules.rrc import rrc_filter
 #from modules.clock_sync import polyphase_clock_sync
 
+script_filename = os.path.basename ( __file__ )
 # Wczytaj plik JSON z konfiguracją
 with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
@@ -36,8 +37,6 @@ rx_saved_filename = "logs/rx_samples_1240-no_payload.csv"
 #rx_saved_filename = "logs/rx_samples_987-no_crc32.csv"
 #rx_saved_filename = "logs/rx_samples_702-no_preamble.csv"
 #rx_saved_filename = "logs/rx_samples_1245-no_barker.csv"
-
-script_filename = os.path.basename ( __file__ )
 
 PAYLOAD = [ 0x0F , 0x0F , 0x0F , 0x0F ]  # aktualnie statyczny 4-bajtowy ładunek używany do testów
 
