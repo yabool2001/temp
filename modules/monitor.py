@@ -42,6 +42,7 @@ def calculate_obw_and_offset ( f , Pxx , power_percent = 0.99 ) :
     obw = f[ high_idx ] - f[ low_idx ]
     # Estymacja offset freq: centrum masy PSD (weighted average freq)
     freq_offset_est = np.sum ( f * Pxx ) / total_power
+    print ( f"{obw=} | {freq_offset_est:.3f=} Hz" )
     return f[ low_idx ] , f[ high_idx ] , obw , freq_offset_est
 
 def show_spectrum_occupancy_with_obw ( samples , nperseg = 1024 , power_percent = 0.99 ) :
