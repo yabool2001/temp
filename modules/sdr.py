@@ -39,9 +39,8 @@ def init_pluto_v3 ( sn ) :
     sdr.tx_cyclic_buffer = False
     time.sleep ( 0.2 ) #delay after setting device parameters
     print ( "SDR initialized:" )
-    if settings["log"]["verbose_2"] : print ( f"{F_C=} {BW=} {F_S=}" )
-    if settings["log"]["verbose_0"] : print ( f"{sn=}" )
-    if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+    if settings["log"]["verbose_0"] : print ( f"{sn=} {F_C=} {BW=} {F_S=}" )
+    if settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     return sdr
 
 
@@ -82,6 +81,7 @@ def tx_once ( samples , sdr ) :
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = False
     sdr.tx ( samples )
+    if settings["log"]["verbose_0"] : print ( f"Samples sent!" )
 
 def tx_cyclic ( samples , sdr ) :
     sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
