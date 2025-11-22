@@ -32,6 +32,12 @@ def bpsk_modulation ( bpsk_symbols ) :
     # plot_tx_waveform ( samples )
     pass
 
+def create_bpsk_symbols_v0_1_5 ( bits ) -> np.complex128 :
+    # Map 0 -> -1, 1 -> +1
+    symbols_real = np.where ( bits == 1 , 1.0 , -1.0 ).astype ( np.float64 )
+    # return complex symbols (Q=0)
+    return ( symbols_real + 0j ).astype( np.complex128 )
+
 def create_bpsk_symbols ( bits ) :
     return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.int64 )
 
