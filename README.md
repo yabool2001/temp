@@ -8,6 +8,20 @@ Check for a newest version at: https://pypi.org/project/numba/#history
 ## AD9361 transceiver block diagram
 ![image](https://github.com/user-attachments/assets/aa3e2089-f667-406d-b144-5c89a048f7e0)
 
+# Software description
+
+## Samples corrections in corrections module
+### CFO estimation
+Implementacja wykonana na podstawie opisu w rozdz.10.5 CFO Estimation książki "Software-Deﬁned Radio for Engineers" Travis F. Collins, Robin Getz, Di Pu, Alexander M. Wyglinski
+
+1. Znajdź korelację, wyznacz pozycję preambuły (peak)
+1. Wyodrębnij segment sygnału odpowiadający preambule lub powtórzonym blokom preambuły
+1. Oblicz średnią fazę iloczynów próbek oddalonych o M próbek (M = separacja powtarzających się symboli lub sps): products = seg[ M: ] * conj ( seg[ : -M ] )
+1. Delta_phi = angle ( mean ( products ) )
+1. CFO_est_Hz = Delta_phi * fs / ( 2 pi M )
+1. Zastosuj korekcję multiplicative: rx = exp ( -j2 pi CFO_est_Hz * ( n / fs ) )
+1. Opcjonalnie: uruchom PLL lub fine estimator żeby dopracować residual
+
 Key functions:
 1. Correlates the received signal with a reference waveform (a modulated Barker 13 sequence) and estimates the phase offset (θ) required for constellation rotation correction
 

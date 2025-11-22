@@ -133,6 +133,67 @@ def full_compensation_v0_1_3 ( samples , preamble_samples ) :
 
     return rx_final_corrected
 
+# Początek nowej wersji v0_1_5 full compensation z estymacją CFO z preambuły
+# Funkcja powstała na bazie rozzdziału 10.5 CFO Estimation książki SDR4Engineers
+
+def estimate_cfo_from_preamble_v0_1_5(rx, preamble, fs, sps):
+    """
+    Simple coarse CFO estimator using a known preamble.
+    Uses products of samples separated by `sps` (M) and returns frequency offset in Hz.
+    """
+    if rx is None or preamble is None:
+        return 0.0
+    corr = np.correlate(rx, preamble, mode='valid')
+    if corr.size == 0:
+        return 0.0
+    peak = np.argmax(np.abs(corr))
+    seg_len = len(preamble)
+    # take segment aligned to preamble (clip if necessary)
+    if peak + seg_len <= len(rx):
+        seg = rx[peak:peak + seg_len]
+    else:
+        seg = rx[peak:]
+    if len(seg) <= sps:
+        return 0.0
+    prods = seg[sps:] * np.conj(seg[:-sps])
+    # average product to reduce noise
+    avg = np.mean(prods)
+    delta = np.angle(avg)
+    f_offset = delta * fs / (2.0 * np.pi * sps)
+    return float(f_offset)
+
+
+def full_compensation_v0_1_5 ( samples , preamble_samples ) :
+    """
+    Improved full compensation pipeline:
+      1) NEW FEATURE: coarse CFO estimate from preamble (apply frequency rotation) -> multiplicative correction
+      2) PLL (fine tracking)
+      3) phase offset correction via correlation with preamble
+      4) IQ balance
+
+    Returns corrected samples (complex numpy array).
+    """
+    fs = sdr.F_S
+    sps = modulation.SPS
+
+    # 1) Coarse CFO estimate and correction
+    coarse_f = estimate_cfo_from_preamble_v0_1_5(samples, preamble_samples, fs, sps)
+    if coarse_f != 0.0:
+        n = np.arange(len(samples))
+        samples = samples * np.exp(-1j * 2.0 * np.pi * coarse_f * n / fs)
+
+    # 2) PLL-based fine tracking
+    rx_pll_corrected = pll_v0_1_3(samples, freq_offset_initial=0.0)
+
+    # 3) Phase offset correction using preamble
+    rx_phase_corrected = correct_phase_offset_v3(rx_pll_corrected, preamble_samples)
+
+    # 4) IQ imbalance compensation
+    rx_final_corrected = iq_balance(rx_phase_corrected)
+
+    return rx_final_corrected
+# Koniec nowej wersji v0_1_5 full compensation z estymacją CFO z preambuły
+
 # Pipeline kompensacji CFO, fazy, IQ
 def full_compensation ( samples, fs , preamble_samples ) :
     

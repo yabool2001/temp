@@ -74,7 +74,7 @@ def main() :
         pluto_tx = sdr.init_pluto ( uri_tx , settings["ADALM-Pluto"]["F_C"] , F_S , BW )
         pluto_rx = sdr.init_pluto ( uri_rx , settings["ADALM-Pluto"]["F_C"] , F_S , BW )
         if settings["log"]["verbose_0"] : print ( f"{uri_tx=}" ) ; print ( f"{uri_rx=}" )
-        if settings["log"]["verbose_0"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+        if settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
         sdr.tx_cyclic ( tx_samples , pluto_tx )
 
         # Clear buffer just to be safe
@@ -93,7 +93,9 @@ def main() :
     end = t.perf_counter ()
     print ( f"apply_rrc_rx_filter perf: {end - start:.6f} sekundy" )
     start = t.perf_counter ()
-    rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
+    #rx_samples_corrected = corrections.full_compensation ( rx_samples_filtered , F_S , modulation.get_barker13_bpsk_samples ( SPS , RRC_BETA , RRC_SPAN , True ) )
+    #rx_samples_corrected = corrections.full_compensation_v0_1_3 ( rx_samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) )
+    rx_samples_corrected = corrections.full_compensation_v0_1_5 ( rx_samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) )
     end = t.perf_counter ()
     print ( f"full_compensation perf: {end - start:.6f} sekundy" )
     start = t.perf_counter ()
