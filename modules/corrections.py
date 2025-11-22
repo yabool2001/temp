@@ -178,15 +178,17 @@ def full_compensation_v0_1_5 ( samples , preamble_samples ) :
 
     # 1) Coarse CFO estimate and correction
     coarse_f = estimate_cfo_from_preamble_v0_1_5(samples, preamble_samples, fs, sps)
+    # Apply coarse correction
     if coarse_f != 0.0:
+    # Alternative apply coarse correction: if abs(coarse_f) > 1e-12:
         n = np.arange(len(samples))
         samples = samples * np.exp(-1j * 2.0 * np.pi * coarse_f * n / fs)
 
     # 2) PLL-based fine tracking
-    rx_pll_corrected = pll_v0_1_3(samples, freq_offset_initial=0.0)
+    pl_corrected = pll_v0_1_3(samples, freq_offset_initial=0.0)
 
     # 3) Phase offset correction using preamble
-    rx_phase_corrected = correct_phase_offset_v3(rx_pll_corrected, preamble_samples)
+    rx_phase_corrected = correct_phase_offset_v3(pl_corrected, preamble_samples)
 
     # 4) IQ imbalance compensation
     rx_final_corrected = iq_balance(rx_phase_corrected)
