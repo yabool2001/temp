@@ -1,4 +1,6 @@
 '''
+Issue #7
+
 Najlepiej działa z bpsk-real-tx_v3-curses.py
 2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
 2025.10.29 Wprowadzić obsługę zmiennej App setting: cuda
@@ -26,7 +28,7 @@ with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
 
 ### App settings ###
-real_rx = False # Pobieranie żywych danych z Pluto 
+real_rx = True # Pobieranie żywych danych z Pluto 
 cuda = True
 #real_rx = False # Ładowanie danych zapisanych w pliku:
 
@@ -67,7 +69,7 @@ def main() :
             end = t.perf_counter ()
             print ( f"apply_rrc_rx_filter perf: {end - start:.6f} sekundy" )
             start = t.perf_counter ()
-            rx_samples_corrected = corrections.full_compensation_v0_1_3 ( rx_samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) )
+            rx_samples_corrected = corrections.full_compensation_v0_1_5 ( rx_samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) )
             end = t.perf_counter ()
             print ( f"full_compensation perf: {end - start:.6f} sekundy" )
             start = t.perf_counter ()
@@ -110,6 +112,7 @@ def main() :
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( barker13_samples , script_filename + f" {barker13_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" {rx_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples_filtered , script_filename + f" {rx_samples_filtered.size=}" )
+    if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" {rx_samples_corrected.size=}" )
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_leftovers , script_filename + f" {rx_samples_leftovers.size=}" )
 
     ops_file.write_samples_2_csv ( settings["log"]["tx_samples"] , tx_samples )

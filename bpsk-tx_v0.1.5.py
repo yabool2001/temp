@@ -1,6 +1,11 @@
 
 '''
 Issue #5: Develop new real-tx to test all important filter's arguments
+
+Sekwencja uruchomienia skryptu:
+cd ~/python/temp/
+source .venv/bin/activate
+python bpsk-tx_v0.1.5.py
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
@@ -45,16 +50,10 @@ try :
             sdr.tx_once ( tx_packet_samples , pluto_tx )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
-            pluto_tx.tx_destroy_buffer ()
-            pluto_tx.tx_cyclic_buffer = True
-            pluto_tx.tx ( tx_packet_samples )
-            print ( "[c] TX CYCLIC started..." )
+            sdr.tx_cyclic ( tx_packet_upsampled , pluto_tx )
         elif key == 's' :
             t.sleep ( 1 ) # anty-dubler
-            pluto_tx.tx_destroy_buffer ()
-            pluto_tx.tx_cyclic_buffer = False
-            print ( f"{pluto_tx.tx_cyclic_buffer=}" )
-            print ( "[s] TX CYCLIC stopped" )
+            sdr.stop_tx_cyclic ( pluto_tx )
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     curses.echo ()

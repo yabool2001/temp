@@ -81,18 +81,20 @@ def tx_once ( samples , sdr ) :
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = False
     sdr.tx ( samples )
-    if settings["log"]["verbose_0"] : print ( f"Samples sent!" )
+    if settings["log"]["verbose_0"] : print ( f"[s] Sample sent!" )
 
 def tx_cyclic ( samples , sdr ) :
     sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = True
     sdr.tx ( samples )
+    if settings["log"]["verbose_0"] : print ( f"[c] Tx cyclic started..." )
 
 def stop_tx_cyclic ( sdr ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
     print ( f"{sdr.tx_cyclic_buffer=}" )
+    print ( "[s] Tc cyclic stopped" )
 
 def rx_samples ( sdr ) :
     return sdr.rx ()
