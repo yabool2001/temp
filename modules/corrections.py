@@ -162,6 +162,24 @@ def estimate_cfo_from_preamble_v0_1_5(rx, preamble, fs, sps):
     f_offset = delta * fs / (2.0 * np.pi * sps)
     return float(f_offset)
 
+def estimate_cfo_from_preamble_early (rx, preamble, fs, sps):
+    # korelacja do zlokalizowania preambuły
+    corr = np.correlate(rx, preamble, mode='valid')
+    if corr.size == 0:
+        return 0.0
+    peak = np.argmax(np.abs(corr))
+    # wyciągnij segment sygnału odpowiadający preambule (upewnij się, że jest wystarczająco długi)
+    seg_len = len(preamble)
+    seg = rx[peak:peak + seg_len]
+    if len(seg) <= sps:
+        return 0.0
+    # produkty próbek oddalonych o sps
+    prods = seg[sps:] * np.conj(seg[:-sps])
+    # średnia faza (bardziej odporna na szum niż pojedynczy pomiar)
+    delta = np.angle(np.mean(prods))
+    # przelicz na Hz: delta to faza na M próbek (M = sps)
+    f_offset = delta * fs / (2.0 * np.pi * sps)
+    return f_offset
 
 def full_compensation_v0_1_5 ( samples , preamble_samples ) :
     """
