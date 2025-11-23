@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+from scipy import signal
+
+from modules import sdr
 
 def plot_complex_waveform_v2 (samples: np.ndarray, title: str = "Samples") -> None:
     if not np.iscomplexobj ( samples ) :
@@ -178,3 +181,47 @@ def plot_bpsk_symbols_v2(symbols: np.ndarray,
 
     # Oś Y dopasowana dynamicznie, ale możesz wymusić np. range=[-1.5, 1.5] jeśli chcesz sztywną skalę
     fig.show()
+
+def spectrum_occupancy ( samples , nperseg = 1024 , title: str = "Spectrum occupancy (PSD)" ) -> None :
+    """
+    Funkcja do wizualizacji zajętości widma (PSD) na podstawie próbek.
+    Używa scipy.signal.welch do estymacji PSD, co jest efektywne dla sygnałów BPSK
+    z dużym offsetem częstotliwości/fazy – pozwoli zobaczyć, czy sygnał jest centrowany
+    wokół 0 Hz w baseband (po downconversion z rx_lo=2.9 GHz), i wykryć offsety.
+    
+    Parametry:
+    - tsdr: Obiekt adi.Pluto z ustawionymi parametrami (sample_rate=3e6, rx_rf_bandwidth=1e6).
+    - n_samples: Liczba próbek do pobrania (domyślnie rx_buffer_size=32768).
+    - nperseg: Długość segmentu dla welch (trade-off: rozdzielczość vs. wariancja; mniejsza dla szybszego obliczenia).
+    
+    Zwraca: Interaktywny wykres PSD w dB vs. częstotliwość (w Hz, centrowana wokół rx_lo).
+    """
+    
+    # Estymacja PSD z scipy (welch dla uśredniania, hanning window dla BPSK)
+    f_s = sdr.F_S  # 3e6 Hz
+
+    # Dynamiczne dostosowanie nperseg i noverlap
+    len_samples = len ( samples )
+    if nperseg > len_samples:
+        nperseg = len_samples  # Automatyczna redukcja jak w scipy
+    noverlap = min ( nperseg // 2 , nperseg - 1 )  # Zapewnij noverlap < nperseg
+    f, Pxx = signal.welch ( samples , fs = f_s , window = 'hann' , nperseg = nperseg , noverlap = noverlap , detrend = 'constant' , scaling = 'density' )
+    
+    # Przesunięcie częstotliwości o rx_lo (2.9 GHz) dla wizualizacji pełnego widma RF
+    f_c = sdr.F_C
+    f_rf = f + f_c  # Centrowanie wokół 2.9 GHz (uwzględnia offsety)
+    
+    # Normalizacja do dB (dla lepszej wizualizacji zajętości widma)
+    Pxx_db = 10 * np.log10 ( Pxx + 1e-12 )  # Unikanie log(0)
+    
+    # DataFrame do wizualizacji z pandas i plotly
+    df = pd.DataFrame ( { 'Częstotliwość [Hz]': f_rf , 'PSD [dB/Hz]': Pxx_db } )
+    
+    # Wykres interaktywny – idealny do analizy offsetu fazy/częstotliwości w BPSK
+    fig = px.line ( df , x = 'Częstotliwość [Hz]' , y = 'PSD [dB/Hz]' , title = title )
+    fig.update_layout ( xaxis_title = 'Częstotliwość [Hz]' , yaxis_title = 'Moc spektralna [dB/Hz]' ,
+                      xaxis_range = [ f_c - f_s / 2 , f_c + f_s / 2 ] )  # Zakres wokół lo ± fs/2
+    fig.show ()
+    
+    # Opcjonalnie: Zintegruj z numba dla szybszego przetwarzania dużych buforów, jeśli potrzeba
+    # (np. @jit na custom PSD, ale welch jest wystarczająco szybki dla N=32768)

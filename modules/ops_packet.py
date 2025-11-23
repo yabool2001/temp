@@ -1,6 +1,11 @@
 import zlib
 import numpy as np
+import tomllib
 from modules import filters , modulation
+
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    settings = tomllib.load ( settings_file )
 
 def bits_2_byte_list ( bits : np.ndarray ) :
     """
@@ -58,8 +63,10 @@ def bits_2_int ( bits : np.ndarray ) -> int:
     return result
 
 
-BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
-PADDING_BITS = [ 0 , 0 , 0 ] # Padding to 16 bits for BARKER13 (added at the end - LSB)
+#BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
+BARKER13_BITS = settings[ "BARKER13_BITS" ]
+#PADDING_BITS = [ 0 , 0 , 0 ] # Padding to 16 bits for BARKER13 (added at the end - LSB)
+PADDING_BITS = settings[ "PADDING_BITS" ]
 BARKER13_W_PADDING_BITS = np.array ( BARKER13_BITS + PADDING_BITS , dtype = np.uint8 )
 BARKER13_W_PADDING_BYTES = bits_2_byte_list ( BARKER13_W_PADDING_BITS )
 BARKER13_W_PADDING_INT = bits_2_int ( BARKER13_W_PADDING_BITS )

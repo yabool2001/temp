@@ -4,21 +4,19 @@ Issue #5: Develop new real-tx to test all important filter's arguments
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
-import json
 import numpy as np
 import os
 import time as t
+import tomllib
 
+#from pathlib import Path
 from modules import filters , sdr , ops_packet , ops_file , modulation , monitor , corrections , plot
 
 script_filename = os.path.basename ( __file__ )
-# Wczytaj plik JSON z konfiguracją
-with open ( "settings.json" , "r" ) as settings_file :
-    settings = json.load ( settings_file )
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    settings = tomllib.load ( settings_file )
 
-### App settings ###
-cuda = True
-# monitor.show_spectrum_occupancy ( samples , nperseg = 1024 )
 
 tx_packet_bits = ops_packet.create_packet_bits ( settings[ "PAYLOAD" ] )
 if settings["log"]["verbose_1"] : plot.plot_bpsk_symbols_v2 ( tx_packet_bits , script_filename + f" {tx_packet_bits.size=}" )
@@ -28,9 +26,10 @@ tx_packet_samples = filters.apply_tx_rrc_filter_v0_1_5 ( tx_bpsk_packet_symbols 
 if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_packet_samples , script_filename + f" {tx_packet_samples.size=}" )
 tx_packet_upsampled = filters.apply_tx_rrc_filter_v0_1_5 ( tx_bpsk_packet_symbols , True )
 if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_packet_upsampled , script_filename + f" {tx_packet_upsampled.size=}" )
-pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
-print ( "Max scaled value:", np.max ( np.abs ( tx_packet_upsampled ) ) )
+if settings["log"]["verbose_1"] : plot.spectrum_occupancy ( tx_packet_upsampled , 1024 , script_filename + f" {tx_packet_upsampled.size=}" )
 
+pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
+print ( f"{np.max ( np.abs ( tx_packet_upsampled ) )=}" )
 stdscr = curses.initscr ()
 curses.noecho ()
 stdscr.keypad ( True )

@@ -1,4 +1,8 @@
 # Konfiguracja ADALM-Pluto
+BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
+PADDING_BITS = [ 0 , 0 , 0 ]                                            # Padding to 16 bits for BARKER13 (added at the end - LSB)
+PAYLOAD = [ 15, 15 , 15 , 15 ]
+cuda = "True"
 
 [ADALM-Pluto]
 F_C = 2900000000                    # center frequency
@@ -17,7 +21,7 @@ SN_RX = "10447318ac0f00091e002400454e18b77d"
 SN_TX = "1044739a470b000a090018007ecf7f5ea8"
 
 [bpsk]
-SPS = 4                             # samples per symbol
+SPS = 8                             # samples per symbol
 
 [rrc_filter]
 BETA = 0.35                         # roll-off factor
@@ -35,4 +39,3 @@ rx_samples_filtered = "logs/rx_samples_filtered.csv"
 rx_samples_corrected = "logs/rx_samples_corrected.csv"
 rx_samples_leftovers = "logs/rx_samples_leftovers.csv"
 
-PAYLOAD = [ 15, 15 , 15 , 15 ]
