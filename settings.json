@@ -16,7 +16,7 @@
         }
     } ,
     "bpsk": {
-        "SPS": 2
+        "SPS": 4
     } ,
     "rrc_filter": {
         "BETA": 0.35,

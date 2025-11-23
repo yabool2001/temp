@@ -146,6 +146,7 @@ def main() :
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( preamble_samples , script_filename + f" {preamble_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples , script_filename + f" {rx_samples.size=}" )
     if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples_filtered , script_filename + f" {rx_samples_filtered.size=}" )
+    if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( rx_samples_corrected , script_filename + f" {rx_samples_corrected.size=}" )
     if settings["log"]["verbose_2"] : plot.plot_complex_waveform ( rx_samples_leftovers , script_filename + f" {rx_samples_leftovers.size=}" )
 
     if real_rx :

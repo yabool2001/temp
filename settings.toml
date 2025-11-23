@@ -1,0 +1,38 @@
+# Konfiguracja ADALM-Pluto
+
+[ADALM-Pluto]
+F_C = 2900000000
+F_S = 3000000
+BW = 1000000
+TX_GAIN = -10.0 ,
+RX_GAIN = 70
+GAIN_CONTROL = "slow_attack"
+SAMPLES_BUFFER = 32768
+SAMPLES_BUFFER_SIZE = 32768
+
+[ADALM-Pluto.URI]
+IP = "ip:192.168.2.1"
+USB = "usb:"
+SN_RX = "10447318ac0f00091e002400454e18b77d"
+SN_TX = "1044739a470b000a090018007ecf7f5ea8"
+
+[bpsk]
+SPS = 4
+
+[rrc_filter]
+BETA = 0.35
+SPAN = 11
+
+[log]
+verbose_0 = 1
+verbose_1 = 1
+verbose_2 = 0
+tx_samples = "logs/tx_samples.csv"
+rx_samples = "logs/rx_samples.csv"
+tx_symbols = "logs/tx_symbols.csv"
+rx_symbols = "logs/rx_symbols.csv"
+rx_samples_filtered = "logs/rx_samples_filtered.csv"
+rx_samples_corrected = "logs/rx_samples_corrected.csv"
+rx_samples_leftovers = "logs/rx_samples_leftovers.csv"
+
+PAYLOAD = [ 15, 15 , 15 , 15 ]
