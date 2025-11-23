@@ -1,12 +1,12 @@
 # Konfiguracja ADALM-Pluto
 
 [ADALM-Pluto]
-F_C = 2900000000
-F_S = 3000000
-BW = 1000000
-TX_GAIN = -10.0 ,
-RX_GAIN = 70
-GAIN_CONTROL = "slow_attack"
+F_C = 2900000000                    # center frequency
+F_S = 3000000                       # sample rate
+BW = 1000000                        # bandwidth
+TX_GAIN = -10.0                     # transmit gain
+RX_GAIN = 70                        # receive gain
+GAIN_CONTROL = "slow_attack"        # gain control mode
 SAMPLES_BUFFER = 32768
 SAMPLES_BUFFER_SIZE = 32768
 
@@ -17,11 +17,11 @@ SN_RX = "10447318ac0f00091e002400454e18b77d"
 SN_TX = "1044739a470b000a090018007ecf7f5ea8"
 
 [bpsk]
-SPS = 4
+SPS = 4                             # samples per symbol
 
 [rrc_filter]
-BETA = 0.35
-SPAN = 11
+BETA = 0.35                         # roll-off factor
+SPAN = 11                           # filter span in symbols
 
 [log]
 verbose_0 = 1
