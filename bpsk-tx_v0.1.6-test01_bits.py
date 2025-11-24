@@ -23,9 +23,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 
-tx_packet_bits = ops_packet.create_packet_bits ( settings[ "PAYLOAD" ] )
-if settings["log"]["verbose_1"] : plot.plot_bpsk_symbols_v2 ( tx_packet_bits , script_filename + f" {tx_packet_bits.size=}" )
-tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_5 ( tx_packet_bits )
+tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_5 ( np.array ( settings["TEST01_BITS"] , dtype=np.uint8 ) )
 if settings["log"]["verbose_1"] : plot.plot_bpsk_symbols_v2 ( tx_bpsk_packet_symbols , script_filename + f" {tx_bpsk_packet_symbols.size=}" )
 tx_packet_samples = filters.apply_tx_rrc_filter_v0_1_5 ( tx_bpsk_packet_symbols , False )
 if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_packet_samples , script_filename + f" {tx_packet_samples.size=}" )

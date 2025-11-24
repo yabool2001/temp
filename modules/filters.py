@@ -1,15 +1,19 @@
 import json
 import numpy as np
+import tomllib
 from numba import njit  # Dodane dla przyspieszenia obliczeń
 from scipy.signal import lfilter , upfirdn
 from modules import modulation
 
-with open ( "settings.json" , "r" ) as settings_file :
-    settings = json.load ( settings_file )
+with open ( "settings.json" , "r" ) as settings_json_file :
+    settings = json.load ( settings_json_file )
     filter = settings[ "rrc_filter" ]
 
-BETA = float ( filter[ "BETA" ] )
-SPAN = int ( filter[ "SPAN" ] )
+with open ( "settings.toml" , "rb" ) as settings_toml_file :
+    toml_settings = tomllib.load ( settings_toml_file )
+
+BETA = float ( toml_settings[ "rrc_filter" ][ "BETA" ] )
+SPAN = int ( toml_settings[ "rrc_filter" ][ "SPAN" ] )
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
     """

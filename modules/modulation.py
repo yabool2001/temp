@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import tomllib
 from numpy.lib.stride_tricks import sliding_window_view
 from modules import ops_packet , filters , plot
 from scipy.signal import upfirdn , correlate
@@ -8,12 +9,15 @@ import adi  # pyadi-iio
 import numpy as np
 import time  # Opcjonalnie, do pauzy
 
-with open ( "settings.json" , "r" ) as settings_file :
-    settings = json.load ( settings_file )
-    modulation = settings[ "bpsk" ]
-    filter = settings[ "rrc_filter" ]
+with open ( "settings.json" , "r" ) as settings_json_file :
+    json_settings = json.load ( settings_json_file )
+    modulation = json_settings[ "bpsk" ]
+    filter = json_settings[ "rrc_filter" ]
 
-SPS  = int ( modulation[ "SPS" ] )
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
+
+SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
 
 def cw ( buffer_size , scale: str ) -> np.complex128 :
 
