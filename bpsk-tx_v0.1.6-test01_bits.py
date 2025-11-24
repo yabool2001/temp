@@ -1,6 +1,6 @@
 
 '''
-Issue #5: Develop new real-tx to test all important filter's arguments
+Issue #8: Tworzenie dokumentacji dla różnych parametrów rrc_filter
 
 Sekwencja uruchomienia skryptu:
 cd ~/python/temp/

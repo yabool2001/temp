@@ -1,5 +1,5 @@
 '''
-Issue #7
+Issue #8: Tworzenie dokumentacji dla różnych parametrów rrc_filter
 
 Najlepiej działa z bpsk-real-tx_v3-curses.py
 2025.10.20 Zmiany wprowadzone w celu wdrożenia sdr.init_pluto_v3
