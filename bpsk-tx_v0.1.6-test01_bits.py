@@ -25,10 +25,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_5 ( np.array ( settings["TEST01_BITS"] , dtype=np.uint8 ) )
 if settings["log"]["verbose_1"] : plot.plot_bpsk_symbols_v2 ( tx_bpsk_packet_symbols , script_filename + f" {tx_bpsk_packet_symbols.size=}" )
-tx_packet_samples = filters.apply_tx_rrc_filter_v0_1_5 ( tx_bpsk_packet_symbols , False )
-if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_packet_samples , script_filename + f" {tx_packet_samples.size=}" )
 tx_packet_upsampled = filters.apply_tx_rrc_filter_v0_1_5 ( tx_bpsk_packet_symbols , True )
-if settings["log"]["verbose_1"] : plot.plot_complex_waveform ( tx_packet_upsampled , script_filename + f" {tx_packet_upsampled.size=}" )
+if settings["log"]["verbose_1"] : plot.complex_waveform ( tx_packet_upsampled , script_filename + f" {tx_packet_upsampled.size=}" , True )
 if settings["log"]["verbose_1"] : plot.spectrum_occupancy ( tx_packet_upsampled , 1024 , script_filename + f" {tx_packet_upsampled.size=}" )
 
 pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
@@ -45,7 +43,7 @@ try :
         key = stdscr.getkey ()
         if key ==  't' :
             t.sleep ( 1 )  # anty-dubler
-            sdr.tx_once ( tx_packet_samples , pluto_tx )
+            sdr.tx_once ( tx_packet_upsampled , pluto_tx )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
             sdr.tx_cyclic ( tx_packet_upsampled , pluto_tx )
