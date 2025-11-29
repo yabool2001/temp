@@ -1,12 +1,16 @@
 import adi
 import iio
 import json
-import plotly.express as px
-#import matplotlib.pyplot as plt
-#from modules import filters
 import numpy as np
+import plotly.express as px
 import os
 import time 
+
+from dataclasses import dataclass, field
+from modules import plot , filters
+from numpy.typing import NDArray
+
+script_filename = os.path.basename ( __file__ )
 
 with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
@@ -22,6 +26,33 @@ TX_GAIN = float ( pluto[ "TX_GAIN" ] )
 RX_GAIN = int ( pluto[ "RX_GAIN" ] )
 GAIN_CONTROL = pluto[ "GAIN_CONTROL" ]
 SAMPLES_BUFFER_SIZE = int ( pluto[ "SAMPLES_BUFFER_SIZE" ] )
+PLUTO_DAC_SCALE = 16384  # precomputed value of 2**14 for slight performance gain. The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
+
+
+@dataclass ( slots = True , eq = False )
+class TxSamples :
+    """
+    Wrapper for BPSK symbols -> TX samples pipeline.
+    Accepts BPSK symbols (0/1 or ±1) as np.complex128 array input to the constructor.
+    Applies the TX RRC filter (`filters.apply_tx_rrc_filter_v0_1_5`) to produce the waveform samples and stores them as `np.complex128`.
+    scale_to_pluto_dac() always performs in-place scaling and clipping of `self.samples` to Pluto DAC
+    """
+    symbols: NDArray[ np.complex128 ]
+    samples: NDArray[ np.complex128 ] = field ( init = False , repr = False )
+    
+    def __post_init__ ( self ) -> None :
+        self.samples = np.ravel (
+            filters.apply_tx_rrc_filter_v0_1_6 ( self.symbols)
+        ).astype ( np.complex128 , copy = False )
+        self.scale_to_pluto_dac ()
+
+    def scale_to_pluto_dac ( self ) -> None : # None, because In-place modification
+        # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
+        self.samples *= PLUTO_DAC_SCALE
+        np.clip ( self.samples, -PLUTO_DAC_SCALE, PLUTO_DAC_SCALE, out = self.samples )
+
+    def __repr__( self ) -> str:
+        return f"TxSamples ( samples.shape = { self.samples.shape }, dtype={ self.samples.dtype } )"
 
 def init_pluto_v3 ( sn ) :
     uri = get_uri ( sn )
@@ -78,17 +109,19 @@ def init_pluto ( uri , f_c , f_s , bw ) :
 
 def tx_once ( samples , sdr ) :
     sdr.tx_destroy_buffer ()
-    samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = False
-    sdr.tx ( samples )
+    sdr.tx ( scale_to_pluto_dac ( samples ) )
     if settings["log"]["verbose_0"] : print ( f"[s] Sample sent!" )
+    if settings["log"]["verbose_1"] : plot.complex_waveform ( samples , script_filename + f" {samples.size=}" , True )
+    if settings["log"]["verbose_1"] : plot.spectrum_occupancy ( samples , 1024 , script_filename + f" {samples.size=}" )
 
 def tx_cyclic ( samples , sdr ) :
     sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
-    samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     sdr.tx_cyclic_buffer = True
-    sdr.tx ( samples )
+    sdr.tx ( scale_to_pluto_dac ( samples ) )
     if settings["log"]["verbose_0"] : print ( f"[c] Tx cyclic started..." )
+    if settings["log"]["verbose_1"] : plot.complex_waveform ( samples , script_filename + f" {samples.size=}" , True )
+    if settings["log"]["verbose_1"] : plot.spectrum_occupancy ( samples , 1024 , script_filename + f" {samples.size=}" )
 
 def stop_tx_cyclic ( sdr ) :
     sdr.tx_destroy_buffer ()

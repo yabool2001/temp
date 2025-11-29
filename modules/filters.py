@@ -1,9 +1,11 @@
 import json
 import numpy as np
 import tomllib
-from numba import njit  # Dodane dla przyspieszenia obliczeń
-from scipy.signal import lfilter , upfirdn
+
 from modules import modulation
+from numba import njit  # Dodane dla przyspieszenia obliczeń
+from numpy.typing import NDArray
+from scipy.signal import lfilter , upfirdn
 
 with open ( "settings.json" , "r" ) as settings_json_file :
     settings = json.load ( settings_json_file )
@@ -145,6 +147,30 @@ def rrc_filter_v4 ( beta , sps , span ) :
     h = h / np.sqrt ( np.sum ( h ** 2 ) )  # Normalizacja
 
     return h
+
+def apply_tx_rrc_filter_v0_1_6 ( symbols: NDArray[ np.complex128 ] , upsample: bool = True , ) -> NDArray[ np.complex128 ] :
+    """
+    Stosuje filtr Root Raised Cosine (RRC) z opcjonalnym upsamplingiem.
+    Zawsze zwraca sygnał zespolony (complex128).
+
+    Parametry:
+        symbols: Sygnał wejściowy (real lub complex).
+        beta: Współczynnik roll-off (0.0-1.0).
+        sps: Próbek na symbol (samples per symbol).
+        span: Długość filtra w symbolach.
+        upsample: Czy wykonać upsampling (True) czy tylko filtrować (False).
+
+    Zwraca:
+        Przefiltrowany sygnał zespolony (complex128).
+    """
+    rrc_taps = rrc_filter_v4 ( BETA , modulation.SPS , SPAN )
+    
+    if upsample:
+        filtered = upfirdn ( rrc_taps , symbols , modulation.SPS )  # Auto-upsampling + filtracja
+    else:
+        filtered = lfilter ( rrc_taps , 1.0 , symbols )     # Tylko filtracja
+    
+    return ( filtered + 0j ) .astype ( np.complex128 )
 
 def apply_tx_rrc_filter_v0_1_5 ( symbols: np.complex128 , upsample: bool = True , ) -> np.complex128 :
     """

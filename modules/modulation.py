@@ -1,13 +1,12 @@
 import json
 import numpy as np
 import tomllib
+
 from numpy.lib.stride_tricks import sliding_window_view
+from numpy.typing import NDArray
 from modules import ops_packet , filters , plot
 from scipy.signal import upfirdn , correlate
 
-import adi  # pyadi-iio
-import numpy as np
-import time  # Opcjonalnie, do pauzy
 
 with open ( "settings.json" , "r" ) as settings_json_file :
     json_settings = json.load ( settings_json_file )
@@ -35,6 +34,13 @@ def bpsk_modulation ( bpsk_symbols ) :
     samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
     # plot_tx_waveform ( samples )
     pass
+
+def create_bpsk_symbols_v0_1_6 ( bits : np.uint8 ) -> NDArray[ np.complex128 ] :
+    # Map 0 -> -1, 1 -> +1
+    symbols_real = np.where ( bits == 1 , 1.0 , -1.0 ).astype ( np.float64 )
+    # return complex symbols (Q=0)
+    return ( symbols_real + 0j ).astype ( np.complex128 )
+
 
 def create_bpsk_symbols_v0_1_5 ( bits ) -> np.complex128 :
     # Map 0 -> -1, 1 -> +1
