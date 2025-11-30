@@ -254,17 +254,22 @@ class TxPacket :
     payload_bits : NDArray[ np.uint8 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
     payload_symbols : NDArray[ np.complex128 ] = field ( init = False )
-    payload_samples : NDArray[ np.complex128 ] = field ( init = False )
-    packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    payload_samples_4pluto : NDArray[ np.complex128 ] = field ( init = False )
     packet_bits : NDArray[ np.uint8 ] = field ( init = False )
+    packet_symbols : NDArray[ np.uint8 ] = field ( init = False )
+    packet_samples_4pluto : NDArray[ np.uint8 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
+        
+        self.create_payload_bits_and_bytes ()
+        self.create_payload_symbols ()
+        self.create_packet_bits ()
+        self.create_payload_samples_4pluto ()
 
+    def create_payload_bits_and_bytes ( self ) -> None :
         if not self.payload:
             raise ValueError ( "Error: Payload is empty!" )
-        
         payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
-        
         if self.is_bits :         
             if payload_arr.max () > 1 :
                 raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
@@ -280,24 +285,29 @@ class TxPacket :
                 raise ValueError ( "Error: Payload has not all values in 0 - 255!")
             self.payload_bytes = payload_arr.copy ()
             self.payload_bits = np.unpackbits ( self.payload_bytes )   # zawsze MSB first
-        
+
+    def create_payload_symbols ( self ) -> None :
         self.payload_symbols = modulation.create_bpsk_symbols_v0_1_6 ( self.payload_bits )
-        
+
+    def create_payload_samples_4pluto ( self ) -> None :
         self.payload_samples = np.ravel (
             filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
         ).astype ( np.complex128 , copy = False )
-        
-        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_symbols)
+        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_symbols )
 
-    def create_packet_bits ( self ) -> NDArray[ np.uint8 ] :
+    def create_packet_bits ( self ) -> None:
         length_bytes = [ len ( self.payload_bytes ) - 1 ]
         crc32 = zlib.crc32 ( self.payload_bytes )
         crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
         print ( f"{ BARKER13_W_PADDING_BITS= }, { length_bytes= }, { self.payload_bytes= }, { crc32_bytes= }")
         preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
+        
         header_bits = gen_bits ( length_bytes )
         crc32_bits = gen_bits ( crc32_bytes )
         self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
+
+    def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
+        np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
 
     def __repr__ ( self ) -> str :
         return (

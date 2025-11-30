@@ -15,14 +15,14 @@ import time as t
 import tomllib
 
 #from pathlib import Path
-from modules import packet , modulation , plot
+from modules import packet , modulation , plot , sdr
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-tx_packet = ops_packet.TxPacket ( payload = settings[ "PAYLOAD_1BYTE_HEX" ] )
+tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_1BYTE_HEX" ] )
 
 tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_6 ( np.array ( settings["TEST01_BITS"] , dtype=np.uint8 ) )
 tx_packet_upsampled = sdr.TxSamples ( tx_bpsk_packet_symbols )
