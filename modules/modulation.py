@@ -35,11 +35,16 @@ def bpsk_modulation ( bpsk_symbols ) :
     # plot_tx_waveform ( samples )
     pass
 
-def create_bpsk_symbols_v0_1_6 ( bits : np.uint8 ) -> NDArray[ np.complex128 ] :
+def create_bpsk_symbols_v0_1_6_fastest_short ( bits : NDArray[ np.uint8 ]) -> NDArray[ np.complex128 ] :
+    return np.require ( bits , np.uint8 , ['C'] ) * 2 - 1 + 0j
+
+def create_bpsk_symbols_v0_1_6_fastest ( bits : NDArray[ np.uint8 ]) -> NDArray[ np.complex128 ] :
+    bits = np.require ( bits , dtype = np.uint8 , requirements = [ 'C' ] )  # gwarantuje uint8 + contiguous
+    return ( bits * 2 - 1 ).astype ( np.complex128 )
+
+def create_bpsk_symbols_v0_1_6 ( bits : NDArray[ np.uint8 ]) -> NDArray[ np.complex128 ] :
     # Map 0 -> -1, 1 -> +1
-    symbols_real = np.where ( bits == 1 , 1.0 , -1.0 ).astype ( np.float64 )
-    # return complex symbols (Q=0)
-    return ( symbols_real + 0j ).astype ( np.complex128 )
+    return np.where ( bits == 1 , 1.0 + 0j , -1.0 +0j ).astype ( np.complex128 )
 
 
 def create_bpsk_symbols_v0_1_5 ( bits ) -> np.complex128 :

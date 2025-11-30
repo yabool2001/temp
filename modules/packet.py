@@ -8,6 +8,7 @@ from modules import filters , modulation , sdr
 from numpy.typing import NDArray
 
 script_filename = os.path.basename ( __file__ )
+
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
@@ -247,13 +248,15 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
 class TxPacket :
     
     payload: list | tuple | np.ndarray = field ( default_factory = list )
-    payload_bits : bool = False
+    is_bits : bool = False
     
     # Pola uzupełnianie w __post_init__
-    bits : NDArray[ np.uint8 ] = field ( init = False )
-    bytes : NDArray[ np.uint8 ] = field ( init = False )
-    symbols : NDArray[ np.complex128 ] = field ( init = False )
-    samples : NDArray[ np.complex128 ] = field ( init = False )
+    payload_bits : NDArray[ np.uint8 ] = field ( init = False )
+    payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    payload_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    payload_samples : NDArray[ np.complex128 ] = field ( init = False )
+    packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_bits : NDArray[ np.uint8 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
 
@@ -262,34 +265,39 @@ class TxPacket :
         
         payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
         
-        if self.payload_bits :         
+        if self.is_bits :         
             if payload_arr.max () > 1 :
                 raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
-            self.bits = payload_arr.copy ()
+            self.payload_bits = payload_arr.copy ()
             # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
             pad = ( -len ( payload_arr ) ) % 8
             if pad :
                 payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
-            self.bytes = np.packbits ( payload_arr )
+            self.payload_bytes = np.packbits ( payload_arr )
         else :
             # ------------------ payload podany jako bajty -----------------
             if payload_arr.max () > 255 :
                 raise ValueError ( "Error: Payload has not all values in 0 - 255!")
-            self.bytes = payload_arr.copy ()
-            self.bits = np.unpackbits ( self.bytes )   # zawsze MSB first
+            self.payload_bytes = payload_arr.copy ()
+            self.payload_bits = np.unpackbits ( self.payload_bytes )   # zawsze MSB first
         
-        self.symbols = modulation.create_bpsk_symbols_v0_1_6 ( self.bits )
+        self.payload_symbols = modulation.create_bpsk_symbols_v0_1_6 ( self.payload_bits )
         
-        self.samples = np.ravel (
-            filters.apply_tx_rrc_filter_v0_1_6 ( self.symbols)
+        self.payload_samples = np.ravel (
+            filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
         ).astype ( np.complex128 , copy = False )
         
-        self.scale_to_pluto_dac ()
+        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_symbols)
 
-    def scale_to_pluto_dac ( self ) -> None : # None, because In-place modification
-        # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
-        self.samples *= sdr.PLUTO_DAC_SCALE
-        np.clip ( self.samples, -sdr.PLUTO_DAC_SCALE, sdr.PLUTO_DAC_SCALE, out = self.samples )
+    def create_packet_bits ( self ) -> NDArray[ np.uint8 ] :
+        length_bytes = [ len ( self.payload_bytes ) - 1 ]
+        crc32 = zlib.crc32 ( self.payload_bytes )
+        crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
+        print ( f"{ BARKER13_W_PADDING_BITS= }, { length_bytes= }, { self.payload_bytes= }, { crc32_bytes= }")
+        preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
+        header_bits = gen_bits ( length_bytes )
+        crc32_bits = gen_bits ( crc32_bytes )
+        self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
 
     def __repr__ ( self ) -> str :
         return (

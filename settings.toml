@@ -1,8 +1,10 @@
 # Konfiguracja ADALM-Pluto
-TEST01_BITS = [ 0 , 1 , 0 , 1 , 0 , 0 , 0 , 0 ]
+PAYLOAD_8BITS = [ 0 , 1 , 0 , 1 , 0 , 0 , 0 , 0 ]
+PAYLOAD_1BYTE_DEC = [ 80 ]
+PAYLOAD_1BYTE_HEX = [ 0x50 ]
 BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
 PADDING_BITS = [ 0 , 0 , 0 ]                                            # Padding to 16 bits for BARKER13 (added at the end - LSB)
-PAYLOAD = [ 15, 15 , 15 , 15 ]
+PAYLOAD_4BYTES_DEC = [ 15, 15 , 15 , 15 ]
 cuda = "True"
 
 [ADALM-Pluto]
