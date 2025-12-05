@@ -22,9 +22,9 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_1BYTE_HEX" ] )
+tx_packet = packet.TxPacket ( payload = settings[ "TEST_1BIT" ] )
 
-tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_6 ( np.array ( settings["TEST01_BITS"] , dtype=np.uint8 ) )
+tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_6 ( np.array ( settings["TEST_2BITS"] , dtype=np.uint8 ) )
 tx_packet_upsampled = sdr.TxSamples ( tx_bpsk_packet_symbols )
 if settings["log"]["verbose_1"] :
     plot.plot_bpsk_symbols_v2 ( tx_bpsk_packet_symbols , script_filename + f" {tx_bpsk_packet_symbols.size=}" )

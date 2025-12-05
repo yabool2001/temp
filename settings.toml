@@ -1,5 +1,6 @@
 # Konfiguracja ADALM-Pluto
 PAYLOAD_8BITS = [ 0 , 1 , 0 , 1 , 0 , 0 , 0 , 0 ]
+TEST_1BIT = [ 0 ]
 PAYLOAD_1BYTE_DEC = [ 80 ]
 PAYLOAD_1BYTE_HEX = [ 0x50 ]
 BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
