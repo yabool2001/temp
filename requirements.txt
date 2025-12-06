@@ -1,8 +1,6 @@
-matplotlib
-numba
+numba==0.63.0rc1
 pandas
 plotly.express
 pyadi-iio
 pylibiio
 scipy
-pynput
