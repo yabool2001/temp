@@ -254,10 +254,10 @@ class TxPacket :
     payload_bits : NDArray[ np.uint8 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
     payload_symbols : NDArray[ np.complex128 ] = field ( init = False )
-    payload_samples_4pluto : NDArray[ np.complex128 ] = field ( init = False )
+    payload_samples : NDArray[ np.complex128 ] = field ( init = False )
     packet_bits : NDArray[ np.uint8 ] = field ( init = False )
     packet_symbols : NDArray[ np.uint8 ] = field ( init = False )
-    packet_samples_4pluto : NDArray[ np.uint8 ] = field ( init = False )
+    packet_samples : NDArray[ np.uint8 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         
