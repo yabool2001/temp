@@ -22,7 +22,7 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-tx_packet = packet.TxPacket ( payload = settings[ "TEST_1BIT" ] )
+tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
 tx_packet.plot_symbols ( tx_packet.payload_symbols , script_filename + " BPSK payload symbols" )
 tx_packet.plot_symbols ( tx_packet.packet_symbols , script_filename + " BPSK packet symbols" )
 
