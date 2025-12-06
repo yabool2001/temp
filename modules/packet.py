@@ -299,7 +299,7 @@ class TxPacket :
         self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
 
     def create_symbols ( self , bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
-        return modulation.create_bpsk_symbols_v0_1_6 ( bits )
+        return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits )
 
     def create_payload_samples_4pluto ( self ) -> None :
         self.payload_samples = np.ravel (
