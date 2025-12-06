@@ -25,8 +25,9 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_1BYTE_DEC" ] )
 tx_packet.plot_symbols ( tx_packet.payload_symbols , script_filename + " BPSK payload symbols" )
 tx_packet.plot_symbols ( tx_packet.packet_symbols , script_filename + " BPSK packet symbols" )
-tx_packet.plot_waveform ( tx_packet.payload_samples , script_filename + " BPSK payload waveform samples" )
+tx_packet.plot_waveform ( tx_packet.payload_samples , script_filename + " BPSK payload waveform samples" , True)
 tx_packet.plot_waveform ( tx_packet.packet_samples , script_filename + " BPSK packet waveform samples" )
+tx_packet.plot_spectrum ( tx_packet.packet_samples , script_filename + " BPSK packet spectrum occupancy" )
 '''
 tx_packet_upsampled = sdr.TxSamples ( tx_bpsk_packet_symbols )
 plot.spectrum_occupancy ( tx_packet_upsampled.samples , 1024 , script_filename + f" {tx_packet_upsampled.samples.size=}" )
@@ -45,10 +46,10 @@ try :
         key = stdscr.getkey ()
         if key ==  't' :
             t.sleep ( 1 )  # anty-dubler
-            sdr.tx_once ( tx_packet_upsampled , pluto_tx )
+            sdr.tx_once_v0_1_6 ( tx_packet.packet_samples , pluto_tx )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
-            sdr.tx_cyclic ( tx_packet_upsampled , pluto_tx )
+            sdr.tx_cyclic_v0_1_6 ( tx_packet.packet_samples , pluto_tx )
         elif key == 's' :
             t.sleep ( 1 ) # anty-dubler
             sdr.stop_tx_cyclic ( pluto_tx )

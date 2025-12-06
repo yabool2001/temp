@@ -68,25 +68,21 @@ def plot_complex_waveform(signal_complex: np.ndarray, title: str = "Sygnał BPSK
     fig.show()
 
 
-def complex_waveform ( signal_complex: np.ndarray, title: str = "Sygnał zespolony", marker_squares: bool = False) -> None:
+def complex_waveform ( signal_complex: NDArray[ np.complex128 ] , title: str = "Sygnał zespolony", marker_squares: bool = False) -> None:
     """
     Rysuje wykres rzeczywistej i urojonej części sygnału zespolonego.
 
     Dodatkowy parametr `marker_squares`: jeśli True, próbki zostaną oznaczone małymi kwadratami.
 
     Parametry:
-    - signal_complex: np.ndarray (complex)
+    - signal_complex: NDArray[ np.complex128 ] (complex)
     - title: tytuł wykresu
     - marker_squares: bool — czy rysować znaczniki (kwadraty) na próbkach
     """
-    if not np.iscomplexobj(signal_complex):
-        raise ValueError("Wejściowy sygnał musi być zespolony (np.ndarray typu complex).")
+    if not np.iscomplexobj ( signal_complex ) :
+        raise ValueError ( "Wejściowy sygnał musi być zespolony NDArray[ np.complex128 ]" )
 
-    df = pd.DataFrame({
-        "index": np.arange(len(signal_complex)),
-        "real": signal_complex.real,
-        "imag": signal_complex.imag
-    })
+    df = pd.DataFrame ( { "index" : np.arange ( len ( signal_complex ) ) , "real" : signal_complex.real , "imag" : signal_complex.imag } )
 
     # Wybór trybu i markerów
     if marker_squares:
@@ -101,7 +97,7 @@ def complex_waveform ( signal_complex: np.ndarray, title: str = "Sygnał zespolo
         marker_real_cfg = None
         marker_imag_cfg = None
 
-    fig = px.line(df, x="index", y="real", title=title)
+    fig = px.line ( df , x = "index" , y = "real" , title = f"{ title } { signal_complex.size= }" )
     fig.data = []  # usuń automatyczne ślady z px.line i dodaj własne z markerami
     fig.add_scatter(x=df["index"], y=df["real"], mode=mode_real, name="I (real)", line=dict(color='blue'), marker=marker_real_cfg)
     fig.add_scatter(x=df["index"], y=df["imag"], mode=mode_imag, name="Q (imag)", line=dict(color='orange', dash='dash'), marker=marker_imag_cfg)

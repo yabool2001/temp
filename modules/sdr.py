@@ -107,6 +107,18 @@ def init_pluto ( uri , f_c , f_s , bw ) :
     time.sleep ( 0.2 ) #delay after setting device parameters
     return sdr
 
+def tx_once_v0_1_6 ( samples , sdr ) :
+    sdr.tx_destroy_buffer ()
+    sdr.tx_cyclic_buffer = False
+    sdr.tx ( samples )
+    if settings["log"]["verbose_0"] : print ( f"[s] Sample sent!" )
+
+def tx_cyclic_v0_1_6 ( samples , sdr ) :
+    sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
+    sdr.tx_cyclic_buffer = True
+    sdr.tx ( samples )
+    if settings["log"]["verbose_0"] : print ( f"[c] Tx cyclic started..." )
+
 def tx_once ( samples , sdr ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False

@@ -312,11 +312,14 @@ class TxPacket :
         ).astype ( np.complex128 , copy = False )
         self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_samples )
 
-    def plot_symbols ( self , symbols , title = "" ) -> None :
+    def plot_symbols ( self , symbols : NDArray[ np.complex128 ] , title = "" ) -> None :
         plot.plot_symbols ( symbols , f"{title}" )
 
-    def plot_waveform ( self , samples , title = "" ) -> None :
-        plot.complex_waveform ( samples , f"{title}" )
+    def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
+
+    def plot_spectrum ( self , samples : NDArray[ np.complex128 ] , title = "" ) -> None :
+        plot.spectrum_occupancy ( samples , 1024 , title )
 
     def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
         np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
