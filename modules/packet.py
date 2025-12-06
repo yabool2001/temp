@@ -306,8 +306,8 @@ class TxPacket :
         crc32_bits = gen_bits ( crc32_bytes )
         self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
 
-    def plot_bpsk_symbols ( self , bpsk_symbols , title = "" ) -> None :
-        plot.plot_bpsk_symbols ( bpsk_symbols , f" BPSK Symbols {title} {bpsk_symbols.size=}" )
+    def plot_symbols ( self , symbols , title = "" ) -> None :
+        plot.plot_bpsk_symbols ( symbols , f"{title}" )
 
     def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
         np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )

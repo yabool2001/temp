@@ -172,7 +172,7 @@ def plot_bpsk_symbols(symbols: np.ndarray, title: str = "Symbole BPSK", filename
     # Wyświetlenie wykresu
     fig.show()
 
-def plot_symbols ( symbols : NDArray[ np.complex128 ] , title : str = "Symbole BPSK" ) -> None :
+def plot_symbols ( symbols : NDArray[ np.complex128 ] , title : str = "Symbole" ) -> None :
     """
     Rysuje wykres symboli BPSK (np. z ADALM-Pluto) w postaci punktów połączonych przerywaną linią.
 
