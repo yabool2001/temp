@@ -262,8 +262,9 @@ class TxPacket :
     def __post_init__ ( self ) -> None :
         
         self.create_payload_bits_and_bytes ()
-        self.create_payload_symbols ()
         self.create_packet_bits ()
+        self.payload_symbols = self.create_symbols ( self.payload_bits )
+        self.packet_symbols = self.create_symbols ( self.packet_bits )
         self.create_payload_samples_4pluto ()
 
     def create_payload_bits_and_bytes ( self ) -> None :
@@ -286,15 +287,6 @@ class TxPacket :
             self.payload_bytes = payload_arr.copy ()
             self.payload_bits = np.unpackbits ( self.payload_bytes )   # zawsze MSB first
 
-    def create_payload_symbols ( self ) -> None :
-        self.payload_symbols = modulation.create_bpsk_symbols_v0_1_6 ( self.payload_bits )
-
-    def create_payload_samples_4pluto ( self ) -> None :
-        self.payload_samples = np.ravel (
-            filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
-        ).astype ( np.complex128 , copy = False )
-        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_symbols )
-
     def create_packet_bits ( self ) -> None:
         length_bytes = [ len ( self.payload_bytes ) - 1 ]
         crc32 = zlib.crc32 ( self.payload_bytes )
@@ -306,8 +298,17 @@ class TxPacket :
         crc32_bits = gen_bits ( crc32_bytes )
         self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
 
+    def create_symbols ( self , bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
+        return modulation.create_bpsk_symbols_v0_1_6 ( bits )
+
+    def create_payload_samples_4pluto ( self ) -> None :
+        self.payload_samples = np.ravel (
+            filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
+        ).astype ( np.complex128 , copy = False )
+        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_symbols )
+
     def plot_symbols ( self , symbols , title = "" ) -> None :
-        plot.plot_bpsk_symbols ( symbols , f"{title}" )
+        plot.plot_symbols ( symbols , f"{title}" )
 
     def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
         np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
