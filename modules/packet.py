@@ -4,7 +4,7 @@ import os
 import tomllib
 
 from dataclasses import dataclass , field
-from modules import filters , modulation , sdr
+from modules import filters , modulation , plot , sdr
 from numpy.typing import NDArray
 
 script_filename = os.path.basename ( __file__ )
@@ -305,6 +305,9 @@ class TxPacket :
         header_bits = gen_bits ( length_bytes )
         crc32_bits = gen_bits ( crc32_bytes )
         self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
+
+    def plot_bpsk_symbols ( self , bpsk_symbols , title = "" ) -> None :
+        plot.plot_bpsk_symbols ( bpsk_symbols , f" BPSK Symbols {title} {bpsk_symbols.size=}" )
 
     def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
         np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
