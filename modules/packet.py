@@ -265,7 +265,8 @@ class TxPacket :
         self.create_packet_bits ()
         self.payload_symbols = self.create_symbols ( self.payload_bits )
         self.packet_symbols = self.create_symbols ( self.packet_bits )
-        self.create_payload_samples_4pluto ()
+        self.payload_samples = self.create_samples_4pluto ( self.payload_symbols )
+        self.packet_samples = self.create_samples_4pluto ( self.packet_symbols )
 
     def create_payload_bits_and_bytes ( self ) -> None :
         if not self.payload:
@@ -301,14 +302,21 @@ class TxPacket :
     def create_symbols ( self , bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
         return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits )
 
+    def create_samples_4pluto ( self , symbols : NDArray[ np.complex128 ] ) -> None :
+        samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( symbols ) ).astype ( np.complex128 , copy = False )
+        return sdr.scale_to_pluto_dac ( samples )
+
     def create_payload_samples_4pluto ( self ) -> None :
         self.payload_samples = np.ravel (
             filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
         ).astype ( np.complex128 , copy = False )
-        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_symbols )
+        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_samples )
 
     def plot_symbols ( self , symbols , title = "" ) -> None :
         plot.plot_symbols ( symbols , f"{title}" )
+
+    def plot_waveform ( self , samples , title = "" ) -> None :
+        plot.complex_waveform ( samples , f"{title}" )
 
     def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
         np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )

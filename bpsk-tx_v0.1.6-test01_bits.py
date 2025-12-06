@@ -22,16 +22,14 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
+tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_1BYTE_DEC" ] )
 tx_packet.plot_symbols ( tx_packet.payload_symbols , script_filename + " BPSK payload symbols" )
 tx_packet.plot_symbols ( tx_packet.packet_symbols , script_filename + " BPSK packet symbols" )
+tx_packet.plot_waveform ( tx_packet.payload_samples , script_filename + " BPSK payload waveform samples" )
+tx_packet.plot_waveform ( tx_packet.packet_samples , script_filename + " BPSK packet waveform samples" )
 '''
-tx_bpsk_packet_symbols = modulation.create_bpsk_symbols_v0_1_6 ( np.array ( settings["TEST_2BITS"] , dtype=np.uint8 ) )
 tx_packet_upsampled = sdr.TxSamples ( tx_bpsk_packet_symbols )
-if settings["log"]["verbose_1"] :
-    plot.plot_bpsk_symbols_v2 ( tx_bpsk_packet_symbols , script_filename + f" {tx_bpsk_packet_symbols.size=}" )
-    plot.complex_waveform ( tx_packet_upsampled.samples , script_filename + f" {tx_packet_upsampled.samples.size=}" , True )
-    plot.spectrum_occupancy ( tx_packet_upsampled.samples , 1024 , script_filename + f" {tx_packet_upsampled.samples.size=}" )
+plot.spectrum_occupancy ( tx_packet_upsampled.samples , 1024 , script_filename + f" {tx_packet_upsampled.samples.size=}" )
 '''
 pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
 
