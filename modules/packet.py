@@ -251,22 +251,26 @@ class RxPackets :
 
     # Pola uzupełnianie w __post_init__
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    # Flaga informująca, czy w buforze wykryto preambułę/synchronizację
     has_sync : bool = field ( init = False )
-    # Diagnostyczne wartości zwracane przez detektor (jeśli dostępne)
     sync_peak : float | None = field ( init = False )
     sync_power_db : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         #ustawia `has_sync` na wynik detekcji preambuły
         # Detekcja preambuły/synchronizacji
-        self.has_sync = ops_packet.is_sync_seq ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
+        self.has_sync = ops_packet.has_sync_sequence ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
         if self.has_sync :
-            print ( f"{self.has_sync=}" )
-            exit ( 0 )
+            self.plot_waveform ( self.samples , "Rx samples" )
+            self.samples_filtered = self.filter_samples ()
+            self.plot_waveform ( self.samples_filtered , "Filtered Rx samples" )
+
+
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_3 ( self.samples , False )
+    
+    def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return (
