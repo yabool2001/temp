@@ -5,7 +5,6 @@ import plotly.express as px
 
 from numpy.typing import NDArray
 from pathlib import Path
-Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 
 def open_and_init_symbols_csv ( filename ) :
     csv_file = open ( filename , mode = "w" , newline = '' )
@@ -38,9 +37,15 @@ def write_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
         for sample in samples :
             writer.writerow ( [ sample.real , sample.imag ] )
 
-def save_samples_2_npfile_v0_1_6 ( filename : str , samples : NDArray[ np.complex128 ] ) -> None :
+def save_samples_2_npfile_v0_1_6 ( filename : str , samples : NDArray[ np.complex128 ] , append : bool = False ) -> None :
+    target_path = Path ( filename )
     try :
-        np.save ( filename , samples )
+        if append :
+            np.save ( target_path , samples )
+        else :
+            if target_path.exists () :
+                target_path.unlink ()
+            np.save ( target_path , samples )
     except OSError as exc :
         print ( f"Nie udało się zapisać {filename}: {exc}" )
         raise
