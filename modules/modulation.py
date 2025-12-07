@@ -236,5 +236,3 @@ def group_peaks_by_distance(peaks, corr, min_distance=3):
         selected.append(best_index)
 
     return np.array(selected)
-
-BARKER_SAMPLES = get_barker13_bpsk_samples_v0_1_3 ( clipped = False )

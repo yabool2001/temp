@@ -260,7 +260,7 @@ class RxPackets :
     def __post_init__ ( self ) -> None :
         #ustawia `has_sync` na wynik detekcji preambuły
         # Detekcja preambuły/synchronizacji
-        res = ops_packet.is_sync_seq ( self.samples , modulation.BARKER_SAMPLES )
+        res = ops_packet.is_sync_seq ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
         # `is_sync_seq` historically returned a bool, but some versions may return
         # a tuple (peak_corr, mean_power_db). Handle both cases robustly.
         if isinstance ( res , bool ) :

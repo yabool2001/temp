@@ -24,8 +24,8 @@ for i in range ( 0 , 100 ) : # Clear buffer just to be safe
 print ( "Start Pluto Rx!" ) 
 while True :
     rx_samples = sdr.rx_samples ( pluto_rx )
-    rx_packet = packet.RxPacket ( samples = rx_samples )
-    if rx_packet.has_sync :
+    rx_packets = packet.RxPackets ( samples = rx_samples )
+    if rx_packets.has_sync :
         print ( "Preambuła znaleziona!" )
 '''
 tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
