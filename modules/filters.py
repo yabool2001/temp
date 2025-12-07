@@ -245,7 +245,7 @@ def apply_tx_rrc_filter ( symbols: np.ndarray , sps: int = 4 , beta: float = 0.3
     
     return ( filtered + 0j ) .astype ( np.complex128 )  
 
-def apply_rrc_rx_filter_v0_1_3 ( rx_samples: np.ndarray , downsample: bool = True ) -> np.ndarray :
+def apply_rrc_rx_filter_v0_1_3 ( rx_samples: NDArray[ np.complex128 ] , downsample: bool = True ) -> NDArray[ np.complex128 ] :
     """
     Filtruje odebrane próbki z SDR filtrem RRC.
     

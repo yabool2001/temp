@@ -1,11 +1,9 @@
 
 '''
-Issue #8: Tworzenie dokumentacji dla różnych parametrów rrc_filter
-
 Sekwencja uruchomienia skryptu:
 cd ~/python/temp/
 source .venv/bin/activate
-python bpsk-tx_v0.1.5.py
+python bpsk_v0.1.6-tx.py
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
@@ -22,16 +20,12 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_1BYTE_DEC" ] )
-tx_packet.plot_symbols ( tx_packet.payload_symbols , script_filename + " BPSK payload symbols" )
+tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
 tx_packet.plot_symbols ( tx_packet.packet_symbols , script_filename + " BPSK packet symbols" )
 tx_packet.plot_waveform ( tx_packet.payload_samples , script_filename + " BPSK payload waveform samples" , True)
 tx_packet.plot_waveform ( tx_packet.packet_samples , script_filename + " BPSK packet waveform samples" )
 tx_packet.plot_spectrum ( tx_packet.packet_samples , script_filename + " BPSK packet spectrum occupancy" )
-'''
-tx_packet_upsampled = sdr.TxSamples ( tx_bpsk_packet_symbols )
-plot.spectrum_occupancy ( tx_packet_upsampled.samples , 1024 , script_filename + f" {tx_packet_upsampled.samples.size=}" )
-'''
+
 pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
 
 stdscr = curses.initscr ()

@@ -4,7 +4,7 @@ import os
 import tomllib
 
 from dataclasses import dataclass , field
-from modules import filters , modulation , plot , sdr
+from modules import filters , modulation, ops_packet , plot , sdr
 from numpy.typing import NDArray
 
 script_filename = os.path.basename ( __file__ )
@@ -243,7 +243,53 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
     else :
         print ( f"Brak całej ramki." )
         return None
+
+@dataclass ( slots = True , eq = False )
+class RxPackets :
     
+    samples : NDArray[ np.complex128 ]
+
+    # Pola uzupełnianie w __post_init__
+    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    # Flaga informująca, czy w buforze wykryto preambułę/synchronizację
+    has_sync : bool = field ( init = False )
+    # Diagnostyczne wartości zwracane przez detektor (jeśli dostępne)
+    sync_peak : float | None = field ( init = False )
+    sync_power_db : float | None = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        #ustawia `has_sync` na wynik detekcji preambuły
+        # Detekcja preambuły/synchronizacji
+        res = ops_packet.is_sync_seq ( self.samples , modulation.BARKER_SAMPLES )
+        # `is_sync_seq` historically returned a bool, but some versions may return
+        # a tuple (peak_corr, mean_power_db). Handle both cases robustly.
+        if isinstance ( res , bool ) :
+            self.has_sync = res
+            self.sync_peak = None
+            self.sync_power_db = None
+        elif ( isinstance ( res , ( tuple , list ) ) and len ( res ) == 2 ) :
+            peak_val, mean_power_db = res
+            self.sync_peak = float ( peak_val )
+            self.sync_power_db = float ( mean_power_db )
+            # Use conservative defaults consistent with detector heuristics
+            self.has_sync = ( self.sync_peak >= 0.55 ) and ( self.sync_power_db >= -40.0 )
+        else :
+            # Unexpected return type — treat as no-sync but keep diagnostics
+            self.has_sync = False
+            try:
+                self.sync_peak = float ( res )
+            except Exception:
+                self.sync_peak = None
+            self.sync_power_db = None
+    
+    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
+        return filters.apply_rrc_rx_filter_v0_1_3 ( self.samples , False )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.samples.shape= } , dtype={ self.samples.dtype= }"
+        )
+
 @dataclass ( slots = True , eq = False )
 class TxPacket :
     
@@ -314,6 +360,7 @@ class TxPacket :
 
     def plot_symbols ( self , symbols : NDArray[ np.complex128 ] , title = "" ) -> None :
         plot.plot_symbols ( symbols , f"{title}" )
+        plot.complex_symbols_v0_1_6 ( symbols , f"{title}" )
 
     def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
         plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )

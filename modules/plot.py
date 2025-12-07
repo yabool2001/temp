@@ -67,13 +67,75 @@ def plot_complex_waveform(signal_complex: np.ndarray, title: str = "Sygnał BPSK
     )
     fig.show()
 
-def complex_symbols ( complex_symbols : NDArray[ np.complex128 ] , title : str = "Symbole zespolone" , marker_squares : bool = False ) -> None:
-    fig = px.scatter ( complex_symbols , x = complex_symbols.real , y = complex_symbols.imag )
-    # Piękna płaszczyzna zespolona
-    fig.update_xaxes ( range = [ -1.8 , 1.8 ] , zeroline = True , zerolinewidth = 2 , zerolinecolor = "#333" )
-    fig.update_yaxes ( range = [ -1.8 , 1.8 ] , zeroline = True , zerolinewidth = 2 , zerolinecolor="#333" , scaleanchor = "x" , scaleratio = 1 )
+def complex_symbols ( complex_symbols : NDArray[ np.complex128 ] , title : str = "Symbole zespolone" ) -> None:
+    #fig = px.scatter ( complex_symbols , x = complex_symbols.real , y = complex_symbols.imag )
+    constellation = np.array([1+1j, 1-1j, -1+1j, -1-1j], dtype=complex) / np.sqrt(2)
+    labels = np.array(['00', '01', '11', '10'])[bits]
+    fig = px.scatter(
+        x=complex_symbols,                               # bezpośrednio liczby zespolone!
+        color=labels,
+        symbol=labels,
+        color_discrete_sequence=['#FFD700', '#FFEA00', '#C0FF00', '#BFFF00'],  # złoto i limonka
+        symbol_sequence=['circle', 'square', 'diamond', 'x'],
+        opacity=0.78,
+        size_max=7,
+        title=f"<b>Konstelacja QPSK</b><br>"
+            f"E<sub>b</sub>/N<sub>0</sub> = {EbN0_dB} dB  •  {N:,} symboli",
+    )
+
+    # Idealne punkty – duże, złote z czarną obwódką
+    fig.add_scatter(
+        x=constellation,
+        mode="markers+text",
+        marker=dict(size=28, color="#FFD700", line=dict(width=4, color="black")),
+        text=['00', '01', '11', '10'],
+        textposition="middle center",
+        textfont=dict(color="black", size=14, family="Arial Black"),
+        name="Idealne symbole"
+    )
+    fig.update_xaxes(
+    range=[-1.7, 1.7],
+    zeroline=True, zerolinewidth=3, zerolinecolor="#444",
+    showgrid=True, gridwidth=1, gridcolor="#222",
+    ticks="outside", tickcolor="#555", ticklen=8,
+    title="", linewidth=2, linecolor="#555"
+)
+
+    fig.update_yaxes(
+        range=[-1.7, 1.7],
+        zeroline=True, zerolinewidth=3, zerolinecolor="#444",
+        showgrid=True, gridwidth=1, gridcolor="#222",
+        scaleanchor="x", scaleratio=1,
+        ticks="outside", tickcolor="#555", ticklen=8,
+        title="", linewidth=2, linecolor="#555"
+    )
+
+    fig.update_layout(
+        width=900, height=900,
+        plot_bgcolor="#0E1117",      # głęboka czerń tła wykresu
+        paper_bgcolor="#000000",     # czerń papieru
+        font=dict(color="#DDDDDD", size=14, family="Arial"),
+        title=dict(x=0.5, xanchor="center", y=0.95),
+        legend=dict(
+            title="Bity (Gray)",
+            bgcolor="rgba(0,0,0,0.8)",
+            bordercolor="#444",
+            borderwidth=2,
+            font=dict(color="#FFD700")
+        )
+    )
+
+    # Subtelny złoty okrąg jednostkowy
+    fig.add_shape(
+        type="circle", xref="x", yref="y",
+        x0=-1, y0=-1, x1=1, y1=1,
+        line=dict(color="#FFD700", width=2, dash="solid"),
+        opacity=0.4
+    )
+    #fig.update_xaxes ( range = [ -1.8 , 1.8 ] , zeroline = True , zerolinewidth = 2 , zerolinecolor = "#333" )
+    #fig.update_yaxes ( range = [ -1.8 , 1.8 ] , zeroline = True , zerolinewidth = 2 , zerolinecolor="#333" , scaleanchor = "x" , scaleratio = 1 )
     #fig.update_traces(marker=dict(size=6, opacity=0.7, line=dict(width=1, color='black')))
-    #fig.add_shape(type="circle", x0=-1, y0=-1, x1=1, y1=1, line_color="red", line_dash="dash")  # okrąg jednostkowy
+    #fig.add_shape ( type = "circle" , x0 = -1 , y0 = -1 , x1 = 1 , y1 = 1 , line_color = "red" , line_dash = "dash" )  # okrąg jednostkowy
     fig.show ()
 
 
@@ -305,3 +367,107 @@ def spectrum_occupancy ( samples , nperseg = 1024 , title: str = "Spectrum occup
     
     # Opcjonalnie: Zintegruj z numba dla szybszego przetwarzania dużych buforów, jeśli potrzeba
     # (np. @jit na custom PSD, ale welch jest wystarczająco szybki dla N=32768)
+
+def complex_symbols_v0_1_6(
+    complex_symbols: np.ndarray,
+    title: str = "Konstelacja na płaszczyźnie zespolonej"
+) -> None:
+    """
+    Ostateczna, niezniszczalna, piękna wersja.
+    Działa na BPSK, QPSK, 16-QAM, APSK… na wszystkim.
+    Zero błędów JSON, zero NumPy 2.0 issues.
+    """
+    z = np.asarray(complex_symbols, dtype=complex).ravel()
+
+    # --- Wykrywanie unikalnych (idealnych) symboli ---
+    rounded = np.round(z.real, 6) + 1j * np.round(z.imag, 6)
+    unique = np.unique(rounded)
+
+    # --- Przypisanie każdego symbolu do najbliższego idealnego ---
+    idx = np.argmin(np.abs(z[:, np.newaxis] - unique[np.newaxis, :]), axis=1)
+    labels = unique[idx]
+
+    # --- Czytelne formatowanie liczb zespolonych ---
+    def fmt(c: complex) -> str:
+        re = f"{c.real:.4f}".rstrip("0").rstrip(".")
+        if re == "" or re in ("-", "+"): re = "0"
+        im = f"{abs(c.imag):.4f}".rstrip("0").rstrip(".")
+        if im == "" or im == "0": 
+            return re
+        sign = "-" if c.imag < 0 else "+"
+        return f"{re}{sign}{im}j"
+
+    label_str = [fmt(c) for c in labels]
+    unique_str = [fmt(c) for c in unique]
+
+    # --- Główny wykres – teraz bezpiecznie z real/imag ---
+    fig = px.scatter(
+        x=z.real,                 # ← tylko float!
+        y=z.imag,                 # ← tylko float!
+        color=label_str,
+        symbol=label_str,
+        color_discrete_sequence=["#FFD700", "#FFEA00", "#CCFF00", "#AAFF00", "#99FF00", "#77FF00"],
+        symbol_sequence=["circle", "square", "diamond", "x", "cross", "star"],
+        opacity=0.82,
+        title=f"<b>{title}</b>",
+        labels={"x": "Re", "y": "Im"},
+        width=900,
+        height=900
+    )
+
+    # --- Idealne punkty ---
+    fig.add_scatter(
+        x=unique.real,
+        y=unique.imag,
+        mode="markers+text",
+        marker=dict(size=34, color="#FFD700", line=dict(width=5, color="black")),
+        text=[f"<b>{s}</b>" for s in unique_str],
+        textposition="middle center",
+        textfont=dict(color="black", size=14, family="Arial Black"),
+        name="Idealne"
+    )
+
+    # --- Automatyczne marginesy (NumPy 2.0 safe) ---
+    margin = 0.3
+    if len(z) > 1:
+        margin = max(0.3, 0.15 * (np.ptp(z.real) + np.ptp(z.imag)))
+
+    fig.update_xaxes(
+        range=[z.real.min() - margin, z.real.max() + margin],
+        zeroline=True, zerolinewidth=3, zerolinecolor="#555",
+        gridcolor="#222", linecolor="#666"
+    )
+    fig.update_yaxes(
+        range=[z.imag.min() - margin, z.imag.max() + margin],
+        zeroline=True, zerolinewidth=3, zerolinecolor="#555",
+        scaleanchor="x", scaleratio=1,
+        gridcolor="#222", linecolor="#666"
+    )
+
+    # --- Styl czarno-złoty ---
+    fig.update_layout(
+        plot_bgcolor="#0E1117",
+        paper_bgcolor="#000000",
+        font=dict(color="#CCCCCC", size=14),
+        title_x=0.5,
+        legend=dict(
+            title="Symbole",
+            bgcolor="rgba(0,0,0,0.7)",
+            bordercolor="#555",
+            borderwidth=2,
+            font=dict(color="#FFD700", size=12)
+        )
+    )
+
+    # --- Złoty okrąg jednostkowy (jeśli ma sens) ---
+    if np.max(np.abs(z)) <= 3.0:
+        fig.add_shape(
+            type="circle",
+            x0=-1, y0=-1, x1=1, y1=1,
+            xref="x", yref="y",
+            line_color="#FFD700",
+            line_width=2,
+            opacity=0.4
+        )
+
+    fig.show()
