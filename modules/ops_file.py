@@ -37,19 +37,14 @@ def write_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
         for sample in samples :
             writer.writerow ( [ sample.real , sample.imag ] )
 
-def save_samples_2_npfile_v0_1_6 ( filename : str , samples : NDArray[ np.complex128 ] , append : bool = False ) -> None :
+def save_samples_2_npf ( filename : str , samples : NDArray[ np.complex128 ] ) -> None :
     target_path = Path ( filename )
     try :
-        if append :
-            np.save ( target_path , samples )
-        else :
-            if target_path.exists () :
-                target_path.unlink ()
-            np.save ( target_path , samples )
+        np.save ( target_path , samples )
     except OSError as exc :
         print ( f"Nie udało się zapisać {filename}: {exc}" )
         raise
-def open_samples_from_npfile_v0_1_6 ( filename : str ) -> NDArray[ np.complex128 ] :
+def open_samples_from_npf ( filename : str ) -> NDArray[ np.complex128 ] :
     try :
         samples = np.load ( filename ).astype ( np.complex128 , copy = False )
     except OSError as exc :
