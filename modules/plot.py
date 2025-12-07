@@ -67,8 +67,17 @@ def plot_complex_waveform(signal_complex: np.ndarray, title: str = "Sygnał BPSK
     )
     fig.show()
 
+def complex_symbols ( complex_symbols : NDArray[ np.complex128 ] , title : str = "Symbole zespolone" , marker_squares : bool = False ) -> None:
+    fig = px.scatter ( complex_symbols , x = complex_symbols.real , y = complex_symbols.imag )
+    # Piękna płaszczyzna zespolona
+    fig.update_xaxes ( range = [ -1.8 , 1.8 ] , zeroline = True , zerolinewidth = 2 , zerolinecolor = "#333" )
+    fig.update_yaxes ( range = [ -1.8 , 1.8 ] , zeroline = True , zerolinewidth = 2 , zerolinecolor="#333" , scaleanchor = "x" , scaleratio = 1 )
+    #fig.update_traces(marker=dict(size=6, opacity=0.7, line=dict(width=1, color='black')))
+    #fig.add_shape(type="circle", x0=-1, y0=-1, x1=1, y1=1, line_color="red", line_dash="dash")  # okrąg jednostkowy
+    fig.show ()
 
-def complex_waveform ( signal_complex: NDArray[ np.complex128 ] , title: str = "Sygnał zespolony", marker_squares: bool = False) -> None:
+
+def complex_waveform ( signal_complex: NDArray[ np.complex128 ] , title: str = "Sygnał zespolony" , marker_squares : bool = False ) -> None:
     """
     Rysuje wykres rzeczywistej i urojonej części sygnału zespolonego.
 
