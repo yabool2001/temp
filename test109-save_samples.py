@@ -6,8 +6,8 @@ filename_clipped = "logs/barker13_samples_clipped.npy"
 filename = "logs/barker13_samples.npy"
 
 samples_clipped = modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True )
-ops_file.save_samples_2_npfile_v0_1_6 ( filename_clipped , samples_clipped )
+ops_file.save_samples_2_npfile_v0_1_6 ( filename_clipped , samples_clipped , append = False)
 
 samples = modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True )
-ops_file.save_samples_2_npfile_v0_1_6 ( filename , samples )
+ops_file.save_samples_2_npfile_v0_1_6 ( filename , samples , append = True )
 
