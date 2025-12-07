@@ -12,7 +12,6 @@ payload_bits    [ X , ... ]         variable length payload - max 256
 crc32_bits      [ X , X , X , X ]   4 bytes of payload CRC32 
 '''
 
-import adi
 import json
 import numpy as np
 import os

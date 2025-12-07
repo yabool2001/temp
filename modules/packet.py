@@ -4,7 +4,7 @@ import os
 import tomllib
 
 from dataclasses import dataclass , field
-from modules import filters , modulation, ops_packet , plot , sdr
+from modules import filters , modulation, plot , sdr
 from numpy.typing import NDArray
 
 script_filename = os.path.basename ( __file__ )
@@ -258,7 +258,7 @@ class RxPackets :
     def __post_init__ ( self ) -> None :
         #ustawia `has_sync` na wynik detekcji preambuły
         # Detekcja preambuły/synchronizacji
-        self.has_sync = ops_packet.has_sync_sequence ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
+        self.has_sync = filters.has_sync_sequence ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
         if self.has_sync :
             self.plot_waveform ( self.samples , "Rx samples" )
             self.samples_filtered = self.filter_samples ()
