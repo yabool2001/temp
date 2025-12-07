@@ -27,6 +27,7 @@ while True :
     rx_packets = packet.RxPackets ( samples = rx_samples )
     if rx_packets.has_sync :
         print ( "Preambuła znaleziona!" )
+        break
 '''
 tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
 tx_packet.plot_symbols ( tx_packet.packet_symbols , script_filename + " BPSK packet symbols" )
