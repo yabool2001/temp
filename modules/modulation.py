@@ -95,7 +95,7 @@ def signal_correlation(samples, lag=1):
     corr_norm = np.abs(corr) / (norm + 1e-12)
     return corr_norm
 
-def get_barker13_bpsk_samples_v0_1_3 ( clipped = False ) :
+def get_barker13_bpsk_samples_v0_1_3 ( clipped = False ) -> NDArray[ np.complex128 ] :
     symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
     samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
     if clipped :

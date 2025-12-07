@@ -3,6 +3,10 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
+from numpy.typing import NDArray
+from pathlib import Path
+Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
+
 def open_and_init_symbols_csv ( filename ) :
     csv_file = open ( filename , mode = "w" , newline = '' )
     csv_writer = csv.writer ( csv_file )
@@ -27,12 +31,27 @@ def open_and_write_samples_2_csv ( name , samples ) :
         csv_writer.writerow ( [ sample.real , sample.imag ] )
     return csv_file , csv_writer
 
-def write_samples_2_csv ( filename , samples ) :
+def write_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
     with open ( filename , mode = 'w' , newline = '') as file :
         writer = csv.writer ( file )
         writer.writerow ( [ 'real' , 'imag' ] )  # nagłówki kolumn
         for sample in samples :
             writer.writerow ( [ sample.real , sample.imag ] )
+
+def save_samples_2_npfile_v0_1_6 ( filename : str , samples : NDArray[ np.complex128 ] ) -> None :
+    try :
+        np.save ( filename , samples )
+    except OSError as exc :
+        print ( f"Nie udało się zapisać {filename}: {exc}" )
+        raise
+def open_samples_from_npfile_v0_1_6 ( filename : str ) -> NDArray[ np.complex128 ] :
+    try :
+        samples = np.load ( filename ).astype ( np.complex128 , copy = False )
+    except OSError as exc :
+        print ( f"Nie załadować sampli z pliku {filename}: {exc}" )
+        raise
+    return samples
+
 
 def open_csv_and_load_np_complex128 ( filename ) :
     data = np.loadtxt ( filename , delimiter = ',' , skiprows=1 )  # pomija nagłówek

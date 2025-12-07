@@ -311,6 +311,7 @@ def has_sync_sequence ( samples , sync_seq ) :
     Returns:
         bool
     """
+    start_time = t.perf_counter_ns ()
     x = np.asarray(samples)
     tpl = np.asarray(sync_seq)
     n = len(tpl)
@@ -349,5 +350,7 @@ def has_sync_sequence ( samples , sync_seq ) :
     # and a minimum power level. These defaults are conservative; adjust to taste.
     MIN_CORR = 0.55      # normalized correlation (0..1)
     MIN_POWER_DB = -40.0 # minimum mean power (dB) to accept as signal
-
+    end_time = t.perf_counter_ns ()
+    elapsed_ns = end_time - start_time
+    print ( f"has_sync_sequence perf: {elapsed_ns/1e6:.3f} ms" )
     return (peak_val >= MIN_CORR) and (mean_power_db >= MIN_POWER_DB)
