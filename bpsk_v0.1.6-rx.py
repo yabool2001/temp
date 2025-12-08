@@ -27,6 +27,7 @@ while True :
     rx_packets = packet.RxPackets ( samples = rx_samples )
     if rx_packets.has_sync :
         print ( "Preambuła znaleziona!" )
+        rx_packets.plot_waveform ( rx_samples , script_filename + " BPSK packet waveform samples" )
         break
 
 '''
