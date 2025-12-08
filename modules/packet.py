@@ -260,11 +260,7 @@ class RxPackets :
         # Detekcja preambuły/synchronizacji
         self.has_sync = filters.has_sync_sequence ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
         if self.has_sync :
-            self.plot_waveform ( self.samples , "Rx samples" )
             self.samples_filtered = self.filter_samples ()
-            self.plot_waveform ( self.samples_filtered , "Filtered Rx samples" )
-
-
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_3 ( self.samples , False )
