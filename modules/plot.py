@@ -168,7 +168,7 @@ def complex_waveform ( signal_complex: NDArray[ np.complex128 ] , title: str = "
         marker_real_cfg = None
         marker_imag_cfg = None
 
-    fig = px.line ( df , x = "index" , y = "real" , title = f"{ title } { signal_complex.size= }" )
+    fig = px.line ( df , x = "index" , y = "real" , title = f"{ title }" )
     fig.data = []  # usuń automatyczne ślady z px.line i dodaj własne z markerami
     fig.add_scatter(x=df["index"], y=df["real"], mode=mode_real, name="I (real)", line=dict(color='blue'), marker=marker_real_cfg)
     fig.add_scatter(x=df["index"], y=df["imag"], mode=mode_imag, name="Q (imag)", line=dict(color='orange', dash='dash'), marker=marker_imag_cfg)
