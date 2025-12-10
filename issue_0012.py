@@ -25,9 +25,12 @@ m = len ( samples )
 n = len ( sync_sequence )
 if m < n or n == 0:
     print ( "Błąd: Za krótki ciąg samples < sync_sequence" )
-#samples_conj =  np.conj (samples) ; plot.complex_waveform ( samples_conj , f"{script_filename} | {samples_conj.size=}" , False )
-#samples_time_reversed = samples[ : : -1 ] ; plot.complex_waveform ( samples_time_reversed , f"{script_filename} | {samples_time_reversed.size=}" , False )
-samples_conj_time_reversed =  np.conj (samples)[ : : -1 ] ; plot.complex_waveform ( samples_conj_time_reversed , f"{script_filename} | {samples_conj_time_reversed.size=}" , False )
+samples_conj =  samples.conj () ; plot.complex_waveform ( samples_conj , f"{script_filename} | {samples_conj.size=}" , False )
+samples_time_reversed = np.flip ( samples ) ; plot.complex_waveform ( samples_time_reversed , f"{script_filename} | {samples_time_reversed.size=}" , False )
+samples_conj_time_reversed =  np.flip ( samples_conj ) ; plot.complex_waveform ( samples_conj_time_reversed , f"{script_filename} | {samples_conj_time_reversed.size=}" , False )
+corr = np.correlate ( samples , sync_sequence.conj ()[ : : -1 ] , mode = 'valid' ) ; plot.complex_waveform ( corr , f"{script_filename} | {corr.size=}" , False )
+
+
 # 3. Używając np.flip() – trochę bardziej „oficjalne”
 #sync_sequence_rev = np.flip ( sync_sequence )
 #plot.complex_waveform ( sync_sequence_rev , script_filename + " sync_sequence.conj ()[ : : -1 ]" , False )
