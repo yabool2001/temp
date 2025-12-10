@@ -265,8 +265,6 @@ class RxPackets :
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_3 ( self.samples , False )
 
-
-
     def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
         plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
 

@@ -25,11 +25,15 @@ m = len ( samples )
 n = len ( sync_sequence )
 if m < n or n == 0:
     print ( "Błąd: Za krótki ciąg samples < sync_sequence" )
-samples_conj =  samples.conj () ; plot.complex_waveform ( samples_conj , f"{script_filename} | {samples_conj.size=}" , False )
-samples_time_reversed = np.flip ( samples ) ; plot.complex_waveform ( samples_time_reversed , f"{script_filename} | {samples_time_reversed.size=}" , False )
-samples_conj_time_reversed =  np.flip ( samples_conj ) ; plot.complex_waveform ( samples_conj_time_reversed , f"{script_filename} | {samples_conj_time_reversed.size=}" , False )
-corr = np.correlate ( samples , sync_sequence.conj ()[ : : -1 ] , mode = 'valid' ) ; plot.complex_waveform ( corr , f"{script_filename} | {corr.size=}" , False )
+#sync_sequence_conj =  sync_sequence.conj () ; plot.complex_waveform ( sync_sequence_conj , f"{script_filename} | {sync_sequence_conj.size=}" , False )
+#sync_sequence_fliped = np.flip ( sync_sequence ) ; plot.complex_waveform ( sync_sequence_fliped , f"{script_filename} | {sync_sequence_fliped.size=}" , False )
+#sync_sequence_conj_fliped =  np.flip ( sync_sequence.conj () ) ; plot.complex_waveform ( sync_sequence_conj_fliped , f"{script_filename} | {sync_sequence_conj_fliped.size=}" , False )
+corr = np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) ; plot.complex_waveform ( corr , f"{script_filename} | {corr.size=}" , False )
+#correlate_abs = np.abs ( correlate ) ; plot.complex_waveform ( correlate_abs , f"{script_filename} | {correlate_abs.size=}" , False )
+corr_abs = np.abs ( np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) ) ; plot.real_waveform ( corr_abs , f"{script_filename} | {corr_abs.size=}" , False )
 
+# template energy
+sync_sequence_energy = np.sum ( np.abs ( sync_sequence ) ** 2 )
 
 # 3. Używając np.flip() – trochę bardziej „oficjalne”
 #sync_sequence_rev = np.flip ( sync_sequence )

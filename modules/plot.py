@@ -171,7 +171,44 @@ def complex_waveform ( signal_complex: NDArray[ np.complex128 ] , title: str = "
     fig = px.line ( df , x = "index" , y = "real" , title = f"{ title }" )
     fig.data = []  # usuń automatyczne ślady z px.line i dodaj własne z markerami
     fig.add_scatter(x=df["index"], y=df["real"], mode=mode_real, name="I (real)", line=dict(color='blue'), marker=marker_real_cfg)
-    fig.add_scatter(x=df["index"], y=df["imag"], mode=mode_imag, name="Q (imag)", line=dict(color='orange', dash='dash'), marker=marker_imag_cfg)
+    fig.add_scatter(x=df["index"], y=df["imag"], mode=mode_imag, name="Q (imag)", line=dict(color='green', dash='dash'), marker=marker_imag_cfg)
+
+    fig.update_layout (
+        xaxis_title = "Numer próbki" ,
+        yaxis_title = "Amplituda" ,
+        xaxis = dict ( rangeslider_visible = True ) ,
+        legend = dict ( x = 0.01 , y = 0.99 ) ,
+        height = 500
+    )
+    fig.show()
+
+def real_waveform ( signal_real : NDArray[ np.float64 ] , title : str = "Sygnał rzeczywisty" , marker_squares : bool = False ) -> None :
+    """
+    Rysuje wykres wartości rzeczywistych sygnału.
+
+    Dodatkowy parametr `marker_squares`: jeśli True, próbki zostaną oznaczone małymi kwadratami.
+
+    Parametry:
+    - signal_real: NDArray[ np.float64 ] (real)
+    - title: tytuł wykresu
+    - marker_squares: bool — czy rysować znaczniki (kwadraty) na próbkach
+    """
+    if np.iscomplexobj ( signal_real ) :
+        raise ValueError ( "Wejściowy sygnał musi być rzeczywisty NDArray[ np.float64 ]" )
+
+    df = pd.DataFrame ( { "index" : np.arange ( len ( signal_real ) ) , "value" : signal_real } )
+
+    # Wybór trybu i markerów
+    if marker_squares:
+        mode = 'lines+markers'
+        marker_cfg = dict(symbol='square', size=5, color='rgba(0,0,0,0)', line=dict(color='blue', width=1))
+    else:
+        mode = 'lines'
+        marker_cfg = None
+
+    fig = px.line ( df , x = "index" , y = "value" , title = f"{ title }" )
+    fig.data = []  # usuń automatyczne ślady z px.line i dodaj własne z markerami
+    fig.add_scatter(x=df["index"], y=df["value"], mode=mode, name="Wartość", line=dict(color='blue'), marker=marker_cfg)
 
     fig.update_layout (
         xaxis_title = "Numer próbki" ,
@@ -368,10 +405,7 @@ def spectrum_occupancy ( samples , nperseg = 1024 , title: str = "Spectrum occup
     # Opcjonalnie: Zintegruj z numba dla szybszego przetwarzania dużych buforów, jeśli potrzeba
     # (np. @jit na custom PSD, ale welch jest wystarczająco szybki dla N=32768)
 
-def complex_symbols_v0_1_6(
-    complex_symbols: np.ndarray,
-    title: str = "Konstelacja na płaszczyźnie zespolonej"
-) -> None:
+def complex_symbols_v0_1_6 ( complex_symbols : np.ndarray , title : str = "Konstelacja na płaszczyźnie zespolonej" ) -> None :
     """
     Ostateczna, niezniszczalna, piękna wersja.
     Działa na BPSK, QPSK, 16-QAM, APSK… na wszystkim.
