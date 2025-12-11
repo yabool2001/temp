@@ -19,4 +19,6 @@ m = len ( samples )
 n = len ( sync_sequence )
 corr = np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) ; plot.complex_waveform ( corr , f"{script_filename} | {corr.size=}" , False )
 corr_abs = np.abs ( np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) ) ; plot.real_waveform ( corr_abs , f"{script_filename} | {corr_abs.size=}" , False )
-print ( f" {sync_sequence_energy.size=} {sync_sequence_energy=}" )
+
+sync_sequence_power = np.abs ( sync_sequence ) ** 2 ; plot.real_waveform ( sync_sequence_power , f"{script_filename} | {sync_sequence_power.size=}" , False )
+sync_sequence_energy = np.sum ( sync_sequence_power ) ; print ( f" {sync_sequence_energy.size=} {sync_sequence_energy=}" )
