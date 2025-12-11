@@ -32,8 +32,8 @@ corr = np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'vali
 #correlate_abs = np.abs ( correlate ) ; plot.complex_waveform ( correlate_abs , f"{script_filename} | {correlate_abs.size=}" , False )
 corr_abs = np.abs ( np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) ) ; plot.real_waveform ( corr_abs , f"{script_filename} | {corr_abs.size=}" , False )
 
-# template energy
-sync_sequence_energy = np.sum ( np.abs ( sync_sequence ) ** 2 )
+# sync_sequence energy
+sync_sequence_energy = np.sum ( np.abs ( sync_sequence ) ** 2 ); print ( f" {sync_sequence_energy.size=} {sync_sequence_energy=}" )
 
 # 3. Używając np.flip() – trochę bardziej „oficjalne”
 #sync_sequence_rev = np.flip ( sync_sequence )
