@@ -222,7 +222,7 @@ filename_samples_32768_6 = "logs/rx_samples_32768_6.npy" # dwukrotny przegieg i 
 
 filename_sync_sequence = "logs/barker13_samples_clipped.npy"
 
-samples  = ops_file.open_samples_from_npf ( filename_samples_32768_3_1sample )
+samples = filters.apply_rrc_rx_filter_v0_1_3 ( ops_file.open_samples_from_npf ( filename_samples_32768_3_1sample ) )
 sync_sequence = ops_file.open_samples_from_npf ( filename_sync_sequence )
 
 t0 = t.perf_counter_ns ()
