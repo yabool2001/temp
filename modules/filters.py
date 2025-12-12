@@ -102,9 +102,6 @@ def rrc_filter_v3 ( beta , sps , span ) :
 
     return h
 
-import numpy as np
-
-
 @njit ( cache = True , fastmath = True )  # Kompilacja Just-In-Time z optymalizacjami
 def rrc_filter_v4 ( beta , sps , span ) :
     """
