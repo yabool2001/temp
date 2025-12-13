@@ -256,11 +256,12 @@ class RxPackets :
     sync_power_db : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        #ustawia `has_sync` na wynik detekcji preambuły
-        # Detekcja preambuły/synchronizacji
-        self.has_sync = filters.has_sync_sequence ( self.samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
+        #filtracja próbek
+        self.samples_filtered = self.filter_samples ( self.samples , False)
+        # Detekcja preambuły/synchronizacji i ustawienie `has_sync` na wynik detekcji preambuły
+        self.has_sync = filters.has_sync_sequence ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
         if self.has_sync :
-            self.samples_filtered = self.filter_samples ()
+            pass
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_3 ( self.samples , False )

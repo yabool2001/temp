@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from scipy import signal
+from typing import Optional
 
 from modules import sdr
 from numpy.typing import NDArray
@@ -504,4 +505,57 @@ def complex_symbols_v0_1_6 ( complex_symbols : np.ndarray , title : str = "Konst
             opacity=0.4
         )
 
+    fig.show()
+
+def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex128 ] , title : str = "Sygnał zespolony", marker_squares : bool = False , marker_peaks : Optional[ NDArray[ np.int_ ] ] = None ) -> None :
+    """
+    Rozszerzona wersja funkcji complex_waveform z dodatkowym parametrem marker_peaks.
+    Jeśli marker_peaks zostanie przekazany (np.ndarray z indeksami), peaks zostaną zaznaczone trójkątami na wykresie.
+
+    Parametry:
+    - signal_complex: NDArray[np.complex128] (zespolony)
+    - title: tytuł wykresu
+    - marker_squares: bool — czy rysować znaczniki (kwadraty) na wszystkich próbkach
+    - marker_peaks: Optional[np.ndarray] — indeksy próbek, gdzie zaznaczyć trójkąty (rozmiar taki sam jak marker_squares)
+    """
+    if not np.iscomplexobj(signal_complex):
+        raise ValueError("Wejściowy sygnał musi być zespolony NDArray[np.complex128]")
+
+    df = pd.DataFrame({"index": np.arange(len(signal_complex)), "real": signal_complex.real, "imag": signal_complex.imag})
+
+    if marker_squares:
+        mode_real = 'lines+markers'
+        mode_imag = 'lines+markers'
+        marker_real_cfg = dict(symbol='square', size=5, color='rgba(0,0,0,0)', line=dict(color='blue', width=1))
+        marker_imag_cfg = dict(symbol='square', size=5, color='rgba(0,0,0,0)', line=dict(color='orange', width=1))
+    else:
+        mode_real = 'lines'
+        mode_imag = 'lines'
+        marker_real_cfg = None
+        marker_imag_cfg = None
+
+    fig = px.line(df, x="index", y="real", title=f"{title}")
+    fig.data = []  # usuń automatyczne ślady z px.line i dodaj własne z markerami
+    fig.add_scatter(x=df["index"], y=df["real"], mode=mode_real, name="I (real)", line=dict(color='blue'), marker=marker_real_cfg)
+    fig.add_scatter(x=df["index"], y=df["imag"], mode=mode_imag, name="Q (imag)", line=dict(color='green', dash='dash'), marker=marker_imag_cfg)
+
+    # Dodatek dla peaks
+    if marker_peaks is not None:
+        # Filtruj indeksy w zakresie
+        valid_peaks = marker_peaks[(marker_peaks >= 0) & (marker_peaks < len(signal_complex))]
+        if len(valid_peaks) > 0:
+            peaks_real = signal_complex[valid_peaks].real
+            peaks_imag = signal_complex[valid_peaks].imag
+            # Trójkąty dla I (real)
+            fig.add_scatter(x=valid_peaks, y=peaks_real, mode='markers', name="Peaks I", marker=dict(symbol='triangle-up', size=10, color='rgba(0,0,0,0)', line=dict(color='red', width=1)))
+            # Trójkąty dla Q (imag)
+            fig.add_scatter(x=valid_peaks, y=peaks_imag, mode='markers', name="Peaks Q", marker=dict(symbol='triangle-up', size=10, color='rgba(0,0,0,0)', line=dict(color='purple', width=1)))
+
+    fig.update_layout(
+        xaxis_title="Numer próbki",
+        yaxis_title="Amplituda",
+        xaxis=dict(rangeslider_visible=True),
+        legend=dict(x=0.01, y=0.99),
+        height=500
+    )
     fig.show()
