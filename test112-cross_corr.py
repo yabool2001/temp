@@ -7,16 +7,19 @@ import os
 from pathlib import Path
 import time as t
 
-#plt = True
-plt = False
+plt = True
+#plt = False
 
 Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 script_filename = os.path.basename ( __file__ )
 
-filename_samples_1k = "np.samples/complex_samples_1k.npy"
+filename_samples = "np.samples/complex_samples_1k.npy"
 filename_sync_sequence = "np.samples/complex_sync_sqeuence_4_1k.npy"
 
-samples  = ops_file.open_samples_from_npf ( filename_samples_1k )
+filename_samples = "logs/rx_samples_32768_1.npy"
+filename_sync_sequence = "logs/barker13_samples_clipped.npy"
+
+samples  = ops_file.open_samples_from_npf ( filename_samples )
 sync_sequence = ops_file.open_samples_from_npf ( filename_sync_sequence )
 
 #t0 = t.perf_counter_ns ()
@@ -55,6 +58,6 @@ if plt :
     plot.real_waveform ( samples_power , f"{script_filename} | {samples_power.size=}" , False )
     plot.real_waveform ( cumulative_sample_power_sum , f"{script_filename} | {cumulative_sample_power_sum.size=}" , False )
     plot.real_waveform ( window_energy , f"{script_filename} | {window_energy.size=}" , False )
-    plot.complex_waveform ( norm_corr , f"{script_filename} | {norm_corr.size=}" , False )
+    plot.real_waveform ( norm_corr , f"{script_filename} | {norm_corr.size=}" , False )
     plot.real_waveform ( norm_corr_best , f"{script_filename} | {norm_corr_best.size=}" , False )
     plot.real_waveform ( norm_corr_better , f"{script_filename} | {norm_corr_better.size=}" , False )   
