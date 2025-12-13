@@ -7,33 +7,25 @@ import os
 from pathlib import Path
 import time as t
 
-#pluto = True
-pluto = False
-plt = True
-#plt = False
-
-Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
+#Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 script_filename = os.path.basename ( __file__ )
 
-if pluto :
-    filename_samples = "logs/rx_samples_32768_1.npy"
-    filename_sync_sequence = "logs/barker13_samples_clipped.npy"
-else:
-    filename_samples = "np.samples/complex_samples_1k.npy"
-    filename_sync_sequence = "np.samples/complex_sync_sqeuence_4_1k.npy"
+plt = False
 
+filename_samples = "logs/rx_samples_32768_3_1sample_clipped.npy"
+filename_sync_sequence = "logs/sync_sequence_barker13_bpsk_clipped.npy"
 
 samples  = ops_file.open_samples_from_npf ( filename_samples )
-if pluto : samples = filters.apply_rrc_rx_filter_v0_1_3 ( samples , False )
 sync_sequence = ops_file.open_samples_from_npf ( filename_sync_sequence )
 
 #t0 = t.perf_counter_ns ()
-filters.has_sync_sequence ( samples , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
 
 m = len ( samples )
 n = len ( sync_sequence )
 corr = np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' )
 corr_abs = np.abs ( np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) )
+
+
 peak_idx_corr = int ( np.argmax ( corr ) ) ; peak_val = float ( np.abs ( corr[ peak_idx_corr ] ) ) ; print ( f"corr: {peak_idx_corr=}, {peak_val=}" )
 peak_idx_corr_abs = int ( np.argmax ( corr_abs ) ) ; peak_val = float ( corr_abs[ peak_idx_corr_abs ] ) ; print ( f"corr_abs: {peak_idx_corr_abs=}, {peak_val=}" )
 # rolling window energy for received (efficient via cumulative_sample_power_sum)
