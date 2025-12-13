@@ -322,7 +322,8 @@ def has_sync_sequence ( samples , sync_seq ) :
         return False
 
     # template energy
-    tpl_energy = np.sum(np.abs(tpl) ** 2)
+    #tpl_energy = np.sum(np.abs(tpl) ** 2)
+    tpl_energy = np.vdot ( tpl , tpl ) .real
 
     # rolling window energy for received samples (efficient via cumsum)
     x_sq = np.abs(x) ** 2
@@ -340,7 +341,7 @@ def has_sync_sequence ( samples , sync_seq ) :
     mean_power_db = 10 * np.log10(mean_power + 1e-12)
 
     # Diagnostic print (keeps previous behaviour of printing a diagnostic)
-    print(f"is_sync_seq: peak_corr={peak_val:.4f}, mean_power_db={mean_power_db:.2f} dB")
+    print(f"is_sync_seq: peak_corr={peak_val:.4f}, {peak_idx=}, mean_power_db={mean_power_db:.2f} dB")
 
     # Decision thresholds (tunable): require reasonably high normalized correlation
     # and a minimum power level. These defaults are conservative; adjust to taste.
