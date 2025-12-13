@@ -271,7 +271,7 @@ class RxPackets :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.samples.shape= } , dtype={ self.samples.dtype= }"
+            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
         )
 
     def clip_samples ( self , start : int , end : int ) -> None :
