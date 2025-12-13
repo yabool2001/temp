@@ -17,6 +17,7 @@ with open ( "settings.toml" , "rb" ) as settings_toml_file :
 
 BETA = float ( toml_settings[ "rrc_filter" ][ "BETA" ] )
 SPAN = int ( toml_settings[ "rrc_filter" ][ "SPAN" ] )
+SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
     """
@@ -242,6 +243,23 @@ def apply_tx_rrc_filter ( symbols: np.ndarray , sps: int = 4 , beta: float = 0.3
         filtered = lfilter ( rrc_taps , 1.0 , symbols )     # Tylko filtracja
     
     return ( filtered + 0j ) .astype ( np.complex128 )  
+
+def apply_rrc_rx_filter_v0_1_6 ( rx_samples: NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] :
+    """
+    Filtruje odebrane próbki z SDR filtrem RRC.
+    
+    Parametry:
+        rx_samples: Odebrane próbki (complex128) z SDR.
+
+    Zwraca:
+        Przefiltrowane próbki (complex128).
+    """
+    # Generuj współczynniki filtra RRC
+    rrc_taps = rrc_filter_v4 ( BETA , SPS , SPAN )
+    # Filtracja (uwaga: filtr musi być znormalizowany!)
+    filtered = lfilter ( rrc_taps , 1.0 , rx_samples )
+    
+    return filtered.astype ( np.complex128 )  # Gwarancja complex128
 
 def apply_rrc_rx_filter_v0_1_3 ( rx_samples: NDArray[ np.complex128 ] , downsample: bool = True ) -> NDArray[ np.complex128 ] :
     """
