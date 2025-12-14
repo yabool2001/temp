@@ -6,17 +6,20 @@ from numpy.typing import NDArray
 import os
 from pathlib import Path
 import time as t
+import csv
 
 #Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 script_filename = os.path.basename ( __file__ )
 
-plt = True
+#plt = True
+plt = False
 
 filename_samples_1 = "correlation/samples_1.npy"
 filename_samples_2 = "correlation/samples_2.npy"
 filename_samples_2_noisy_1 = "correlation/samples_2_noisy_1.npy"
 filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
 filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
+filename_results_csv = "correlation/correlation_results.csv"
 
 samples_1 = ops_file.open_real_float64_samples_from_npf ( filename_samples_1 )
 samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2 )
@@ -44,11 +47,54 @@ scenarios = [
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
-    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2 & sync_sequence_2" , "sample" : samples_2 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_1 & sync_sequence_2" , "sample" : samples_2_noisy_1 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
     ]
 
 
 
+results = []
 for scenario in scenarios:
     if scenario[ "conjugate" ] :
         scenario[ "sync_sequence" ] = np.conj ( scenario[ "sync_sequence" ] )
@@ -61,10 +107,27 @@ for scenario in scenarios:
     peak_val = np.abs ( corr[ peak_idx ] )
     name = f"{script_filename} | {scenario[ 'name' ]} {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''} {scenario[ 'desc' ]}"
     print ( f"{name} {scenario[ 'desc' ]}: {peak_idx=}, {peak_val=}" )
+    results.append ( {
+        'name' : scenario['name'],
+        'description' : scenario['desc'],
+        'correlation_mode' : scenario['mode'],
+        'conjugate' : scenario['conjugate'],
+        'flip' : scenario['flip'],
+        'magnitude' : scenario['magnitude_mode'],
+        'peak_idx' : peak_idx,
+        'peak_val' : peak_val
+    } )
     if plt :
         plot.real_waveform_v0_1_6 ( corr , f"{script_filename} | {corr.size=}" , True )
         plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{script_filename} | {scenario[ 'name' ]} {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''} {scenario[ 'desc' ]}" , True , np.array([peak_idx]) )
     
+
+with open ( filename_results_csv , 'w' , newline='' ) as csvfile :
+    fieldnames = ['name', 'description', 'correlation_mode', 'conjugate', 'flip', 'magnitude', 'peak_idx', 'peak_val']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for result in results:
+        writer.writerow(result)
 
 #t0 = t.perf_counter_ns ()
 
