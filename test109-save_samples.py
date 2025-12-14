@@ -2,14 +2,14 @@ from modules import ops_file , plot , modulation
 from pathlib import Path
 import numpy as np
 
-Path ( "normalization" ).mkdir ( parents = True , exist_ok = True )
+Path ( "correlation" ).mkdir ( parents = True , exist_ok = True )
 
 plt = True
 
-filename_samples_square_sync_sequence = "normalization/samples_square_sync_sequence.npy"
-filename_samples_triangle_sync_sequence = "normalization/samples_triangle_sync_sequence.npy"
-filename_samples_square = "normalization/samples_square.npy"
-filename_samples_triangle = "normalization/samples_triangle.npy"
+filename_samples_square_sync_sequence = "correlation/samples_square_sync_sequence.npy"
+filename_samples_triangle_sync_sequence = "correlation/samples_triangle_sync_sequence.npy"
+filename_samples_square = "normalizacorrelationtion/samples_square.npy"
+filename_samples_triangle = "correlation/samples_triangle.npy"
 
 samples_square_sync_sequence = np.array ( [ 0 , 100 , 100 , -100 , -100 , 0  ] , dtype = np.int32 )
 samples_triangle_sync_sequence = np.array ( [ 0 , 100 , 0 , -100 , 0 , 200 , 0 , -200 , 0 , 1000 , 0 , -200 , 0 , 200 , 0 , -100 , 0 , 100 , 0 ] , dtype = np.int32 )
