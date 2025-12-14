@@ -11,8 +11,8 @@ import csv
 #Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 script_filename = os.path.basename ( __file__ )
 
-#plt = True
-plt = False
+plt = True
+#plt = False
 
 filename_samples_1 = "correlation/samples_1.npy"
 filename_samples_2 = "correlation/samples_2.npy"
@@ -26,6 +26,12 @@ samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2 )
 samples_2_noisy_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_1 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
 sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
+
+#plot.real_waveform_v0_1_6 ( sync_sequence_1 , f"sync_sequence_1" , True )
+#plot.real_waveform_v0_1_6 ( sync_sequence_2 , f"sync_sequence_2" , True )
+#plot.real_waveform_v0_1_6 ( samples_1 , f"samples_1" , True )
+#plot.real_waveform_v0_1_6 ( samples_2 , f"samples_2" , True )
+#plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"samples_2_noisy_1" , True )
 
 scenarios = [
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
@@ -105,7 +111,7 @@ for scenario in scenarios:
         corr = np.abs ( corr )
     peak_idx = int ( np.argmax ( corr ) )
     peak_val = np.abs ( corr[ peak_idx ] )
-    name = f"{script_filename} | {scenario[ 'name' ]} {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''} {scenario[ 'desc' ]}"
+    name = f"{script_filename} {scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]} : {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''}"
     print ( f"{name} {scenario[ 'desc' ]}: {peak_idx=}, {peak_val=}" )
     results.append ( {
         'name' : scenario['name'],
@@ -118,8 +124,8 @@ for scenario in scenarios:
         'peak_val' : peak_val
     } )
     if plt :
-        plot.real_waveform_v0_1_6 ( corr , f"{script_filename} | {corr.size=}" , True )
-        plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{script_filename} | {scenario[ 'name' ]} {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''} {scenario[ 'desc' ]}" , True , np.array([peak_idx]) )
+        plot.real_waveform_v0_1_6 ( corr , f"{name}" , True )
+        plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array([peak_idx]) )
     
 
 with open ( filename_results_csv , 'w' , newline='' ) as csvfile :
