@@ -10,24 +10,78 @@ import time as t
 #Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 script_filename = os.path.basename ( __file__ )
 
-plt = False
+plt = True
 
-filename_samples = "logs/rx_samples_32768_3_1sample_clipped.npy"
-filename_sync_sequence = "logs/sync_sequence_barker13_bpsk_clipped.npy"
+filename_samples_1 = "correlation/samples_1.npy"
+filename_samples_2 = "correlation/samples_2.npy"
+filename_samples_2_noisy_1 = "correlation/samples_2_noisy_1.npy"
+filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
+filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
 
-samples  = ops_file.open_samples_from_npf ( filename_samples )
-sync_sequence = ops_file.open_samples_from_npf ( filename_sync_sequence )
+samples_1 = ops_file.open_real_float64_samples_from_npf ( filename_samples_1 )
+samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2 )
+samples_2_noisy_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_1 )
+sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
+sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
+
+scenarios = [
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
+    ]
+
+
+
+for scenario in scenarios:
+    if scenario[ "conjugate" ] :
+        scenario[ "sync_sequence" ] = np.conj ( scenario[ "sync_sequence" ] )
+    if scenario[ "flip" ] :
+        scenario[ "sync_sequence" ] = np.flip ( scenario[ "sync_sequence" ] )
+    corr = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
+    if scenario[ "magnitude_mode" ] :
+        corr = np.abs ( corr )
+    peak_idx = int ( np.argmax ( corr ) )
+    peak_val = np.abs ( corr[ peak_idx ] )
+    name = f"{script_filename} | {scenario[ 'name' ]} {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''} {scenario[ 'desc' ]}"
+    print ( f"{name} {scenario[ 'desc' ]}: {peak_idx=}, {peak_val=}" )
+    if plt :
+        plot.real_waveform_v0_1_6 ( corr , f"{script_filename} | {corr.size=}" , True )
+        plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{script_filename} | {scenario[ 'name' ]} {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''} {scenario[ 'desc' ]}" , True , np.array([peak_idx]) )
+    
 
 #t0 = t.perf_counter_ns ()
 
-m = len ( samples )
-n = len ( sync_sequence )
-corr = np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' )
-corr_abs = np.abs ( np.correlate ( samples , np.flip ( sync_sequence.conj () ) , mode = 'valid' ) )
+m1 = len ( samples_1 )
+m2 = len ( samples_2 )
+n1 = len ( sync_sequence_1 )
+n2 = len ( sync_sequence_2 )
 
 
-peak_idx_corr = int ( np.argmax ( corr ) ) ; peak_val = float ( np.abs ( corr[ peak_idx_corr ] ) ) ; print ( f"corr: {peak_idx_corr=}, {peak_val=}" )
-peak_idx_corr_abs = int ( np.argmax ( corr_abs ) ) ; peak_val = float ( corr_abs[ peak_idx_corr_abs ] ) ; print ( f"corr_abs: {peak_idx_corr_abs=}, {peak_val=}" )
+corr_abs_1 = np.abs ( np.correlate ( samples_1 , sync_sequence_1 , mode = 'valid' ) )
+peak_idx_corr_abs_1 = int ( np.argmax ( corr_abs_1 ) ) ; peak_val_1 = corr_abs_1[ peak_idx_corr_abs_1 ] ; print ( f"corr_abs_1: {peak_idx_corr_abs_1=}, {peak_val_1=}" )
+
+corr_abs_1_fc = np.abs ( np.correlate ( samples_1 , np.flip ( sync_sequence_1.conj () ) , mode = 'valid' ) )
+peak_idx_corr_abs_1_fc = int ( np.argmax ( corr_abs_1_fc ) ) ; peak_val_1_fc = corr_abs_1_fc[ peak_idx_corr_abs_1_fc ] ; print ( f"corr_abs_1_fc: {peak_idx_corr_abs_1_fc=}, {peak_val_1_fc=}" )
+
+
+'''
 # rolling window energy for received (efficient via cumulative_sample_power_sum)
 samples_power = np.abs ( samples ) ** 2
 cumulative_sample_power_sum = np.concatenate ( ( [ 0.0 ] , np.cumsum ( samples_power ) ) )
@@ -46,19 +100,52 @@ norm_corr_better = np.abs(corr) / (np.sqrt(window_energy * sync_sequence_energy)
 peak_idx_norm_corr_better = int ( np.argmax ( norm_corr_better ) ) ; peak_val = float ( norm_corr_better[ peak_idx_norm_corr_better ] ) ; print ( f"norm_corr_better: {peak_idx_norm_corr_better=}, {peak_val=}" )
 #t1 = t.perf_counter_ns ()
 #print ( f"Detekcja sekwencji synchronizacji tj. w filters.has_sync_sequence: {(t1 - t0)/1e3:.1f} µs ")
+
 if plt :
-    plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} | {samples.size=}" , False )
-    plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} | {samples.size=}" , False , np.array([peak_idx_corr]) )
-    plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} | {samples.size=}" , False , np.array([peak_idx_corr_abs]) )
-    plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} | {samples.size=}" , False , np.array([peak_idx_norm_corr]) )
-    plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} | {samples.size=}" , False , np.array([peak_idx_norm_corr_best]) )
-    plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} | {samples.size=}" , False , np.array([peak_idx_norm_corr_better]) )
-    plot.complex_waveform ( sync_sequence , f"{script_filename} | {sync_sequence.size=}" , False )
-    plot.complex_waveform ( corr , f"{script_filename} | {corr.size=}" , False )
-    plot.real_waveform ( corr_abs , f"{script_filename} | {corr_abs.size=}" , False )
-    plot.real_waveform ( samples_power , f"{script_filename} | {samples_power.size=}" , False )
-    plot.real_waveform ( cumulative_sample_power_sum , f"{script_filename} | {cumulative_sample_power_sum.size=}" , False )
-    plot.real_waveform ( window_energy , f"{script_filename} | {window_energy.size=}" , False )
-    plot.real_waveform ( norm_corr , f"{script_filename} | {norm_corr.size=}" , False )
-    plot.real_waveform ( norm_corr_best , f"{script_filename} | {norm_corr_best.size=}" , False )
-    plot.real_waveform ( norm_corr_better , f"{script_filename} | {norm_corr_better.size=}" , False )   
+    plot.real_waveform_v0_1_6 ( sync_sequence_1 , f"{script_filename} | {sync_sequence_1.size=}" , True )
+    plot.real_waveform_v0_1_6 ( s1_corr_1_valid , f"{script_filename} | {s1_corr_1_valid.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} s1_corr_1_valid" , True , np.array([s1_corr_1_valid_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s1_corr_1_same , f"{script_filename} | {s1_corr_1_same.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} s1_corr_1_same" , True , np.array([s1_corr_1_same_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s1_corr_1_full , f"{script_filename} | {s1_corr_1_full.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} s1_corr_1_full" , True , np.array([s1_corr_1_full_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s1_corr_1_fc_valid , f"{script_filename} | {s1_corr_1_fc_valid.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} s1_corr_1_fc_valid" , True , np.array([s1_corr_1_fc_valid_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s1_corr_1_fc_same , f"{script_filename} | {s1_corr_1_fc_same.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} s1_corr_1_fc_same" , True , np.array([s1_corr_1_fc_same_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s1_corr_1_fc_full , f"{script_filename} | {s1_corr_1_fc_full.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} s1_corr_1_fc_full" , True , np.array([s1_corr_1_fc_full_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_corr_1_valid , f"{script_filename} | {s2_corr_1_valid.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{script_filename} | {samples_2.size=} s2_corr_1_valid" , True , np.array([s2_corr_1_valid_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_corr_1_same , f"{script_filename} | {s2_corr_1_same.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{script_filename} | {samples_2.size=} s2_corr_1_same" , True , np.array([s2_corr_1_same_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_corr_1_full , f"{script_filename} | {s2_corr_1_full.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{script_filename} | {samples_2.size=} s2_corr_1_full" , True , np.array([s2_corr_1_full_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_corr_1_fc_valid , f"{script_filename} | {s2_corr_1_fc_valid.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{script_filename} | {samples_2.size=} s2_corr_1_fc_valid" , True , np.array([s2_corr_1_fc_valid_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_corr_1_fc_same , f"{script_filename} | {s2_corr_1_fc_same.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{script_filename} | {samples_2.size=} s2_corr_1_fc_same" , True , np.array([s2_corr_1_fc_same_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_corr_1_fc_full , f"{script_filename} | {s2_corr_1_fc_full.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{script_filename} | {samples_2.size=} s2_corr_1_fc_full" , True , np.array([s2_corr_1_fc_full_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_noisy_1_corr_1_valid , f"{script_filename} | {s2_noisy_1_corr_1_valid.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"{script_filename} | {samples_2_noisy_1.size=} s2_noisy_1_corr_1_valid" , True , np.array([s2_noisy_1_corr_1_valid_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_noisy_1_corr_1_same , f"{script_filename} | {s2_noisy_1_corr_1_same.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"{script_filename} | {samples_2_noisy_1.size=} s2_noisy_1_corr_1_same" , True , np.array([s2_noisy_1_corr_1_same_peak_idx]) )
+    plot.real_waveform_v0_1_6 ( s2_noisy_1_corr_1_full , f"{script_filename} | {s2_noisy_1_corr_1_full.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"{script_filename} | {samples_2_noisy_1.size=} s2_noisy_1_corr_1_full" , True , np.array([s2_noisy_1_corr_1_full_peak_idx]) )
+    
+    plot.real_waveform_v0_1_6 ( corr_abs_1.astype(np.float64) , f"{script_filename} | {corr_abs_1.size=}" , True )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{script_filename} | {samples_1.size=} corr_abs" , True , np.array([peak_idx_corr_abs_1]) )
+    
+    plot.complex_waveform_v0_1_6 ( samples_1_float64 , f"{script_filename} | {samples_1_float64.size=}" , True , np.array([peak_idx_norm_corr_1]) )
+    plot.complex_waveform_v0_1_6 ( samples_1_float64 , f"{script_filename} | {samples_1_float64.size=}" , True , np.array([peak_idx_norm_corr_best_1]) )
+    plot.complex_waveform_v0_1_6 ( samples_1_float64 , f"{script_filename} | {samples_1_float64.size=}" , True , np.array([peak_idx_norm_corr_better_1]) )
+    plot.complex_waveform ( sync_sequence_1_float64 , f"{script_filename} | {sync_sequence_1_float64.size=}" , True )
+    
+    plot.real_waveform ( corr_abs_1 , f"{script_filename} | {corr_abs_1.size=}" , True )
+    plot.real_waveform ( samples_power , f"{script_filename} | {samples_power.size=}" , True )
+    plot.real_waveform ( cumulative_sample_power_sum , f"{script_filename} | {cumulative_sample_power_sum.size=}" , True )
+    plot.real_waveform ( window_energy , f"{script_filename} | {window_energy.size=}" , True )
+    plot.real_waveform ( norm_corr_best , f"{script_filename} | {norm_corr_best.size=}" , True )
+    plot.real_waveform ( norm_corr_better , f"{script_filename} | {norm_corr_better.size=}" , True )
+    '''

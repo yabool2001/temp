@@ -220,6 +220,51 @@ def real_waveform ( signal_real : NDArray[ np.float64 ] , title : str = "Sygnał
     )
     fig.show()
 
+def real_waveform_v0_1_6(signal_real: NDArray[np.float64], title: str = "Sygnał rzeczywisty", marker_squares: bool = False, marker_peaks: Optional[NDArray[np.int_]] = None) -> None:
+    """
+    Rozszerzona wersja funkcji real_waveform z dodatkowym parametrem marker_peaks.
+    Jeśli marker_peaks zostanie przekazany (np.ndarray z indeksami), peaks zostaną zaznaczone trójkątami na wykresie.
+
+    Parametry:
+    - signal_real: NDArray[np.float64] (rzeczywisty)
+    - title: tytuł wykresu
+    - marker_squares: bool — czy rysować znaczniki (kwadraty) na wszystkich próbkach
+    - marker_peaks: Optional[NDArray[np.int_]] — indeksy próbek, gdzie zaznaczyć trójkąty (rozmiar taki sam jak marker_squares)
+    """
+    if np.iscomplexobj(signal_real):
+        raise ValueError("Wejściowy sygnał musi być rzeczywisty NDArray[np.float64]")
+
+    df = pd.DataFrame({"index": np.arange(len(signal_real)), "value": signal_real})
+
+    if marker_squares:
+        mode = 'lines+markers'
+        marker_cfg = dict(symbol='square', size=5, color='rgba(0,0,0,0)', line=dict(color='blue', width=1))
+    else:
+        mode = 'lines'
+        marker_cfg = None
+
+    fig = px.line(df, x="index", y="value", title=f"{title}")
+    fig.data = []  # usuń automatyczne ślady z px.line i dodaj własne z markerami
+    fig.add_scatter(x=df["index"], y=df["value"], mode=mode, name="Wartość", line=dict(color='blue'), marker=marker_cfg)
+
+    # Dodatek dla peaks
+    if marker_peaks is not None:
+        # Filtruj indeksy w zakresie
+        valid_peaks = marker_peaks[(marker_peaks >= 0) & (marker_peaks < len(signal_real))]
+        if len(valid_peaks) > 0:
+            peaks_values = signal_real[valid_peaks]
+            # Trójkąty dla wartości
+            fig.add_scatter(x=valid_peaks, y=peaks_values, mode='markers', name="Peaks", marker=dict(symbol='triangle-up', size=10, color='rgba(0,0,0,0)', line=dict(color='red', width=1)))
+
+    fig.update_layout(
+        xaxis_title="Numer próbki",
+        yaxis_title="Amplituda",
+        xaxis=dict(rangeslider_visible=True),
+        legend=dict(x=0.01, y=0.99),
+        height=500
+    )
+    fig.show()
+
 def plot_bpsk_symbols(symbols: np.ndarray, title: str = "Symbole BPSK", filename: str = "–") -> None:
     """
     Rysuje wykres symboli BPSK w postaci punktów połączonych przerywaną linią.
