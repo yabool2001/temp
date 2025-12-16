@@ -19,6 +19,7 @@ filename_samples_2 = "correlation/samples_2.npy"
 filename_samples_2_noisy_1 = "correlation/samples_2_noisy_1.npy"
 filename_samples_2_noisy_2 = "correlation/samples_2_noisy_2.npy"
 filename_samples_2_noisy_3 = "correlation/samples_2_noisy_3.npy"
+filename_samples_2_noisy_4 = "correlation/samples_2_noisy_4.npy"
 filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
 filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
 filename_results_csv = "correlation/correlation_results.csv"
@@ -28,6 +29,7 @@ samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2 )
 samples_2_noisy_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_1 )
 samples_2_noisy_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_2 )
 samples_2_noisy_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_3 )
+samples_2_noisy_4  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_4 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
 sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
 
@@ -141,7 +143,14 @@ scenarios = [
     { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
     { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
     { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
-    { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_4 & sync_sequence_2" , "sample" : samples_2_noisy_4 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_4 & sync_sequence_2" , "sample" : samples_2_noisy_4 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_4 & sync_sequence_2" , "sample" : samples_2_noisy_4 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_4 & sync_sequence_2" , "sample" : samples_2_noisy_4 , "sync_sequence" : sync_sequence_2 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_4 & sync_sequence_2" , "sample" : samples_2_noisy_4 , "sync_sequence" : sync_sequence_2 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s2 corr" , "desc" : "samples_2_noisy_4 & sync_sequence_2" , "sample" : samples_2_noisy_4 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True }
     ]
 
 

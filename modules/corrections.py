@@ -278,3 +278,70 @@ def costas_loop ( samples , f_s ) :
     plt.plot ( freq_log , '.-' )
     plt.show ()
     return out
+
+def generate_noisy_samples () :
+    '''
+    Zakłócenia są bardzo podobne do tych w pliku rx_samples_32768.csv i obejmują:
+    stopniowy dryft fazy (frequency offset),
+    zmienność amplitudy,
+    dodatkowy szum.
+
+    Pomiędzy powtórzeniami jest tylko 10 próbek bardzo słabego szumu, więc korelacja powinna wykryć wielokrotne szczyty, ale każdy z nich będzie nieco zniekształcony
+    – idealne do testowania robustności detekcji synchronizacji w Twoim modemie BPSK na Pluto.
+    Poziom zakłóceń można zmianiać (więcej/mniej offsetu, szumu), dostosować parametry phase_drift_rate, initial_phase, noise_std.
+    '''
+
+    # Definicja sekwencji synchronizacyjnej sync_sequence_2 (jako próbki I/Q - tutaj czysto rzeczywiste)
+    sync_seq_raw = np.array([0, 100, 0, -100, 0, 200, 0, -200, 0, 1000, 0, -200, 0, 200, 0, -100, 0, 100, 0], dtype=np.int32)
+
+    # Na podstawie analizy Twojego rzeczywistego odebranego sygnału rx_samples_32768.csv
+    # sekwencja jest przesunięta w fazie (clock offset / frequency offset) oraz ma zmienną amplitudę
+    # Symulujemy podobne zakłócenie: rotację fazy + skalowanie amplitudy + dodatkowy szum
+
+    np.random.seed(42)  # dla powtarzalności
+
+    sync_length = len(sync_seq_raw)
+
+    # Parametry zakłócenia (dostosowane, żeby było podobnie trudne jak w Twoim pliku)
+    phase_drift_rate = 0.012   # stopniowe dryft fazy (symuluje frequency offset)
+    initial_phase = np.deg2rad(15)  # początkowa faza
+    amp_variation = 0.85 + 0.15 * np.sin(np.linspace(0, np.pi, sync_length))  # zmienność amplitudy ~15%
+    noise_std = 80  # dodatkowy szum gaussowski (mniejszy niż w noisy_1, ale wystarczający)
+
+    # Jedna zakłócona wersja sekwencji
+    t = np.arange(sync_length)
+    phase = initial_phase + phase_drift_rate * t
+    rotation = np.exp(1j * phase)
+    distorted_sync = (sync_seq_raw * amp_variation) * np.real(rotation) + 1j * (sync_seq_raw * amp_variation) * np.imag(rotation)
+    distorted_sync = distorted_sync + noise_std * (np.random.randn(sync_length) + 1j * np.random.randn(sync_length))
+
+    distorted_sync_int = np.round(np.real(distorted_sync)).astype(np.int32) + 1j * np.round(np.imag(distorted_sync)).astype(np.int32)
+
+    # Teraz budujemy samples_2_noisy_4_fo: 10 powtórzeń tej samej zakłóconej sekwencji
+    # oddzielonych 10 próbkami bardzo słabego szumu (std=15)
+    repeats = 10
+    separator_len = 10
+    separator = 15 * (np.random.randn(separator_len) + 1j * np.random.randn(separator_len))
+    separator = np.round(np.real(separator)).astype(np.int32) + 1j * np.round(np.imag(separator)).astype(np.int32)
+
+    # Lista części
+    parts = [distorted_sync_int]
+    for _ in range(repeats - 1):
+        parts.append(separator)
+        parts.append(distorted_sync_int)
+
+    samples_2_noisy_4_fo_complex = np.concatenate(parts)
+
+    # Konwersja na oddzielne real i imag jako np.int32 (jeśli potrzebujesz dwóch tablic)
+    samples_2_noisy_4_fo_real = np.real(samples_2_noisy_4_fo_complex).astype(np.int32)
+    samples_2_noisy_4_fo_imag = np.imag(samples_2_noisy_4_fo_complex).astype(np.int32)
+
+    # Lub jako jedna tablica interleaved I, Q (często używana w Pluto)
+    samples_2_noisy_4_fo_interleaved = np.empty(2 * len(samples_2_noisy_4_fo_complex), dtype=np.int32)
+    samples_2_noisy_4_fo_interleaved[0::2] = samples_2_noisy_4_fo_real
+    samples_2_noisy_4_fo_interleaved[1::2] = samples_2_noisy_4_fo_imag
+
+    #print("Długość samples_2_noisy_4_fo_interleaved:", len(samples_2_noisy_4_fo_interleaved))
+    #print("Przykład pierwszych 60 wartości (I,Q):")
+    #print(samples_2_noisy_4_fo_interleaved[:60])
+    return samples_2_noisy_4_fo_real
