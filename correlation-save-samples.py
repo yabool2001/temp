@@ -16,6 +16,9 @@ filename_samples_2_noisy_2 = "correlation/samples_2_noisy_2.npy"
 filename_samples_2_noisy_3 = "correlation/samples_2_noisy_3.npy"
 filename_samples_2_noisy_4 = "correlation/samples_2_noisy_4.npy"
 
+filename_samples_3_bpsk_1 = "logs/rx_samples_32768.csv"
+samples_3_bpsk_1 = ops_file.open_csv_and_load_np_complex128 ( filename_samples_3_bpsk_1 )
+
 sync_sequence_1 = np.array ( [ 0 , 100 , 100 , -100 , -100 , 0  ] , dtype = np.int32 )
 sync_sequence_2 = np.array ( [ 0 , 100 , 0 , -100 , 0 , 200 , 0 , -200 , 0 , 1000 , 0 , -200 , 0 , 200 , 0 , -100 , 0 , 100 , 0 ] , dtype = np.int32 )
 
@@ -78,7 +81,8 @@ if plt :
     #plot.real_waveform ( samples_2_noisy_1 , f"{samples_2_noisy_1.size=}" , True )
     #plot.real_waveform ( samples_2_noisy_2 , f"{samples_2_noisy_2.size=}" , True )
     #plot.real_waveform ( samples_2_noisy_3 , f"{samples_2_noisy_3.size=}" , True )
-    plot.real_waveform ( samples_2_noisy_4 , f"{samples_2_noisy_4.size=}" , True )
+    #plot.real_waveform ( samples_2_noisy_4 , f"{samples_2_noisy_4.size=}" , True )
+    plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , False )
 
 if save :
     '''
@@ -90,6 +94,7 @@ if save :
     ops_file.save_samples_2_npf ( filename_samples_2 , samples_2 )
     ops_file.save_samples_2_npf ( filename_samples_2_noisy_1 , samples_2_noisy_1 )
     ops_file.save_samples_2_npf ( filename_samples_2_noisy_2 , samples_2_noisy_2 )
-    ops_file.save_samples_2_npf ( "correlation/samples_2_noisy_3.npy" , samples_2_noisy_3 )
-    ''' 
+    ops_file.save_samples_2_npf ( "correlation/samples_2_noisy_3.npy" , samples_2_noisy_3 ) 
     ops_file.save_samples_2_npf ( "correlation/samples_2_noisy_4.npy" , samples_2_noisy_4 )
+    '''
+    ops_file.save_samples_2_npf ( "correlation/samples_3_bpsk_1.npy" , samples_3_bpsk_1 )

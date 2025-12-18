@@ -11,16 +11,18 @@ import csv
 #Path ( "logs" ).mkdir ( parents = True , exist_ok = True )
 script_filename = os.path.basename ( __file__ )
 
-#plt = True
-plt = False
+plt = True
+#plt = False
 
 filename_samples_1 = "correlation/samples_1.npy"
 filename_samples_2 = "correlation/samples_2.npy"
 filename_samples_2_noisy_1 = "correlation/samples_2_noisy_1.npy"
 filename_samples_2_noisy_2 = "correlation/samples_2_noisy_2.npy"
 filename_samples_2_noisy_3 = "correlation/samples_2_noisy_3.npy"
+filename_samples_3_bpsk_1 = "logs/rx_samples_32768_3_1sample.npy"
 filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
 filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
+filename_sync_sequence_3 = "logs/barker13_samples_clipped.npy"
 filename_results_csv = "correlation/correlation_results.csv"
 
 samples_1 = ops_file.open_real_float64_samples_from_npf ( filename_samples_1 )
@@ -28,8 +30,14 @@ samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2 )
 samples_2_noisy_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_1 )
 samples_2_noisy_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_2 )
 samples_2_noisy_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_3 )
+samples_3_bpsk_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_3_bpsk_1 )
+sync_sequence_3 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_3 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
 sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
+
+
+######### samples muszą być filtrowane RRC przed korelacją! #########
+
 
 #plot.real_waveform_v0_1_6 ( sync_sequence_1 , f"sync_sequence_1" , True )
 #plot.real_waveform_v0_1_6 ( sync_sequence_2 , f"sync_sequence_2" , True )
@@ -37,7 +45,7 @@ sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_se
 #plot.real_waveform_v0_1_6 ( samples_2 , f"samples_2" , True )
 #plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"samples_2_noisy_1" , True )
 
-scenarios = [
+scenarios_old = [
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
     { "name" : "s1 corr" , "desc" : "samples_1 & sync_sequence_1" , "sample" : samples_1 , "sync_sequence" : sync_sequence_1 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
@@ -144,7 +152,23 @@ scenarios = [
     { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
     ]
 
-
+scenarios = [
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
+    
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
+]
 
 results = []
 for scenario in scenarios:
