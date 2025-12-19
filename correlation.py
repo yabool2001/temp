@@ -154,48 +154,46 @@ scenarios_old = [
 
 scenarios = [
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
-    
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "same"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
 ]
+
+conjugate = [ False , True ]
+flip = [ False , True ]
+magnitude_mode = [ False , True ]
 
 results = []
 for scenario in scenarios:
-    if scenario[ "conjugate" ] :
-        scenario[ "sync_sequence" ] = np.conj ( scenario[ "sync_sequence" ] )
-    if scenario[ "flip" ] :
-        scenario[ "sync_sequence" ] = np.flip ( scenario[ "sync_sequence" ] )
-    corr = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
-    if scenario[ "magnitude_mode" ] :
-        corr = np.abs ( corr )
-    peak_idx = int ( np.argmax ( corr ) )
-    peak_val = np.abs ( corr[ peak_idx ] )
-    name = f"{script_filename} {scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]} : {'conjugated' if scenario[ 'conjugate' ] else ''} {'fliped' if scenario[ 'flip' ] else ''} {'magnitued' if scenario[ 'magnitude_mode' ] else ''}"
-    print ( f"{name} {scenario[ 'desc' ]}: {peak_idx=}, {peak_val=}" )
-    results.append ( {
-        'name' : scenario['name'],
-        'description' : scenario['desc'],
-        'correlation_mode' : scenario['mode'],
-        'conjugate' : scenario['conjugate'],
-        'flip' : scenario['flip'],
-        'magnitude' : scenario['magnitude_mode'],
-        'peak_idx' : peak_idx,
-        'peak_val' : peak_val
-    } )
-    if plt :
-        plot.real_waveform_v0_1_6 ( corr , f"{name}" , True )
-        plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array([peak_idx]) )
+    for magnitude_mode_state in magnitude_mode :
+        for conjugate_state in conjugate :
+            if conjugate_state :
+                for flip_state in flip :
+                    if conjugate_state :
+                        sync_sequence = np.conj ( scenario[ "sync_sequence" ] )
+                    if flip_state :
+                        sync_sequence = np.flip ( sync_sequence )
+                    corr = np.correlate ( scenario[ "sample" ] , sync_sequence , mode = scenario[ "mode" ] )
+                    if scenario[ "magnitude_mode" ] :
+                        corr = np.abs ( corr )
+                    peak_idx = int ( np.argmax ( corr ) )
+                    peak_val = np.abs ( corr[ peak_idx ] )
+                    name = f"{script_filename} {scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]} : {'conjugated' if conjugate_state else ''} {'fliped' if flip_state else ''} {'magnitued' if magnitude_mode_state else ''}"
+                    print ( f"{name} {scenario[ 'desc' ]}: {peak_idx=}, {peak_val=}" )
+                    results.append ( {
+                        'name' : scenario['name'],
+                        'description' : scenario['desc'],
+                        'correlation_mode' : scenario['mode'],
+                        'conjugate' : conjugate_state,
+                        'flip' : flip_state,
+                        'magnitude' : magnitude_mode_state,
+                        'peak_idx' : peak_idx,
+                        'peak_val' : peak_val
+                    } )
+                    if plt :
+                        plot.real_waveform_v0_1_6 ( corr , f"{name}" , True )
+                        plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array([peak_idx]) )
     
 
 with open ( filename_results_csv , 'w' , newline='' ) as csvfile :
