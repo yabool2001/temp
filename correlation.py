@@ -20,6 +20,7 @@ filename_samples_2_noisy_1 = "correlation/samples_2_noisy_1.npy"
 filename_samples_2_noisy_2 = "correlation/samples_2_noisy_2.npy"
 filename_samples_2_noisy_3 = "correlation/samples_2_noisy_3.npy"
 filename_samples_3_bpsk_1 = "logs/rx_samples_32768_3_1sample.npy"
+filename_samples_3_bpsk_2 = "logs/rx_samples_32768_1.npy"
 filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
 filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
 filename_sync_sequence_3 = "logs/barker13_samples_clipped.npy"
@@ -31,6 +32,7 @@ samples_2_noisy_1  = ops_file.open_real_float64_samples_from_npf ( filename_samp
 samples_2_noisy_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_2 )
 samples_2_noisy_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_3 )
 samples_3_bpsk_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_3_bpsk_1 )
+samples_3_bpsk_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_3_bpsk_2 )
 sync_sequence_3 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_3 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
 sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
@@ -153,11 +155,8 @@ scenarios_old = [
     ]
 
 scenarios = [
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : False , "flip" : False , "magnitude_mode" : True } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : False } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : False , "magnitude_mode" : True } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" , "conjugate" : True , "flip" : True , "magnitude_mode" : False } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } ,
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" }
 ]
 
 conjugate = [ False , True ]
@@ -175,12 +174,12 @@ for scenario in scenarios:
                     if flip_state :
                         sync_sequence = np.flip ( sync_sequence )
                     corr = np.correlate ( scenario[ "sample" ] , sync_sequence , mode = scenario[ "mode" ] )
-                    if scenario[ "magnitude_mode" ] :
+                    if magnitude_mode_state :
                         corr = np.abs ( corr )
                     peak_idx = int ( np.argmax ( corr ) )
                     peak_val = np.abs ( corr[ peak_idx ] )
                     name = f"{script_filename} {scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]} : {'conjugated' if conjugate_state else ''} {'fliped' if flip_state else ''} {'magnitued' if magnitude_mode_state else ''}"
-                    print ( f"{name} {scenario[ 'desc' ]}: {peak_idx=}, {peak_val=}" )
+                    print ( f"{name}: {peak_idx=}, {peak_val=}" )
                     results.append ( {
                         'name' : scenario['name'],
                         'description' : scenario['desc'],
