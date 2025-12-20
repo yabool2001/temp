@@ -8,6 +8,41 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
+def correlation_v5 ( scenario ) :
+
+    corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
+    
+    corr_real = np.abs ( np.real ( corr_bpsk ) )
+    corr_imag = np.abs ( np.imag ( corr_bpsk ) )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+    #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+    peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_imag, _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_abs, _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    
+    # Sprawdź wiarygodność synchronizacji na podstawie zakresu peaks
+    if len(peaks_abs) > 0 and np.ptp(peaks_abs) <= 4:
+        print("Synchronizacja potwierdzona!")
+        # Tutaj można dodać logikę wycinania danych od peak_idx, np. od peaks_abs[0]
+    else:
+        print("Brak wiarygodnej synchronizacji")
+    
+    name = f"{scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]}"
+    print ( f"{name}: peaks_real={peaks_real}, peaks_imag={peaks_imag}, peaks_abs={peaks_abs}" )
+    plot.real_waveform_v0_1_6 ( corr_abs , f"{name}" , False , peaks_abs )
+    plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , False , peaks_abs )
+    plot.real_waveform_v0_1_6 ( corr_real , f"{name}" , False , peaks_real )
+    plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"{name}" , False , peaks_real )
+    plot.real_waveform_v0_1_6 ( corr_imag , f"{name}" , False , peaks_imag )
+    plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"{name}" , False , peaks_imag )
+
+
 def correlation_v4 ( scenario ) :
 
     corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
