@@ -1,9 +1,5 @@
 name,description,correlation_mode,conjugate,flip,magnitude,peak_idx,peak_val
-s3 corr,samples_3 & sync_sequence_3,valid,True,False,False,10436,92043.14546148879
-s3 corr,samples_3 & sync_sequence_3,valid,True,True,False,10637,67655.41403700277
-s3 corr,samples_3 & sync_sequence_3,valid,True,False,True,10436,92043.14546148879
-s3 corr,samples_3 & sync_sequence_3,valid,True,True,True,10421,77581.0233921754
-s3 corr,samples_3 & sync_sequence_3,valid,True,False,False,31889,125714.17190672489
-s3 corr,samples_3 & sync_sequence_3,valid,True,True,False,30590,82253.20305714644
-s3 corr,samples_3 & sync_sequence_3,valid,True,False,True,31889,125714.17190672489
-s3 corr,samples_3 & sync_sequence_3,valid,True,True,True,31158,85896.15604037663
+s3 corr,samples_3 & sync_sequence_3,valid,True,False,False,10368,89765.03864609485
+s3 corr,samples_3 & sync_sequence_3,valid,True,True,False,10421,61086.42837610119
+s3 corr,samples_3 & sync_sequence_3,valid,True,False,True,10368,89765.03864609485
+s3 corr,samples_3 & sync_sequence_3,valid,True,True,True,10421,61086.42837610119

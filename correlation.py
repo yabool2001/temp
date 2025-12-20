@@ -43,7 +43,7 @@ sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_se
 
 plot.complex_waveform_v0_1_6 ( sync_sequence_3 , f"{sync_sequence_3.size=}" , True )
 plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , False )
-plot.complex_waveform_v0_1_6 ( samples_3_bpsk_2 , f"{samples_3_bpsk_2.size=}" , False )
+#plot.complex_waveform_v0_1_6 ( samples_3_bpsk_2 , f"{samples_3_bpsk_2.size=}" , False )
 #plot.real_waveform_v0_1_6 ( samples_1 , f"samples_1" , True )
 #plot.real_waveform_v0_1_6 ( samples_2 , f"samples_2" , True )
 #plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"samples_2_noisy_1" , True )
@@ -158,9 +158,12 @@ scenarios_old = [
 samples_3_bpsk_1 = filters.apply_rrc_rx_filter_v0_1_6 ( samples_3_bpsk_1 )
 samples_3_bpsk_2 = filters.apply_rrc_rx_filter_v0_1_6 ( samples_3_bpsk_2 )
 
-scenarios = [
+scenarios_old2 = [
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } ,
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" }
+]
+scenarios = [
+    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
 ]
 
 conjugate = [ False , True ]
@@ -177,7 +180,7 @@ for scenario in scenarios:
                         sync_sequence = np.conj ( scenario[ "sync_sequence" ] )
                     if flip_state :
                         sync_sequence = np.flip ( sync_sequence )
-                    corr = np.correlate ( scenario[ "sample" ] , sync_sequence , mode = scenario[ "mode" ] )
+                    corr = np.correlate ( scenario[ "sample" ].imag , sync_sequence , mode = scenario[ "mode" ] )
                     if magnitude_mode_state :
                         corr = np.abs ( corr )
                     peak_idx = int ( np.argmax ( corr ) )
@@ -208,7 +211,7 @@ with open ( filename_results_csv , 'w' , newline='' ) as csvfile :
     writer.writeheader()
     for result in results:
         writer.writerow(result)
-
+'''
 #t0 = t.perf_counter_ns ()
 
 m1 = len ( samples_1 )
@@ -224,7 +227,7 @@ corr_abs_1_fc = np.abs ( np.correlate ( samples_1 , np.flip ( sync_sequence_1.co
 peak_idx_corr_abs_1_fc = int ( np.argmax ( corr_abs_1_fc ) ) ; peak_val_1_fc = corr_abs_1_fc[ peak_idx_corr_abs_1_fc ] ; print ( f"corr_abs_1_fc: {peak_idx_corr_abs_1_fc=}, {peak_val_1_fc=}" )
 
 
-'''
+
 # rolling window energy for received (efficient via cumulative_sample_power_sum)
 samples_power = np.abs ( samples ) ** 2
 cumulative_sample_power_sum = np.concatenate ( ( [ 0.0 ] , np.cumsum ( samples_power ) ) )
