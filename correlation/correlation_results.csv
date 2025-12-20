@@ -1,3 +1,2 @@
-name,description,correlation_mode,peak_real_idx,peak_real_val,peak_imag_idx,peak_imag_val
-s3 corr,samples_3 & sync_sequence_3,valid,10436,63132.350595799435,10368,89765.03864609485
-s3 corr,samples_3 & sync_sequence_3,valid,31889,90324.33982517562,30321,89101.77570007707
+peak_abs_idx,peak_abs_val,peak_real_idx,peak_real_val,peak_imag_idx,peak_imag_val
+31889,125714.17190672489,31889,90324.33982517562,30321,89101.77570007707

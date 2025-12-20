@@ -159,11 +159,11 @@ samples_3_bpsk_1 = filters.apply_rrc_rx_filter_v0_1_6 ( samples_3_bpsk_1 )
 samples_3_bpsk_2 = filters.apply_rrc_rx_filter_v0_1_6 ( samples_3_bpsk_2 )
 
 scenarios_old2 = [
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } ,
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" }
+    { "name" : "s3 corr" , "desc" : "s3_and_ss3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } ,
+    { "name" : "s3 corr" , "desc" : "s3_and_ss3" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" }
 ]
 scenarios = [
-    { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
+    { "name" : "s3 corr" , "desc" : "s3_and_ss3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
 ]
 
 conjugate = [ False , True ]
@@ -171,7 +171,7 @@ flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
 for scenario in scenarios_old2 :
-    correlation.correlation_v2 ( scenario )
+    correlation.correlation_v3 ( scenario )
 
 '''
 #t0 = t.perf_counter_ns ()
