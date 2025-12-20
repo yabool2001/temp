@@ -42,8 +42,8 @@ sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_se
 
 
 plot.complex_waveform_v0_1_6 ( sync_sequence_3 , f"{sync_sequence_3.size=}" , True )
-plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , True )
-plot.complex_waveform_v0_1_6 ( samples_3_bpsk_2 , f"{samples_3_bpsk_2.size=}" , True )
+plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , False )
+plot.complex_waveform_v0_1_6 ( samples_3_bpsk_2 , f"{samples_3_bpsk_2.size=}" , False )
 #plot.real_waveform_v0_1_6 ( samples_1 , f"samples_1" , True )
 #plot.real_waveform_v0_1_6 ( samples_2 , f"samples_2" , True )
 #plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"samples_2_noisy_1" , True )
