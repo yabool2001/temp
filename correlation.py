@@ -31,9 +31,9 @@ samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2 )
 samples_2_noisy_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_1 )
 samples_2_noisy_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_2 )
 samples_2_noisy_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_3 )
-samples_3_bpsk_1  = ops_file.open_real_float64_samples_from_npf ( filename_samples_3_bpsk_1 )
-samples_3_bpsk_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_3_bpsk_2 )
-sync_sequence_3 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_3 )
+samples_3_bpsk_1  = ops_file.open_samples_from_npf ( filename_samples_3_bpsk_1 )
+samples_3_bpsk_2  = ops_file.open_samples_from_npf ( filename_samples_3_bpsk_2 )
+sync_sequence_3 = ops_file.open_samples_from_npf ( filename_sync_sequence_3 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
 sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
 
@@ -195,7 +195,10 @@ for scenario in scenarios:
                         'peak_val' : peak_val
                     } )
                     if plt :
-                        plot.complex_waveform_v0_1_6 ( corr , f"{name}" , True , np.array ( [ peak_idx ] ) )
+                        if magnitude_mode_state :
+                            plot.real_waveform_v0_1_6 ( corr , f"{name}" , True , np.array ( [ peak_idx ] ) )
+                        else :
+                            plot.complex_waveform_v0_1_6 ( corr , f"{name}" , True , np.array ( [ peak_idx ] ) )
                         plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array ( [ peak_idx ] ) )
     
 

@@ -9,8 +9,9 @@ filename9 = "logs/rx_samples_32768_9_empty.npy"
 filename8 = "logs/rx_samples_32768_8_11samples.npy"
 filename4 = "logs/rx_samples_32768_4.npy"
 filename5 = "logs/rx_samples_32768_5.npy"
+filename_barker13_clipped = "correlation/barker13_clipped.npy"
 
-samples : NDArray[np.complex128] = ops_file.open_samples_from_npf ( filename1 )
+samples : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( filename1 )
 #samples8 : NDArray[np.complex128] = ops_file.open_samples_from_npf ( filename8 )
 #samples4 : NDArray[np.complex128] = ops_file.open_samples_from_npf ( filename4 )
 #samples5 : NDArray[np.complex128] = ops_file.open_samples_from_npf ( filename5 )
