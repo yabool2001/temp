@@ -41,8 +41,8 @@ sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_se
 ######### samples muszą być filtrowane RRC przed korelacją! #########
 
 
-plot.complex_waveform_v0_1_6 ( sync_sequence_3 , f"{sync_sequence_3.size=}" , True )
-plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , False )
+#plot.complex_waveform_v0_1_6 ( sync_sequence_3 , f"{sync_sequence_3.size=}" , True )
+#plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , False )
 #plot.complex_waveform_v0_1_6 ( samples_3_bpsk_2 , f"{samples_3_bpsk_2.size=}" , False )
 #plot.real_waveform_v0_1_6 ( samples_1 , f"samples_1" , True )
 #plot.real_waveform_v0_1_6 ( samples_2 , f"samples_2" , True )
@@ -172,37 +172,29 @@ magnitude_mode = [ False , True ]
 
 results = []
 for scenario in scenarios:
-    for magnitude_mode_state in magnitude_mode :
-        for conjugate_state in conjugate :
-            if conjugate_state :
-                for flip_state in flip :
-                    if conjugate_state :
-                        sync_sequence = np.conj ( scenario[ "sync_sequence" ] )
-                    if flip_state :
-                        sync_sequence = np.flip ( sync_sequence )
-                    corr = np.correlate ( scenario[ "sample" ].imag , sync_sequence , mode = scenario[ "mode" ] )
-                    if magnitude_mode_state :
-                        corr = np.abs ( corr )
-                    peak_idx = int ( np.argmax ( corr ) )
-                    peak_val = np.abs ( corr[ peak_idx ] )
-                    name = f"{script_filename} {scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]} : {'conjugated' if conjugate_state else ''} {'fliped' if flip_state else ''} {'magnitued' if magnitude_mode_state else ''}"
-                    print ( f"{name}: {peak_idx=}, {peak_val=}" )
-                    results.append ( {
-                        'name' : scenario['name'],
-                        'description' : scenario['desc'],
-                        'correlation_mode' : scenario['mode'],
-                        'conjugate' : conjugate_state,
-                        'flip' : flip_state,
-                        'magnitude' : magnitude_mode_state,
-                        'peak_idx' : peak_idx,
-                        'peak_val' : peak_val
-                    } )
-                    if plt :
-                        if magnitude_mode_state :
-                            plot.real_waveform_v0_1_6 ( corr , f"{name}" , True , np.array ( [ peak_idx ] ) )
-                        else :
-                            plot.complex_waveform_v0_1_6 ( corr , f"{name}" , True , np.array ( [ peak_idx ] ) )
-                        plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array ( [ peak_idx ] ) )
+    corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
+    corr_real = np.real ( corr_bpsk )
+    corr_imag = np.imag ( corr_bpsk )
+    peak_real = np.max ( np.abs ( corr_real ) )
+    peak_imag = np.max ( np.abs ( corr_imag ) )
+    peak_val = max ( peak_real , peak_imag )
+    if peak_real > peak_imag:
+        peak_idx = int ( np.argmax ( np.abs ( corr_real ) ) )
+    else:
+        peak_idx = int ( np.argmax ( np.abs ( corr_imag ) ) )
+    peak_phase = np.angle ( corr_bpsk[ peak_idx ] )
+    name = f"{script_filename} {scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]}"
+    print ( f"{name}: {peak_idx=}, {peak_val=}, {peak_phase=}" )
+    results.append ( {
+        'name' : scenario['name'],
+        'description' : scenario['desc'],
+        'correlation_mode' : scenario['mode'],
+        'peak_idx' : peak_idx,
+        'peak_val' : peak_val
+    } )
+    if plt :
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"{name}" , True , np.array ( [ peak_idx ] ) )
+        plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array ( [ peak_idx ] ) )
     
 
 with open ( filename_results_csv , 'w' , newline='' ) as csvfile :

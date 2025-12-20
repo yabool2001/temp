@@ -1,5 +1,2 @@
 name,description,correlation_mode,conjugate,flip,magnitude,peak_idx,peak_val
-s3 corr,samples_3 & sync_sequence_3,valid,True,False,False,10368,89765.03864609485
-s3 corr,samples_3 & sync_sequence_3,valid,True,True,False,10421,61086.42837610119
-s3 corr,samples_3 & sync_sequence_3,valid,True,False,True,10368,89765.03864609485
-s3 corr,samples_3 & sync_sequence_3,valid,True,True,True,10421,61086.42837610119
+s3 corr,samples_3 & sync_sequence_3,valid,,,,10368,89765.03864609485
