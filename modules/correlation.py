@@ -5,6 +5,7 @@ from numpy.typing import NDArray
 from pathlib import Path
 
 filename_results_csv = "correlation/correlation_results.csv"
+base_path = Path ( filename_results_csv )
 
 def correlation_v3 ( scenarios ) :
 
@@ -51,44 +52,34 @@ def correlation_v3 ( scenarios ) :
             writer.writerow ( result )
 
 
-def correlation_v2 ( scenarios , plt = True ) :
+def correlation_v2 ( scenario , plt = True ) :
 
-    results = []
-    for scenario in scenarios:
-        corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
-        corr_real = np.real ( corr_bpsk )
-        corr_imag = np.imag ( corr_bpsk )
-        peak_real_val = np.max ( np.abs ( corr_real ) )
-        peak_imag_val = np.max ( np.abs ( corr_imag ) )
-        #if peak_real > peak_imag:
-        peak_real_idx = int ( np.argmax ( np.abs ( corr_real ) ) )
-        peak_imag_idx = int ( np.argmax ( np.abs ( corr_imag ) ) )
-        name = f"{scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]}"
-        print ( f"{name}: {peak_real_idx=} {peak_real_val=}, {peak_imag_idx=} {peak_imag_val=}" )
-        results.append ( {
-            'name' : scenario['name'] ,
-            'description' : scenario['desc'] ,
-            'correlation_mode' : scenario['mode'] ,
-            'peak_real_idx' : peak_real_idx ,
-            'peak_real_val' : peak_real_val ,
-            'peak_imag_idx' : peak_imag_idx ,
-            'peak_imag_val' : peak_imag_val
-        } )
-        if plt :
-            plot.complex_waveform_v0_1_6 ( corr_bpsk , f"{name}" , False , np.array ( [ peak_real_idx , peak_imag_idx ] ) )
-            plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , False , np.array ( [ peak_real_idx , peak_imag_idx ] ) )
-            plot.real_waveform_v0_1_6 ( corr_bpsk.real , f"{name}" , False , np.array ( [ peak_real_idx ] ) )
-            plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"{name}" , False , np.array ( [ peak_real_idx ] ) )
-            plot.real_waveform_v0_1_6 ( corr_bpsk.imag , f"{name}" , False , np.array ( [ peak_imag_idx ] ) )
-            plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"{name}" , False , np.array ( [ peak_imag_idx ] ) )
-        
+    filename_results_csv = "correlation/correlation_results.csv"
 
-    with open ( filename_results_csv , 'w' , newline='' ) as csvfile :
-        fieldnames = [ 'name', 'description' , 'correlation_mode' , 'peak_real_idx' , 'peak_real_val' , 'peak_imag_idx' , 'peak_imag_val' ]
+    corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
+    corr_real = np.real ( corr_bpsk )
+    corr_imag = np.imag ( corr_bpsk )
+    peak_real_val = np.max ( np.abs ( corr_real ) )
+    peak_imag_val = np.max ( np.abs ( corr_imag ) )
+    #if peak_real > peak_imag:
+    peak_real_idx = int ( np.argmax ( np.abs ( corr_real ) ) )
+    peak_imag_idx = int ( np.argmax ( np.abs ( corr_imag ) ) )
+    name = f"{scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]}"
+    print ( f"{name}: {peak_real_idx=} {peak_real_val=}, {peak_imag_idx=} {peak_imag_val=}" )
+    if plt :
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"{name}" , False , np.array ( [ peak_real_idx , peak_imag_idx ] ) )
+        plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , False , np.array ( [ peak_real_idx , peak_imag_idx ] ) )
+        plot.real_waveform_v0_1_6 ( corr_bpsk.real , f"{name}" , False , np.array ( [ peak_real_idx ] ) )
+        plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"{name}" , False , np.array ( [ peak_real_idx ] ) )
+        plot.real_waveform_v0_1_6 ( corr_bpsk.imag , f"{name}" , False , np.array ( [ peak_imag_idx ] ) )
+        plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"{name}" , False , np.array ( [ peak_imag_idx ] ) )
+
+    filename = base_path.parent / f"{name}_{base_path.name}"
+    with open ( filename , 'w' , newline='' ) as csvfile :
+        fieldnames = [ 'peak_real_idx' , 'peak_real_val' , 'peak_imag_idx' , 'peak_imag_val' ]
         writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
         writer.writeheader ()
-        for result in results :
-            writer.writerow ( result )
+        writer.writerow ( { 'peak_real_idx': peak_real_idx, 'peak_real_val': peak_real_val, 'peak_imag_idx': peak_imag_idx, 'peak_imag_val': peak_imag_val } )
 
 def correlation_v1 ( scenarios , plt = True ) :
 
