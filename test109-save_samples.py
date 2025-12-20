@@ -42,8 +42,8 @@ if plt :
     #plot.real_waveform ( samples_2 , f"{samples_2.size=}" , True )
 
 if save :
-    ops_file.save_complex_samples_2_npf ( filename_barker13 , barker13 )
-    ops_file.save_complex_samples_2_npf ( filename_barker13_clipped , barker13_clipped )
+    #ops_file.save_complex_samples_2_npf ( filename_barker13 , barker13 )
+    #ops_file.save_complex_samples_2_npf ( filename_barker13_clipped , barker13_clipped )
     #ops_file.save_samples_2_npf ( filename_sync_sequence_1 , sync_sequence_1 )
     #ops_file.save_samples_2_npf ( filename_sync_sequence_2 , sync_sequence_2 )
     #ops_file.save_samples_2_npf ( filename_samples_1 , samples_1 )
