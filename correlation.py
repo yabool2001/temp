@@ -41,8 +41,9 @@ sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_se
 ######### samples muszą być filtrowane RRC przed korelacją! #########
 
 
-#plot.real_waveform_v0_1_6 ( sync_sequence_1 , f"sync_sequence_1" , True )
-#plot.real_waveform_v0_1_6 ( sync_sequence_2 , f"sync_sequence_2" , True )
+plot.complex_waveform_v0_1_6 ( sync_sequence_3 , f"{sync_sequence_3.size=}" , True )
+plot.complex_waveform_v0_1_6 ( samples_3_bpsk_1 , f"{samples_3_bpsk_1.size=}" , True )
+plot.complex_waveform_v0_1_6 ( samples_3_bpsk_2 , f"{samples_3_bpsk_2.size=}" , True )
 #plot.real_waveform_v0_1_6 ( samples_1 , f"samples_1" , True )
 #plot.real_waveform_v0_1_6 ( samples_2 , f"samples_2" , True )
 #plot.real_waveform_v0_1_6 ( samples_2_noisy_1 , f"samples_2_noisy_1" , True )
@@ -154,6 +155,9 @@ scenarios_old = [
     { "name" : "s2 corr" , "desc" : "samples_2_noisy_3 & sync_sequence_2" , "sample" : samples_2_noisy_3 , "sync_sequence" : sync_sequence_2 , "mode": "full"  , "conjugate" : True , "flip" : True , "magnitude_mode" : True }
     ]
 
+samples_3_bpsk_1 = filters.apply_rrc_rx_filter_v0_1_6 ( samples_3_bpsk_1 )
+samples_3_bpsk_2 = filters.apply_rrc_rx_filter_v0_1_6 ( samples_3_bpsk_2 )
+
 scenarios = [
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } ,
     { "name" : "s3 corr" , "desc" : "samples_3 & sync_sequence_3" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" }
@@ -191,8 +195,8 @@ for scenario in scenarios:
                         'peak_val' : peak_val
                     } )
                     if plt :
-                        plot.real_waveform_v0_1_6 ( corr , f"{name}" , True )
-                        plot.real_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array([peak_idx]) )
+                        plot.complex_waveform_v0_1_6 ( corr , f"{name}" , True , np.array ( [ peak_idx ] ) )
+                        plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"{name}" , True , np.array ( [ peak_idx ] ) )
     
 
 with open ( filename_results_csv , 'w' , newline='' ) as csvfile :

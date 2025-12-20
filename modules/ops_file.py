@@ -44,6 +44,20 @@ def save_samples_2_npf ( filename : str , samples : NDArray[ np.complex128 ] ) -
     except OSError as exc :
         print ( f"Nie udało się zapisać {filename}: {exc}" )
         raise
+
+def save_complex_samples_2_npf ( filename : str , samples : NDArray[ np.complex128 ] ) -> None :
+    """
+    Save complex samples to a .npf file with type validation.
+    """
+    if not isinstance ( samples , np.ndarray ) or samples.dtype != np.complex128 :
+        raise TypeError ( "Samples must be NDArray[np.complex128]" )
+    target_path = Path ( filename )
+    try :
+        np.save ( target_path , samples )
+    except OSError as exc :
+        print ( f"Nie udało się zapisać {filename}: {exc}" )
+        raise
+
 def open_samples_from_npf ( filename : str ) -> NDArray[ np.complex128 ] :
     try :
         samples = np.load ( filename ).astype ( np.complex128 , copy = False )
