@@ -170,7 +170,7 @@ conjugate = [ False , True ]
 flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
-correlation.correlation_v2 ( scenarios )
+correlation.correlation_v3 ( scenarios_old2 )
 
 '''
 #t0 = t.perf_counter_ns ()
