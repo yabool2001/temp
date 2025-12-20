@@ -171,7 +171,7 @@ flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
 for scenario in scenarios_old2 :
-    correlation.correlation_v3 ( scenario )
+    correlation.correlation_v4 ( scenario )
 
 '''
 #t0 = t.perf_counter_ns ()

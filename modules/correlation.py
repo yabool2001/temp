@@ -1,8 +1,9 @@
 import csv
 import numpy as np
-from modules import plot
+from modules import modulation , plot
 from numpy.typing import NDArray
 from pathlib import Path
+from scipy.signal import find_peaks
 
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
@@ -14,18 +15,23 @@ def correlation_v4 ( scenario ) :
     corr_real = np.real ( corr_bpsk )
     corr_imag = np.imag ( corr_bpsk )
     corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( np.abs ( corr_real ) )
+    max_peak_imag_val = np.max ( np.abs ( corr_imag ) )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+    #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+    peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_imag, _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_abs, _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
     
-    # Znajdź wszystkie lokalne maksima (peaks) dla real, imag, abs
-    def find_peaks(signal):
-        # Prosta metoda znajdowania lokalnych maksimów: gdzie druga różnica jest ujemna
-        diff1 = np.diff(signal)
-        diff2 = np.diff(diff1)
-        peaks = np.where(diff2 < 0)[0] + 1  # +1 bo diff przesuwa indeksy
-        return peaks
-    
-    peaks_real = find_peaks(corr_real)
-    peaks_imag = find_peaks(corr_imag)
-    peaks_abs = find_peaks(corr_abs)
+    # Sprawdź wiarygodność synchronizacji na podstawie zakresu peaks
+    if len(peaks_abs) > 0 and np.ptp(peaks_abs) <= 4:
+        print("Synchronizacja potwierdzona!")
+        # Tutaj można dodać logikę wycinania danych od peak_idx, np. od peaks_abs[0]
+    else:
+        print("Brak wiarygodnej synchronizacji")
     
     name = f"{scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]}"
     print ( f"{name}: peaks_real={peaks_real}, peaks_imag={peaks_imag}, peaks_abs={peaks_abs}" )
