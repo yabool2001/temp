@@ -24,6 +24,7 @@ filename_samples_3_bpsk_2 = "logs/rx_samples_32768_1.npy"
 filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
 filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
 filename_sync_sequence_3 = "logs/barker13_samples_clipped.npy"
+filename_sync_sequence_3_noclipping = "logs/barker13_samples.npy"
 filename_results_csv = "correlation/correlation_results.csv"
 
 samples_1 = ops_file.open_real_float64_samples_from_npf ( filename_samples_1 )
@@ -33,6 +34,7 @@ samples_2_noisy_2  = ops_file.open_real_float64_samples_from_npf ( filename_samp
 samples_2_noisy_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_3 )
 samples_3_bpsk_1  = ops_file.open_samples_from_npf ( filename_samples_3_bpsk_1 )
 samples_3_bpsk_2  = ops_file.open_samples_from_npf ( filename_samples_3_bpsk_2 )
+sync_sequence_3_noclipping = ops_file.open_samples_from_npf ( filename_sync_sequence_3_noclipping )
 sync_sequence_3 = ops_file.open_samples_from_npf ( filename_sync_sequence_3 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
 sync_sequence_2 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_2 )
@@ -162,6 +164,10 @@ scenarios_old2 = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } ,
     { "name" : "s3 corr" , "desc" : "s3_and_ss3 8 samples" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" }
 ]
+scenarios_old2_nc = [
+    { "name" : "s3 corr" , "desc" : "s3_and_ss3_noclipping 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3_noclipping , "mode": "valid" } ,
+    { "name" : "s3 corr" , "desc" : "s3_and_ss3_noclipping 8 samples" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3_noclipping , "mode": "valid" }
+]
 scenarios = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
 ]
@@ -170,7 +176,7 @@ conjugate = [ False , True ]
 flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
-for scenario in scenarios_old2 :
+for scenario in scenarios_old2_nc :
     correlation.correlation_v7 ( scenario )
 
 '''
