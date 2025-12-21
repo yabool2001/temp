@@ -1,5 +1,6 @@
 import csv
 import numpy as np
+import time as t
 from modules import modulation , plot
 from numpy.typing import NDArray
 from pathlib import Path
@@ -8,8 +9,11 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
+logg = False
 
 def correlation_v7 ( scenario ) :
+
+    t0 = t.perf_counter_ns ()
 
     corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
     
@@ -28,29 +32,32 @@ def correlation_v7 ( scenario ) :
     peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
 
     peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) )
+    t1 = t.perf_counter_ns ()
+    print ( f"Correlation scenario_old2_nc: {scenario['desc']} took {(t1 - t0)/1e3:.1f} µs" )
     
-    plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {scenario[ 'desc' ]}" , False , peaks_abs )
-    plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples abs {scenario[ 'desc' ]}" , False , peaks_abs )
-    plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {scenario[ 'desc' ]}" , False , peaks_real )
-    plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"V7 samples real {scenario[ 'desc' ]}" , False , peaks_real )
-    plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {scenario[ 'desc' ]}" , False , peaks_imag )
-    plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"V7 samples imag {scenario[ 'desc' ]}" , False , peaks_imag )
-    plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {scenario[ 'desc' ]}" , False , peaks )
-    plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples all {scenario[ 'desc' ]}" , False , peaks )
+    if logg :
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {scenario[ 'desc' ]}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples abs {scenario[ 'desc' ]}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {scenario[ 'desc' ]}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"V7 samples real {scenario[ 'desc' ]}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {scenario[ 'desc' ]}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"V7 samples imag {scenario[ 'desc' ]}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {scenario[ 'desc' ]}" , False , peaks )
+        plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples all {scenario[ 'desc' ]}" , False , peaks )
 
-    filename = base_path.parent / f"V7_{scenario['desc']}_{base_path.name}"
-    with open ( filename , 'w' , newline='' ) as csvfile :
-        fieldnames = ['corr', 'peak_idx', 'peak_val']
-        writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
-        writer.writeheader ()
-        for idx in peaks_abs :
-            writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
-        for idx in peaks_real :
-            writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
-        for idx in peaks_imag :
-            writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
-        for idx in peaks :
-            writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+        filename = base_path.parent / f"V7_{scenario['desc']}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
 
 
 def correlation_v6 ( scenario ) :
