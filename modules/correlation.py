@@ -8,6 +8,7 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
+
 def correlation_v7 ( scenario ) :
 
     corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
