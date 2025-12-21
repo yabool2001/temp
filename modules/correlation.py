@@ -8,6 +8,94 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
+def correlation_v7 ( scenario ) :
+
+    corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
+    
+    corr_real = np.abs ( np.real ( corr_bpsk ) )
+    corr_imag = np.abs ( np.imag ( corr_bpsk ) )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+    #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+    peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    
+    plot.real_waveform_v0_1_6 ( corr_abs , f"V7 abs {scenario[ 'desc' ]}" , False , peaks_abs )
+    plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 abs {scenario[ 'desc' ]}" , False , peaks_abs )
+    plot.real_waveform_v0_1_6 ( corr_real , f"V7 real {scenario[ 'desc' ]}" , False , peaks_real )
+    plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"V7 real {scenario[ 'desc' ]}" , False , peaks_real )
+    plot.real_waveform_v0_1_6 ( corr_imag , f"V7 imag {scenario[ 'desc' ]}" , False , peaks_imag )
+    plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"V7 imag {scenario[ 'desc' ]}" , False , peaks_imag )
+
+    filename = base_path.parent / f"V7_{scenario['desc']}_{base_path.name}"
+    with open ( filename , 'w' , newline='' ) as csvfile :
+        fieldnames = ['corr', 'peak_idx', 'peak_val']
+        writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+        writer.writeheader ()
+        for idx in peaks_abs :
+            writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+        for idx in peaks_real :
+            writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+        for idx in peaks_imag :
+            writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+
+
+def correlation_v6 ( scenario ) :
+
+    corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
+    
+    corr_real = np.real ( corr_bpsk )
+    corr_imag = np.imag ( corr_bpsk )
+    corr_abs = np.abs ( corr_bpsk )
+    
+    # Oblicz threshold na podstawie sync_sequence
+    L = len(scenario["sync_sequence"])
+    ideal_peak = L * np.sqrt(np.mean(np.abs(scenario["sync_sequence"])**2))
+    threshold = 0.9 * ideal_peak
+    prominence = 0.5 * ideal_peak
+    
+    # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+    peaks_real, _ = find_peaks(corr_real, height=threshold, prominence=prominence)
+    peaks_imag, _ = find_peaks(corr_imag, height=threshold, prominence=prominence)
+    peaks_abs, _ = find_peaks(corr_abs, height=threshold, prominence=prominence)
+    
+    # Zapisz wszystkie peaks do CSV
+    filename = base_path.parent / f"V6_{scenario['desc']}_{base_path.name}"
+    with open ( filename , 'w' , newline='' ) as csvfile :
+        fieldnames = ['corr', 'peak_idx', 'peak_val']
+        writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+        writer.writeheader ()
+        
+        # Dodaj wiersze dla peaks_abs
+        for idx in peaks_abs:
+            writer.writerow ({
+                'corr': 'abs',
+                'peak_idx': int(idx),
+                'peak_val': float(corr_abs[idx])
+            })
+        
+        # Dodaj wiersze dla peaks_real
+        for idx in peaks_real:
+            writer.writerow ({
+                'corr': 'real',
+                'peak_idx': int(idx),
+                'peak_val': float(corr_real[idx])
+            })
+        
+        # Dodaj wiersze dla peaks_imag
+        for idx in peaks_imag:
+            writer.writerow ({
+                'corr': 'imag',
+                'peak_idx': int(idx),
+                'peak_val': float(corr_imag[idx])
+            })
+    
 def correlation_v5 ( scenario ) :
 
     corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
@@ -22,16 +110,9 @@ def correlation_v5 ( scenario ) :
 
     # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
     #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
-    peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-    peaks_imag, _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-    peaks_abs, _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-    
-    # Sprawdź wiarygodność synchronizacji na podstawie zakresu peaks
-    if len(peaks_abs) > 0 and np.ptp(peaks_abs) <= 4:
-        print("Synchronizacja potwierdzona!")
-        # Tutaj można dodać logikę wycinania danych od peak_idx, np. od peaks_abs[0]
-    else:
-        print("Brak wiarygodnej synchronizacji")
+    peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+    peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
     
     name = f"{scenario[ 'desc' ]} | {scenario[ 'name' ]} {scenario[ 'mode' ]}"
     print ( f"{name}: peaks_real={peaks_real}, peaks_imag={peaks_imag}, peaks_abs={peaks_abs}" )
@@ -41,6 +122,17 @@ def correlation_v5 ( scenario ) :
     plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"{name}" , False , peaks_real )
     plot.real_waveform_v0_1_6 ( corr_imag , f"{name}" , False , peaks_imag )
     plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"{name}" , False , peaks_imag )
+
+    filename = base_path.parent / f"V5_{scenario['desc']}_{base_path.name}"
+    with open ( filename , 'w' , newline='' ) as csvfile :
+        fieldnames = [ 'peaks_abs_idx' , 'peaks_real_idx' , 'peaks_imag_idx' ,]
+        writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+        writer.writeheader ()
+        writer.writerow ( {
+            'peaks_abs_idx': peaks_abs ,
+            'peaks_real_idx': peaks_real ,
+            'peaks_imag_idx': peaks_imag
+        } )
 
 
 def correlation_v4 ( scenario ) :
@@ -76,7 +168,6 @@ def correlation_v4 ( scenario ) :
     plot.real_waveform_v0_1_6 ( scenario[ "sample" ].real , f"{name}" , False , peaks_real )
     plot.real_waveform_v0_1_6 ( corr_bpsk.imag , f"{name}" , False , peaks_imag )
     plot.real_waveform_v0_1_6 ( scenario[ "sample" ].imag , f"{name}" , False , peaks_imag )
-
 
 def correlation_v3 ( scenario ) :
 
