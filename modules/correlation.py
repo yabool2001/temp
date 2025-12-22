@@ -31,7 +31,9 @@ def correlation_v8 ( scenario ) :
     max_peak_imag_val = np.max ( corr_imag )
     max_peak_abs_val = np.max ( corr_abs )
 
-    if np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) > max_amplitude * 12 :
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > 12 :
         sync = True
         # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
         #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
@@ -40,7 +42,7 @@ def correlation_v8 ( scenario ) :
         peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
         peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) )
     else :
-        print ( f"Nie ma korelacji!" )
+        print ( f"Nie ma korelacji! {corr_2_amp=}" )
 
     t1 = t.perf_counter_ns ()
     print ( f"Correlation scenario_old2_nc: {scenario['desc']} took {(t1 - t0)/1e3:.1f} µs" )

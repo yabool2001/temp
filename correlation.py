@@ -189,7 +189,7 @@ conjugate = [ False , True ]
 flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
-for scenario in scenarios_8_samples :
+for scenario in scenarios_0_samples :
     has_sync = correlation.correlation_v8 ( scenario )
 if has_sync is not None :
     print ( f"{has_sync=}" )
