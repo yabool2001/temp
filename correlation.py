@@ -168,15 +168,18 @@ scenarios_old2_nc = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3_noclipping 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3_noclipping , "mode": "valid" } ,
     { "name" : "s3 corr" , "desc" : "s3_and_ss3_noclipping 8 samples" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3_noclipping , "mode": "valid" }
 ]
-scenarios = [
+scenarios_1samples = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
+]
+scenarios_8sampless = [
+    { "name" : "s3 corr" , "desc" : "s3_and_ss3 8 samples" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
 ]
 
 conjugate = [ False , True ]
 flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
-for scenario in scenarios_old2 :
+for scenario in scenarios_8sampless :
     correlation.correlation_v7 ( scenario )
 
 '''
