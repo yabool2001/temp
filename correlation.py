@@ -180,7 +180,7 @@ flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
 for scenario in scenarios_8sampless :
-    correlation.correlation_v7 ( scenario )
+    correlation.correlation_v8 ( scenario )
 
 '''
 #t0 = t.perf_counter_ns ()
