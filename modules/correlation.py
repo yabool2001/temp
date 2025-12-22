@@ -15,6 +15,7 @@ wrt = True
 
 def correlation_v8 ( scenario ) :
 
+    peaks = np.array ( [] )
     sync = False
     t0 = t.perf_counter_ns ()
 
@@ -69,6 +70,7 @@ def correlation_v8 ( scenario ) :
             for idx in peaks :
                 writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
 
+        return peaks
 
 def correlation_v7 ( scenario ) :
 
