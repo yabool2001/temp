@@ -254,6 +254,7 @@ class RxPackets :
     has_sync : bool = field ( init = False )
     sync_peak : float | None = field ( init = False )
     sync_power_db : float | None = field ( init = False )
+    max_amplitude : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         #filtracja próbek

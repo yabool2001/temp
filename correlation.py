@@ -21,6 +21,8 @@ filename_samples_2_noisy_2 = "correlation/samples_2_noisy_2.npy"
 filename_samples_2_noisy_3 = "correlation/samples_2_noisy_3.npy"
 filename_samples_3_bpsk_1 = "logs/rx_samples_32768_3_1sample.npy"
 filename_samples_3_bpsk_2 = "logs/rx_samples_32768_1.npy"
+filename_samples_4_bpsk_1 = "logs/rx_samples_32768_2.npy"
+filename_samples_5_bpsk_1 = "logs/rx_samples_32768_9_empty.npy"
 filename_sync_sequence_1 = "correlation/sync_sequence_1.npy"
 filename_sync_sequence_2 = "correlation/sync_sequence_2.npy"
 filename_sync_sequence_3 = "logs/barker13_samples_clipped.npy"
@@ -34,6 +36,8 @@ samples_2_noisy_2  = ops_file.open_real_float64_samples_from_npf ( filename_samp
 samples_2_noisy_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_noisy_3 )
 samples_3_bpsk_1  = ops_file.open_samples_from_npf ( filename_samples_3_bpsk_1 )
 samples_3_bpsk_2  = ops_file.open_samples_from_npf ( filename_samples_3_bpsk_2 )
+samples_4_bpsk_1  = ops_file.open_samples_from_npf ( filename_samples_4_bpsk_1 )
+samples_5_bpsk_1  = ops_file.open_samples_from_npf ( filename_samples_5_bpsk_1 )
 sync_sequence_3_noclipping = ops_file.open_samples_from_npf ( filename_sync_sequence_3_noclipping )
 sync_sequence_3 = ops_file.open_samples_from_npf ( filename_sync_sequence_3 )
 sync_sequence_1 = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence_1 )
@@ -168,18 +172,24 @@ scenarios_old2_nc = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3_noclipping 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3_noclipping , "mode": "valid" } ,
     { "name" : "s3 corr" , "desc" : "s3_and_ss3_noclipping 8 samples" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3_noclipping , "mode": "valid" }
 ]
-scenarios_1samples = [
+scenarios_1_samples = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3 1 sample" , "sample" : samples_3_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
 ]
-scenarios_8sampless = [
+scenarios_8_samples = [
     { "name" : "s3 corr" , "desc" : "s3_and_ss3 8 samples" , "sample" : samples_3_bpsk_2 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
+]
+scenarios_full_samples = [
+    { "name" : "s4 corr" , "desc" : "s4_and_ss3 many samples" , "sample" : samples_4_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
+]
+scenarios_0_samples = [
+    { "name" : "s5 corr" , "desc" : "s5_and_ss3 empty samples" , "sample" : samples_5_bpsk_1 , "sync_sequence" : sync_sequence_3 , "mode": "valid" } 
 ]
 
 conjugate = [ False , True ]
 flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
-for scenario in scenarios_8sampless :
+for scenario in scenarios_1_samples :
     correlation.correlation_v8 ( scenario )
 
 '''

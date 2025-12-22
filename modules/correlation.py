@@ -9,12 +9,16 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
-plt = False
+plt = True
 wrt = True
+
 
 def correlation_v8 ( scenario ) :
 
+    sync = False
     t0 = t.perf_counter_ns ()
+
+    max_amplitude = np.max ( np.abs ( scenario [ 'sample' ] ) )
 
     corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
     
@@ -26,22 +30,21 @@ def correlation_v8 ( scenario ) :
     max_peak_imag_val = np.max ( corr_imag )
     max_peak_abs_val = np.max ( corr_abs )
 
-    # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
-    #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
-    peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-    peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-    peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-
-    peaks = np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) )
-    peaks = np.unique(peaks)
-
-    #peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) )
-
+    if np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) > max_amplitude * 12 :
+        sync = True
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) )
+    else :
+        print ( f"Nie ma korelacji!" )
 
     t1 = t.perf_counter_ns ()
     print ( f"Correlation scenario_old2_nc: {scenario['desc']} took {(t1 - t0)/1e3:.1f} µs" )
     
-    if plt :
+    if plt and sync :
         plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {scenario[ 'desc' ]}" , False , peaks_abs )
         plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples abs {scenario[ 'desc' ]}" , False , peaks_abs )
         plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {scenario[ 'desc' ]}" , False , peaks_real )
@@ -51,7 +54,7 @@ def correlation_v8 ( scenario ) :
         plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {scenario[ 'desc' ]}" , False , peaks )
         plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples all {scenario[ 'desc' ]}" , False , peaks )
 
-    if wrt :
+    if wrt and sync:
         filename = base_path.parent / f"V7_{scenario['desc']}_{base_path.name}"
         with open ( filename , 'w' , newline='' ) as csvfile :
             fieldnames = ['corr', 'peak_idx', 'peak_val']
