@@ -9,7 +9,9 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
-logg = False
+plt = True
+wrt = True
+
 
 def correlation_v7 ( scenario ) :
 
@@ -35,7 +37,7 @@ def correlation_v7 ( scenario ) :
     t1 = t.perf_counter_ns ()
     print ( f"Correlation scenario_old2_nc: {scenario['desc']} took {(t1 - t0)/1e3:.1f} µs" )
     
-    if logg :
+    if plt :
         plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {scenario[ 'desc' ]}" , False , peaks_abs )
         plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples abs {scenario[ 'desc' ]}" , False , peaks_abs )
         plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {scenario[ 'desc' ]}" , False , peaks_real )
@@ -45,6 +47,7 @@ def correlation_v7 ( scenario ) :
         plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {scenario[ 'desc' ]}" , False , peaks )
         plot.complex_waveform_v0_1_6 ( scenario[ "sample" ] , f"V7 samples all {scenario[ 'desc' ]}" , False , peaks )
 
+    if wrt :
         filename = base_path.parent / f"V7_{scenario['desc']}_{base_path.name}"
         with open ( filename , 'w' , newline='' ) as csvfile :
             fieldnames = ['corr', 'peak_idx', 'peak_val']

@@ -176,7 +176,7 @@ conjugate = [ False , True ]
 flip = [ False , True ]
 magnitude_mode = [ False , True ]
 
-for scenario in scenarios_old2_nc :
+for scenario in scenarios_old2 :
     correlation.correlation_v7 ( scenario )
 
 '''
