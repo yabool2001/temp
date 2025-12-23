@@ -9,8 +9,8 @@ from scipy.signal import find_peaks
 filename_results_csv = "correlation/correlation_results.csv"
 base_path = Path ( filename_results_csv )
 
-plt = True
-wrt = True
+plt = False
+wrt = False
 
 
 def correlation_v8 ( scenario ) :
@@ -18,8 +18,10 @@ def correlation_v8 ( scenario ) :
     peaks = np.array ( [] )
     sync = False
     t0 = t.perf_counter_ns ()
-
-    max_amplitude = np.max ( np.abs ( scenario [ 'sample' ] ) )
+    max_amplitude = np.max(np.abs(scenario['sample']))
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
 
     corr_bpsk = np.correlate ( scenario[ "sample" ] , scenario[ "sync_sequence" ] , mode = scenario[ "mode" ] )
     
@@ -40,7 +42,7 @@ def correlation_v8 ( scenario ) :
         peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
         peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
         peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
-        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
     else :
         print ( f"Nie ma korelacji! {corr_2_amp=}" )
 

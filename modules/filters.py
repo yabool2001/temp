@@ -1,12 +1,14 @@
+import csv
 import json
 import numpy as np
 import time as t
 import tomllib
 
-from modules import modulation
+from modules import modulation , plot
 from numba import njit  # Dodane dla przyspieszenia obliczeń
 from numpy.typing import NDArray
-from scipy.signal import lfilter , upfirdn
+from pathlib import Path
+from scipy.signal import lfilter , upfirdn , find_peaks
 
 with open ( "settings.json" , "r" ) as settings_json_file :
     settings = json.load ( settings_json_file )
@@ -312,6 +314,69 @@ def apply_rrc_rx_filter ( rx_samples: np.ndarray , sps: int = 4 , beta: float = 
         filtered = filtered[::sps]  # Wybierz 1 próbkę na symbol
     
     return filtered.astype ( np.complex128 )  # Gwarancja complex128
+
+def get_sync_sequence_idxs  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = True
+    sync = False
+    base_path = Path ( "correlation/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    sync = False
+    max_amplitude = np.max ( np.abs ( samples ) )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio :
+        sync = True
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
+
+    
+    if plt and sync :
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples abs {samples.size=}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"V7 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+        return peaks
 
 def has_sync_sequence ( samples , sync_seq ) :
     """

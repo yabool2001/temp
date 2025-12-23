@@ -251,16 +251,19 @@ class RxPackets :
 
     # Pola uzupełnianie w __post_init__
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    has_sync : bool = field ( init = False )
-    sync_peak : float | None = field ( init = False )
+    #has_sync : bool = field ( init = False )
+    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
     sync_power_db : float | None = field ( init = False )
     max_amplitude : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         #filtracja próbek
-        self.samples_filtered = self.filter_samples ( self.samples)
+        self.samples_filtered = self.filter_samples ( self.samples )
         # Detekcja preambuły/synchronizacji i ustawienie `has_sync` na wynik detekcji preambuły
-        self.has_sync = filters.has_sync_sequence ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
+        #self.has_sync = filters.has_sync_sequence ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
+        self.sync_seguence_peak_idxs = filters.get_sync_sequence_idxs ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_6_fastest_short ( BARKER13_W_PADDING_BITS ) )
+
+
         if self.has_sync :
             pass
     

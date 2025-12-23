@@ -99,7 +99,7 @@ def get_barker13_bpsk_samples_v0_1_3 ( clipped = False ) -> NDArray[ np.complex1
     symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
     samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
     if clipped :
-        samples = samples[ :72 ]
+        samples = samples[ :72 ] #Uwaga to tylko chyba dobrze działa dla SPS=4
         #samples = samples[ 18:72 ]
     #plot.plot_complex_waveform ( samples , "  barker13 samples")
     return samples
