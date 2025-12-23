@@ -1,3 +1,4 @@
+import csv
 import zlib
 import numpy as np
 import os
@@ -6,6 +7,9 @@ import tomllib
 from dataclasses import dataclass , field
 from modules import filters , modulation, plot , sdr
 from numpy.typing import NDArray
+
+from pathlib import Path
+from scipy.signal import find_peaks
 
 script_filename = os.path.basename ( __file__ )
 
@@ -82,6 +86,70 @@ BARKER13_W_PADDING_INT = bits_2_int ( BARKER13_W_PADDING_BITS )
 PREAMBLE_BITS_LEN = len ( BARKER13_W_PADDING_BITS )
 PAYLOAD_LENGTH_BITS_LEN = 8
 CRC32_BITS_LEN = 32
+
+def get_sync_sequence_idxs  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = True
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    sync = False
+    max_amplitude = np.max ( np.abs ( samples ) )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio :
+        sync = True
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
+
+    
+    if plt and sync :
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples abs {samples.size=}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"V7 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+        return peaks
+
 
 def gen_bits ( bytes ) :
     return np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
@@ -251,21 +319,16 @@ class RxPackets :
 
     # Pola uzupełnianie w __post_init__
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    #has_sync : bool = field ( init = False )
     sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
     sync_power_db : float | None = field ( init = False )
     max_amplitude : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         #filtracja próbek
-        self.samples_filtered = self.filter_samples ( self.samples )
+        self.samples_filtered = self.filter_samples ()
         # Detekcja preambuły/synchronizacji i ustawienie `has_sync` na wynik detekcji preambuły
         #self.has_sync = filters.has_sync_sequence ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
-        self.sync_seguence_peak_idxs = filters.get_sync_sequence_idxs ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_6_fastest_short ( BARKER13_W_PADDING_BITS ) )
-
-
-        if self.has_sync :
-            pass
+        self.sync_seguence_peak_idxs = get_sync_sequence_idxs ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
