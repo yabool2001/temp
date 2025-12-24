@@ -72,10 +72,6 @@ def bits_2_int ( bits : np.ndarray ) -> int:
         result = (result << 1) | int ( bit )
     return result
 
-
-#BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
-BARKER13_BITS = settings[ "BARKER13_BITS" ]
-#PADDING_BITS = [ 0 , 0 , 0 ] # Padding to 16 bits for BARKER13 (added at the end - LSB)
 PADDING_BITS = settings[ "PADDING_BITS" ]
 BARKER13_W_PADDING_BITS = np.array ( BARKER13_BITS + PADDING_BITS , dtype = np.uint8 )
 BARKER13_W_PADDING_BYTES = bits_2_byte_list ( BARKER13_W_PADDING_BITS )
@@ -86,6 +82,14 @@ BARKER13_W_PADDING_INT = bits_2_int ( BARKER13_W_PADDING_BITS )
 PREAMBLE_BITS_LEN = len ( BARKER13_W_PADDING_BITS )
 PAYLOAD_LENGTH_BITS_LEN = 8
 CRC32_BITS_LEN = 32
+
+BARKER13_BITS = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
+BARKER13_BYTES = bits_2_byte_list ( BARKER13_BITS )
+BARKER13_DEC = bits_2_int ( BARKER13_BITS )
+SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
+PACKET_LEN_BITS = 11
+CRC32_LEN_BITS = 32
+
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
@@ -354,14 +358,32 @@ class RxFrame_v0_1_7 :
 
     # Pola uzupełnianie w __post_init__
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    frame_end : np.uint32 | None = field ( init = False )
+    sync_seguence_peaks_idx : NDArray[ np.uint32 ] | None = field ( init = False )
+    has_sync_sequence : bool = field ( init = False )
+    packet_len_dec : np.uint32 | None = field ( init = False )
+    frame_end_idx : np.uint32 | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.sync_seguence_peaks_idx = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
     
-    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
-        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+    def has_sync_sequence ( self ) -> bool :
+        sync_sequence_start_idx = filters.SPAN * modulation.SPS // 2
+        sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * modulation.SPS )
+        symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : modulation.SPS ]
+        bits = ( symbols.real > 0 ).astype ( int )
+        preamble_int = bits_2_int ( bits )
+        if preamble_int == BARKER13_DEC :
+            return True
+        return False
 
+    def packet_len_value_bytes ( self ) :
+        sps = modulation.SPS
+        packet_len_start_idx = ( filters.SPAN * modulation.SPS // 2 ) + ( SYNC_SEQUENCE_LEN_BITS * sps )
+        packet_len_end_index = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
+        symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_index : modulation.SPS ]
+        bits = ( symbols.real > 0 ).astype ( int )
+        payload_length = bits_2_int ( bits ) + 1
+    
     def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
         payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
         return payload_bits
