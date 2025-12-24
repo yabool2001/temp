@@ -339,13 +339,13 @@ class RxSamples_v0_1_7 :
             f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
         )
 
-    def clip_samples ( self , start : np.uint32 , end : np.uint32 ) -> None :
-        if start < 0 or end > ( self.samples.size - 1 ) :
+    def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
+        if start < 0 or end > ( self.samples_filtered.size - 1 ) :
             raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
         if start >= end :
             raise ValueError ( "Start must be < end" )
-        #self.samples = self.samples [ start : end + 1 ]
-        self.samples = self.samples [ start : end ]
+        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
+        self.samples_filtered = self.samples_filtered [ start : end ]
 
 @dataclass ( slots = True , eq = False )
 class RxFrame_v0_1_7 :
@@ -376,12 +376,6 @@ class RxFrame_v0_1_7 :
         return (
             f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
         )
-
-    def clip_samples ( self , start : int , end : int ) -> None :
-        """Trim internal samples to the inclusive [ start , end ] range."""
-        if start < 0 or end > ( self.samples.size - 1 ) :
-            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
-        self.samples = self.samples [ start : end + 1 ]
 
 @dataclass ( slots = True , eq = False )
 class RxPackets :
