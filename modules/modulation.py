@@ -99,7 +99,7 @@ def generate_barker13_bpsk_samples_v0_1_7 ( clipped = False ) -> NDArray[ np.com
     symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
     samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
     if clipped :
-        tail_length = ( filters.SPAN - 1 ) // 2 * modulation.SPS  # Oblicz ogon filtra RRC
+        tail_length = ( filters.SPAN - 1 ) // 2 * SPS  # Oblicz ogon filtra RRC
         samples = samples[ : -tail_length ]  # Przytnij ogon na końcu
     return samples
 

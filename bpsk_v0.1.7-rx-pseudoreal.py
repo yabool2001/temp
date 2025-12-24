@@ -22,18 +22,20 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 filename_samples_1 = "logs/rx_samples_32768_1.npy"
 filename_samples_2 = "logs/rx_samples_32768_2.npy"
+filename_samples_3 = "logs/rx_samples_32768_3_1sample.npy"
 filename_samples_9 = "logs/rx_samples_32768_9_empty.npy"
 samples_1 = ops_file.open_samples_from_npf ( filename_samples_1 )
 samples_2 = ops_file.open_samples_from_npf ( filename_samples_2 )
+samples_3 = ops_file.open_samples_from_npf ( filename_samples_3 )
 samples_9 = ops_file.open_samples_from_npf ( filename_samples_9 )
 
-rx_packets = packet.RxPackets ( samples = samples_1 )
+rx_samples = packet.RxSamples_v0_1_7 ( samples = samples_3 )
 
-if rx_packets.sync_seguence_peak_idxs is not None :
-    print ( rx_packets.sync_seguence_peak_idxs.size )
-    rx_packets.plot_waveform ( f"{script_filename}" , marker = False , peaks = True )
-    for idx in rx_packets.sync_seguence_peak_idxs :
-        print ( f"{idx} {rx_packets.get_bits_at_peak( idx )=}" )
+if rx_samples.sync_seguence_peaks is not None :
+    print ( rx_samples.sync_seguence_peaks.size )
+    rx_samples.plot_complex_waveform ( f"{script_filename}" , marker = False , peaks = True )
+    for idx in rx_samples.sync_seguence_peaks :
+        print ( f"{idx} {rx_samples.get_bits_at_peak ( idx )=}" )
 else :
     print ( "No sync sequence peaks found" )
 

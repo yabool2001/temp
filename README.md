@@ -10,6 +10,22 @@ Check for a newest version at: https://pypi.org/project/numba/#history
 
 # Software description
 
+## Information
+All user data is encapsulated in a frame. The frame comprise:
+- 13 bits of BARKER13 sync sequence
+- 11 bits of PACKET_LEN
+- PACKET
+
+PACKET comprise:
+- PAYLOAD whose length = PACKET_LEN - 4 bytes of CRC32
+- 4 bytes of CRC32
+
+are stored in a payload of the maximum lenght of 255 bytes.
+The payload is located in a packet comprise:
+payload and CRC32
+
+print ( f"{BARKER13_W_PADDING_BITS=}, {length_byte=}, {payload=}, {crc32_bytes=}")
+
 ## Samples corrections in corrections module
 ### CFO estimation
 Implementacja wykonana na podstawie opisu w rozdz.10.5 CFO Estimation książki "Software-Deﬁned Radio for Engineers" Travis F. Collins, Robin Getz, Di Pu, Alexander M. Wyglinski

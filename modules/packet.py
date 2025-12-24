@@ -319,11 +319,11 @@ class RxSamples_v0_1_7 :
 
     # Pola uzupełnianie w __post_init__
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
+    sync_seguence_peaks : NDArray[ np.uint32 ] | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
@@ -345,6 +345,41 @@ class RxSamples_v0_1_7 :
             raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
         self.samples = self.samples [ start : end + 1 ]
 
+@dataclass ( slots = True , eq = False )
+class RxFrame_v0_1_7 :
+    
+    samples : NDArray[ np.complex128 ]
+
+    # Pola uzupełnianie w __post_init__
+    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    frame_end : np.uint32 | None = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+    
+    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
+        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+
+    def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
+        payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
+        return payload_bits
+    
+    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
+        if peaks and self.sync_seguence_peak_idxs is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
+        )
+
+    def clip_samples ( self , start : int , end : int ) -> None :
+        """Trim internal samples to the inclusive [ start , end ] range."""
+        if start < 0 or end > ( self.samples.size - 1 ) :
+            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
+        self.samples = self.samples [ start : end + 1 ]
 
 @dataclass ( slots = True , eq = False )
 class RxPackets :
