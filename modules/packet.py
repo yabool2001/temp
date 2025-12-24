@@ -324,17 +324,21 @@ class RxPackets :
     max_amplitude : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        #filtracja próbek
         self.samples_filtered = self.filter_samples ()
-        # Detekcja preambuły/synchronizacji i ustawienie `has_sync` na wynik detekcji preambuły
-        #self.has_sync = filters.has_sync_sequence ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( clipped = True ) )
         self.sync_seguence_peak_idxs = get_sync_sequence_idxs ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
-    def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
-        plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
+    def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
+        payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
+        return payload_bits
+    
+    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
+        if peaks and self.sync_seguence_peak_idxs is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return (

@@ -27,12 +27,13 @@ samples_1 = ops_file.open_samples_from_npf ( filename_samples_1 )
 samples_2 = ops_file.open_samples_from_npf ( filename_samples_2 )
 samples_9 = ops_file.open_samples_from_npf ( filename_samples_9 )
 
-rx_packets = packet.RxPackets ( samples = samples_9 )
+rx_packets = packet.RxPackets ( samples = samples_1 )
 
 if rx_packets.sync_seguence_peak_idxs is not None :
     print ( rx_packets.sync_seguence_peak_idxs.size )
+    rx_packets.plot_waveform ( f"{script_filename}" , marker = False , peaks = True )
     for idx in rx_packets.sync_seguence_peak_idxs :
-        print ( f"Found sync sequence peak at index: {idx}" )
+        print ( f"{idx} {rx_packets.get_bits_at_peak( idx )=}" )
 else :
     print ( "No sync sequence peaks found" )
 
