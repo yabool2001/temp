@@ -87,7 +87,7 @@ PREAMBLE_BITS_LEN = len ( BARKER13_W_PADDING_BITS )
 PAYLOAD_LENGTH_BITS_LEN = 8
 CRC32_BITS_LEN = 32
 
-def get_sync_sequence_idxs  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
     plt = False
     wrt = True
@@ -313,6 +313,40 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
         return None
 
 @dataclass ( slots = True , eq = False )
+class RxSamples_v0_1_7 :
+    
+    samples : NDArray[ np.complex128 ]
+
+    # Pola uzupełnianie w __post_init__
+    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.samples_filtered = self.filter_samples ()
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
+    
+    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
+        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+
+    def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
+        if peaks and self.sync_seguence_peak_idxs is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
+        )
+
+    def clip_samples ( self , start : int , end : int ) -> None :
+        """Trim internal samples to the inclusive [ start , end ] range."""
+        if start < 0 or end > ( self.samples.size - 1 ) :
+            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
+        self.samples = self.samples [ start : end + 1 ]
+
+
+@dataclass ( slots = True , eq = False )
 class RxPackets :
     
     samples : NDArray[ np.complex128 ]
@@ -325,7 +359,7 @@ class RxPackets :
 
     def __post_init__ ( self ) -> None :
         self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peak_idxs = get_sync_sequence_idxs ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
