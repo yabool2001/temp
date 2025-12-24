@@ -323,7 +323,7 @@ class RxSamples_v0_1_7 :
 
     def __post_init__ ( self ) -> None :
         self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
@@ -359,7 +359,7 @@ class RxPackets :
 
     def __post_init__ ( self ) -> None :
         self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.get_barker13_bpsk_samples_v0_1_3 ( True ) ) # trzeba później zmienić, bo to tylko działa z SPS=4 albo poprawić w funkcji działanie clippingu 
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
     
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
