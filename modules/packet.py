@@ -19,6 +19,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 def bits_2_byte_list ( bits : np.ndarray ) :
     """
+    na bazie def bits_2_byte_list stwórz nową funkcję def bits_2_byte_list_v0_1_7 w której ostatnie brakujące do 8, bity będą uzupełniane zerami. Dzięki temu 
+
     Zamienia tablicę bitów (0/1) na listę bajtów (List[int]),
     traktując każdy zestaw 8 bitów jako jeden bajt (big-endian w bajcie).
 
@@ -72,8 +74,10 @@ def bits_2_int ( bits : np.ndarray ) -> int:
         result = (result << 1) | int ( bit )
     return result
 
-PADDING_BITS = settings[ "PADDING_BITS" ]
-BARKER13_W_PADDING_BITS = np.array ( BARKER13_BITS + PADDING_BITS , dtype = np.uint8 )
+BARKER13_BITS = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
+PADDING_BITS = np.array ( settings[ "PADDING_BITS" ] , dtype = np.uint8 )
+#BARKER13_W_PADDING_BITS = np.array ( BARKER13_BITS + PADDING_BITS , dtype = np.uint8 )
+BARKER13_W_PADDING_BITS = np.concatenate ( ( BARKER13_BITS , PADDING_BITS ) ).astype ( np.uint8 )
 BARKER13_W_PADDING_BYTES = bits_2_byte_list ( BARKER13_W_PADDING_BITS )
 BARKER13_W_PADDING_INT = bits_2_int ( BARKER13_W_PADDING_BITS )
 #BARKER13_W_PADDING = [ 6 , 80 ] # Jak będzie błąd to zamienić na BARKER13_W_PADDING_BYTES
@@ -83,9 +87,6 @@ PREAMBLE_BITS_LEN = len ( BARKER13_W_PADDING_BITS )
 PAYLOAD_LENGTH_BITS_LEN = 8
 CRC32_BITS_LEN = 32
 
-BARKER13_BITS = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
-BARKER13_BYTES = bits_2_byte_list ( BARKER13_BITS )
-BARKER13_DEC = bits_2_int ( BARKER13_BITS )
 SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
 PACKET_LEN_BITS = 11
 CRC32_LEN_BITS = 32
@@ -333,8 +334,8 @@ class RxSamples_v0_1_7 :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
     def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peak_idxs is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
+        if peaks and self.sync_seguence_peaks is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
 
@@ -354,26 +355,29 @@ class RxSamples_v0_1_7 :
 @dataclass ( slots = True , eq = False )
 class RxFrame_v0_1_7 :
     
-    samples : NDArray[ np.complex128 ]
+    samples_filtered : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
-    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    sync_seguence_peaks_idx : NDArray[ np.uint32 ] | None = field ( init = False )
     has_sync_sequence : bool = field ( init = False )
     packet_len_dec : np.uint32 | None = field ( init = False )
     frame_end_idx : np.uint32 | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.sync_seguence_peaks_idx = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.has_sync_sequence = self.check_sync_sequence ()
     
-    def has_sync_sequence ( self ) -> bool :
-        sync_sequence_start_idx = filters.SPAN * modulation.SPS // 2
-        sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * modulation.SPS )
-        symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : modulation.SPS ]
-        bits = ( symbols.real > 0 ).astype ( int )
-        preamble_int = bits_2_int ( bits )
-        if preamble_int == BARKER13_DEC :
+    def check_sync_sequence ( self ) -> bool :
+        #sync_sequence_start_idx = filters.SPAN * modulation.SPS // 2
+        #sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * modulation.SPS )
+        sync_sequence_end_idx = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
+        symbols = self.samples_filtered [ : sync_sequence_end_idx : modulation.SPS ]
+        sync_sequence_bits = modulation.bpsk_symbols_to_bits_v0_1_7 ( symbols )
+        if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
             return True
+        else :
+            symbols = self.samples_filtered.imag [ : sync_sequence_end_idx : modulation.SPS ]
+            sync_sequence_bits = modulation.bpsk_symbols_to_bits_v0_1_7 ( symbols )
+            if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                return True
         return False
 
     def packet_len_value_bytes ( self ) :
