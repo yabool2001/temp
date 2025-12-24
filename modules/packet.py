@@ -370,12 +370,11 @@ class RxFrame_v0_1_7 :
         #sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * modulation.SPS )
         sync_sequence_end_idx = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
         symbols = self.samples_filtered [ : sync_sequence_end_idx : modulation.SPS ]
-        sync_sequence_bits = modulation.bpsk_symbols_to_bits_v0_1_7 ( symbols )
+        sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( symbols.real )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
             return True
         else :
-            symbols = self.samples_filtered.imag [ : sync_sequence_end_idx : modulation.SPS ]
-            sync_sequence_bits = modulation.bpsk_symbols_to_bits_v0_1_7 ( symbols )
+            sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( symbols.imag )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                 return True
         return False

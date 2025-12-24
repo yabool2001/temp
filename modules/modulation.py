@@ -39,12 +39,12 @@ def bpsk_modulation ( bpsk_symbols ) :
 def create_bpsk_symbols_v0_1_6_fastest_short ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     return np.require ( bits , np.uint8 , ['C'] ) * 2.0 - 1.0 + 0j
 
-def bpsk_symbols_2_bits_v0_1_7 ( symbols : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
+def bpsk_symbols_2_bits_v0_1_7 ( symbols : NDArray[ np.float64 ] ) -> NDArray[ np.uint8 ] :
     """
     Odwrotna funkcja do create_bpsk_symbols_v0_1_6_fastest_short.
     Mapuje symbole BPSK (-1+0j -> 0, 1+0j -> 1) na bity.
     """
-    return ( symbols.real > 0 ).astype ( np.uint8 )
+    return ( symbols > 0 ).astype ( np.uint8 )
 
 def create_bpsk_symbols_v0_1_6_fastest ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     bits = np.require ( bits , dtype = np.uint8 , requirements = [ 'C' ] )  # gwarantuje uint8 + contiguous
