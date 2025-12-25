@@ -1,4 +1,5 @@
 # Prerequisites:
+`python v3.14.0`
 `pylibiio` `pyadi-iio` `numba` `scipy` `plotly.express`
 
 To support CUDA with newest version of Python, you may need to run newest beta numba, e.g. 0.63.0b1 : `python -m pip install numba==0.63.0c1`

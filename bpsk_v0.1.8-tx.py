@@ -21,7 +21,9 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 tx_packet = packet.TxPacket_v0_1_8 ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
-print ( f"{ script_filename } utworzono pakiet: { tx_packet.payload_bytes= } { tx_packet.crc32_bytes }" )
+print ( f"{ script_filename } utworzono pakiet: { tx_packet.payload_bytes= } { tx_packet.crc32_bytes } { tx_packet.packet_len= }" )
+tx_frame = packet.TxFrame_v0_1_8 ( packet_len = tx_packet.packet_len )
+print ( f"{ script_filename } utworzono ramkę: { tx_frame.sync_sequence_bits= } { tx_frame.packet_len_bits= } { tx_frame.frame_bits= }" )
 
 '''
 pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
