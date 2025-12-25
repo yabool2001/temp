@@ -391,7 +391,20 @@ class RxFrame_v0_1_7 :
                 packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                 self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
-                pass
+            else :
+                sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
+                if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                    self.has_sync_sequence = True
+                    packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
+                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
+                    self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+                else :
+                    sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
+                    if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                        self.has_sync_sequence = True
+                        packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
+                        packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
+                        self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
     
     def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
         payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
