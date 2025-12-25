@@ -355,7 +355,7 @@ class RxSamples_v0_1_7 :
         self.samples_filtered = self.samples_filtered [ start : end ]
 
 @dataclass ( slots = True , eq = False )
-class RxFrame_v0_1_7 :
+class RxFrame_v0_1_8 :
     
     samples_filtered : NDArray[ np.complex128 ]
 
@@ -383,28 +383,28 @@ class RxFrame_v0_1_7 :
             self.has_sync_sequence = True
             packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
             packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
-            self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+            self.packet_len_dec = bits_2_int ( packet_len_bits )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                 self.has_sync_sequence = True
                 packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
-                self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+                self.packet_len_dec = bits_2_int ( packet_len_bits )
             else :
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                     self.has_sync_sequence = True
                     packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                     packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
-                    self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+                    self.packet_len_dec = bits_2_int ( packet_len_bits )
                 else :
                     sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
                     if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                         self.has_sync_sequence = True
                         packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                         packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
-                        self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+                        self.packet_len_dec = bits_2_int ( packet_len_bits )
     
     def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
         payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
@@ -456,6 +456,95 @@ class RxPackets :
         if start < 0 or end > ( self.samples.size - 1 ) :
             raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
         self.samples = self.samples [ start : end + 1 ]
+
+@dataclass ( slots = True , eq = False )
+class TxPacket_v0_1_8 :
+    
+    payload : list | tuple | np.ndarray = field ( default_factory = list )
+    is_bits : bool = False
+    
+    # Pola uzupełnianie w __post_init__
+    payload_bits : NDArray[ np.uint8 ] = field ( init = False )
+    payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    payload_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    payload_samples : NDArray[ np.complex128 ] = field ( init = False )
+    packet_bits : NDArray[ np.uint8 ] = field ( init = False )
+    packet_symbols : NDArray[ np.uint8 ] = field ( init = False )
+    packet_samples : NDArray[ np.uint8 ] = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        
+        self.create_payload_bits_and_bytes ()
+        self.create_packet_bits ()
+        self.payload_symbols = self.create_symbols ( self.payload_bits )
+        self.packet_symbols = self.create_symbols ( self.packet_bits )
+        self.payload_samples = self.create_samples_4pluto ( self.payload_symbols )
+        self.packet_samples = self.create_samples_4pluto ( self.packet_symbols )
+
+    def create_payload_bits_and_bytes ( self ) -> None :
+        if not self.payload:
+            raise ValueError ( "Error: Payload is empty!" )
+        payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
+        if self.is_bits :         
+            if payload_arr.max () > 1 :
+                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
+            self.payload_bits = payload_arr.copy ()
+            # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
+            pad = ( -len ( payload_arr ) ) % 8
+            if pad :
+                payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
+            self.payload_bytes = np.packbits ( payload_arr )
+        else :
+            # ------------------ payload podany jako bajty -----------------
+            if payload_arr.max () > 255 :
+                raise ValueError ( "Error: Payload has not all values in 0 - 255!")
+            self.payload_bytes = payload_arr.copy ()
+            self.payload_bits = np.unpackbits ( self.payload_bytes )   # zawsze MSB first
+
+    def create_packet_bits ( self ) -> None:
+        length_bytes = [ len ( self.payload_bytes ) ]
+        crc32 = zlib.crc32 ( self.payload_bytes )
+        crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
+        print ( f"{ BARKER13_W_PADDING_BITS= }, { length_bytes= }, { self.payload_bytes= }, { crc32_bytes= }")
+        preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
+        
+        header_bits = gen_bits ( length_bytes )
+        crc32_bits = gen_bits ( crc32_bytes )
+        self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
+
+    def create_symbols ( self , bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
+        return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits )
+
+    def create_samples_4pluto ( self , symbols : NDArray[ np.complex128 ] ) -> None :
+        samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( symbols ) ).astype ( np.complex128 , copy = False )
+        return sdr.scale_to_pluto_dac ( samples )
+
+    def create_payload_samples_4pluto ( self ) -> None :
+        self.payload_samples = np.ravel (
+            filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
+        ).astype ( np.complex128 , copy = False )
+        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_samples )
+
+    def plot_symbols ( self , symbols : NDArray[ np.complex128 ] , title = "" ) -> None :
+        plot.plot_symbols ( symbols , f"{title}" )
+        plot.complex_symbols_v0_1_6 ( symbols , f"{title}" )
+
+    def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
+
+    def plot_spectrum ( self , samples : NDArray[ np.complex128 ] , title = "" ) -> None :
+        plot.spectrum_occupancy ( samples , 1024 , title )
+
+    def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
+        np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.bits.shape= } , dtype={ self.bits.dtype= }"
+            f"{ self.bytes.shape= } , dtype={ self.bytes.dtype= }"
+            f"{ self.symbols.shape= } , dtype={ self.symbols.dtype= }"
+            f"{ self.samples.shape= } , dtype={ self.samples.dtype= }"
+        )
 
 @dataclass ( slots = True , eq = False )
 class TxPacket :

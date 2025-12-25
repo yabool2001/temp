@@ -14,10 +14,11 @@ Check for a newest version at: https://pypi.org/project/numba/#history
 All user data is encapsulated in a FRAME that comprise:
 - 13 bits of SYNC_SEQUENCE ( e.g. BARKER13)
 - 11 bits of PACKET_LEN
+- 8 bits CRC8
 - PACKET
 
 PACKET comprise:
-- PAYLOAD whose length = PACKET_LEN - 4 bytes of CRC32
+- PAYLOAD whose maximum length is 2047 bytes (recommended maximum is 1500 bytes according with IP max. lenght over ETH)
 - 4 bytes of CRC32
 
 ## Samples corrections in corrections module
