@@ -335,9 +335,11 @@ class RxSamples_v0_1_7 :
 
     def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peaks is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
+            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return (
@@ -358,48 +360,50 @@ class RxFrame_v0_1_7 :
     samples_filtered : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
-    has_sync_sequence : bool = field ( init = False )
+    sync_sequence_start_idx : np.uint32 | None = field ( init = False )
+    sync_sequence_end_idx : np.uint32 | None = field ( init = False )
+    packet_len_start_idx : np.uint32 | None = field ( init = False )
+    packet_len_end_idx : np.uint32 | None = field ( init = False )
     packet_len_dec : np.uint32 | None = field ( init = False )
-    frame_end_idx : np.uint32 | None = field ( init = False )
+    #frame_end_idx : np.uint32 | None = field ( init = False )
+    has_sync_sequence : bool | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.has_sync_sequence = self.check_sync_sequence ()
+        self.plot_waveform ( f"RxFrame_v0_1_7 samples_filtered { self.samples_filtered.size= }" , marker = True )
+        self.has_sync_sequence = self.process_frame ()
     
-    def check_sync_sequence ( self ) -> bool :
-        #sync_sequence_start_idx = filters.SPAN * modulation.SPS // 2
-        #sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * modulation.SPS )
-        sync_sequence_end_idx = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
-        symbols = self.samples_filtered [ : sync_sequence_end_idx : modulation.SPS ]
-        sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( symbols.real )
-        if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-            return True
-        else :
-            sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( symbols.imag )
-            if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                return True
-        return False
-
-    def packet_len_value_bytes ( self ) :
+    def process_frame ( self ) -> None :
         sps = modulation.SPS
-        packet_len_start_idx = ( filters.SPAN * modulation.SPS // 2 ) + ( SYNC_SEQUENCE_LEN_BITS * sps )
-        packet_len_end_index = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
-        symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_index : modulation.SPS ]
-        bits = ( symbols.real > 0 ).astype ( int )
-        payload_length = bits_2_int ( bits ) + 1
+        self.sync_sequence_start_idx = filters.SPAN * sps // 2
+        self.sync_sequence_end_idx = self.sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
+        self.packet_len_start_idx = self.sync_sequence_end_idx
+        self.packet_len_end_idx = self.packet_len_start_idx + ( PACKET_LEN_BITS * sps )
+        sync_sequence_symbols = self.samples_filtered [ self.sync_sequence_start_idx : self.sync_sequence_end_idx : sps ]
+        sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
+        if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+            self.has_sync_sequence = True
+            packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
+            packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
+            self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+        else :
+            sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
+            if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                self.has_sync_sequence = True
+                packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
+                packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
+                self.packet_len_dec = bits_2_int ( packet_len_bits ) + 1
+                pass
     
     def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
         payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
         return payload_bits
     
-    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peak_idxs is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
-        else :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+    def plot_waveform ( self , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
+            f"{ self.samples_filtered.shape= } , dtype = { self.samples_filtered.dtype= }"
         )
 
 @dataclass ( slots = True , eq = False )
