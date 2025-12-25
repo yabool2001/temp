@@ -34,12 +34,9 @@ rx_samples = packet.RxSamples_v0_1_7 ( samples = samples_1 )
 if rx_samples.sync_seguence_peaks is not None :
     print ( rx_samples.sync_seguence_peaks.size )
     rx_samples.plot_complex_waveform ( f"{script_filename}" , marker = False , peaks = True )
-    print ( f"{ rx_samples.sync_seguence_peaks[0]= }" )
-    rx_frame = packet.RxFrame_v0_1_7 ( rx_samples.samples_filtered [ rx_samples.sync_seguence_peaks[0] : ] )
-    #for idx in rx_samples.sync_seguence_peaks :
-    #    rx_frame = packet.RxFrame_v0_1_7 ( rx_samples.samples_filtered [ : idx ] )
-    #    has_sync = rx_frame.has_sync_sequence
-    #    print ( f"Frame ending at sample idx {idx}: has_sync_sequence = {has_sync}" )
+    for idx in rx_samples.sync_seguence_peaks :
+        rx_frame = packet.RxFrame_v0_1_7 ( rx_samples.samples_filtered [ idx : ] )
+        print ( f"{ idx= } {rx_frame.has_sync_sequence=}" )
 else :
     print ( "No sync sequence peaks found" )
 

@@ -365,12 +365,11 @@ class RxFrame_v0_1_7 :
     packet_len_start_idx : np.uint32 | None = field ( init = False )
     packet_len_end_idx : np.uint32 | None = field ( init = False )
     packet_len_dec : np.uint32 | None = field ( init = False )
-    #frame_end_idx : np.uint32 | None = field ( init = False )
-    has_sync_sequence : bool | None = field ( init = False )
+    has_sync_sequence : bool = False
 
     def __post_init__ ( self ) -> None :
         self.plot_waveform ( f"RxFrame_v0_1_7 samples_filtered { self.samples_filtered.size= }" , marker = True )
-        self.has_sync_sequence = self.process_frame ()
+        self.process_frame ()
     
     def process_frame ( self ) -> None :
         sps = modulation.SPS
