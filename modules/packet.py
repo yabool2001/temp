@@ -160,6 +160,16 @@ def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , syn
 def gen_bits ( bytes ) :
     return np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
 
+def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
+    return np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) ).astype ( np.uint8 ) # zawsze MSB first
+
+def pad_bits2bytes ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
+    # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
+    pad = ( -len ( bits ) ) % 8
+    if pad :
+        bits = np.concatenate ( [ bits , np.zeros ( pad , dtype = np.uint8 ) ] )
+    return np.packbits ( bits )
+
 def create_packet_bits ( payload ) :
     length_byte = [ len ( payload ) - 1 ]
     crc32 = zlib.crc32 ( bytes ( payload ) )
@@ -459,6 +469,94 @@ class RxPackets :
         self.samples = self.samples [ start : end + 1 ]
 
 @dataclass ( slots = True , eq = False )
+class TxFrame_v0_1_8 :
+    
+    packet_len : np.uint16
+        
+    # Pola uzupełnianie w __post_init__
+    payload_bits : NDArray[ np.uint8 ] = field ( init = False )
+    payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    payload_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    payload_samples : NDArray[ np.complex128 ] = field ( init = False )
+    packet_bits : NDArray[ np.uint8 ] = field ( init = False )
+    packet_symbols : NDArray[ np.uint8 ] = field ( init = False )
+    packet_samples : NDArray[ np.uint8 ] = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        
+        self.create_payload_bits_and_bytes ()
+        self.create_packet_bits ()
+        self.payload_symbols = self.create_symbols ( self.payload_bits )
+        self.packet_symbols = self.create_symbols ( self.packet_bits )
+        self.payload_samples = self.create_samples_4pluto ( self.payload_symbols )
+        self.packet_samples = self.create_samples_4pluto ( self.packet_symbols )
+
+    def create_payload_bits_and_bytes ( self ) -> None :
+        if not self.payload:
+            raise ValueError ( "Error: Payload is empty!" )
+        payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
+        if self.is_bits :         
+            if payload_arr.max () > 1 :
+                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
+            self.payload_bits = payload_arr.copy ()
+            # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
+            pad = ( -len ( payload_arr ) ) % 8
+            if pad :
+                payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
+            self.payload_bytes = np.packbits ( payload_arr )
+        else :
+            # ------------------ payload podany jako bajty -----------------
+            if payload_arr.max () > 255 :
+                raise ValueError ( "Error: Payload has not all values in 0 - 255!")
+            self.payload_bytes = payload_arr.copy ()
+            self.payload_bits = np.unpackbits ( self.payload_bytes )   # zawsze MSB first
+
+    def create_packet_bits ( self ) -> None:
+        length_bytes = [ len ( self.payload_bytes ) - 1 ]
+        crc32 = zlib.crc32 ( self.payload_bytes )
+        crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
+        print ( f"{ BARKER13_W_PADDING_BITS= }, { length_bytes= }, { self.payload_bytes= }, { crc32_bytes= }")
+        preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
+        
+        header_bits = gen_bits ( length_bytes )
+        crc32_bits = gen_bits ( crc32_bytes )
+        self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
+
+    def create_symbols ( self , bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
+        return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits )
+
+    def create_samples_4pluto ( self , symbols : NDArray[ np.complex128 ] ) -> None :
+        samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( symbols ) ).astype ( np.complex128 , copy = False )
+        return sdr.scale_to_pluto_dac ( samples )
+
+    def create_payload_samples_4pluto ( self ) -> None :
+        self.payload_samples = np.ravel (
+            filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
+        ).astype ( np.complex128 , copy = False )
+        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_samples )
+
+    def plot_symbols ( self , symbols : NDArray[ np.complex128 ] , title = "" ) -> None :
+        plot.plot_symbols ( symbols , f"{title}" )
+        plot.complex_symbols_v0_1_6 ( symbols , f"{title}" )
+
+    def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
+
+    def plot_spectrum ( self , samples : NDArray[ np.complex128 ] , title = "" ) -> None :
+        plot.spectrum_occupancy ( samples , 1024 , title )
+
+    def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
+        np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.bits.shape= } , dtype={ self.bits.dtype= }"
+            f"{ self.bytes.shape= } , dtype={ self.bytes.dtype= }"
+            f"{ self.symbols.shape= } , dtype={ self.symbols.dtype= }"
+            f"{ self.samples.shape= } , dtype={ self.samples.dtype= }"
+        )
+
+@dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_8 :
     
     payload : list | tuple | np.ndarray = field ( default_factory = list )
@@ -469,13 +567,14 @@ class TxPacket_v0_1_8 :
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
     crc32_bits : NDArray[ np.uint8 ] = field ( init = False )
     crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    packet_bits : NDArray[ np.uint8 ] = field ( init = False )
+    packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_len : np.uint16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        
         self.create_payload_bits_and_bytes ()
-        self.create_crc32_bits_and_bytes ()
-        self.create_packet_bits ()
+        self.create_crc32_bytes ()
+        self.create_packet_bytes ()
+        self.packet_len = np.uint16 ( len ( self.payload_bytes ) + len ( self.crc32_bytes ) )  # payload + crc32
 
     def create_payload_bits_and_bytes ( self ) -> None :
         if not self.payload or len ( self.payload ) == 0 or self.payload is None :
@@ -488,12 +587,12 @@ class TxPacket_v0_1_8 :
                 raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
             if len ( payload_arr ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN * 8 :
                 raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
+            self.payload_bytes = pad_bits2bytes ( payload_arr )
             # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
-            pad = ( -len ( payload_arr ) ) % 8
-            if pad :
-                payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
-            self.payload_bits = payload_arr.copy ()
-            self.payload_bytes = np.packbits ( payload_arr )
+            #pad = ( -len ( payload_arr ) ) % 8
+            #if pad :
+            #    payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
+            #self.payload_bytes = np.packbits ( payload_arr )
         else :
             # ------------------ payload podany jako bajty -----------------
             if payload_arr.max () > 255 :
@@ -502,26 +601,19 @@ class TxPacket_v0_1_8 :
                 raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
             if len ( payload_arr ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN :
                 raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
-            self.payload_bytes = payload_arr.copy ()
-            self.payload_bits = self.bytes2bits ( self.payload_bytes )
+            #self.payload_bytes = payload_arr.copy ()
+            self.payload_bytes = payload_arr
 
-    def create_crc32_bits_and_bytes ( self ) -> None:
+    def create_crc32_bytes ( self ) -> None:
         crc32 = zlib.crc32 ( self.payload_bytes )
-        self.crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
-        self.crc32_bits = self.bytes2bits ( self.crc32_bytes )
+        self.crc32_bytes = np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
 
-    def create_packet_bits ( self ) -> None:
-        print ( f"{ self.payload_bytes= }, { self.crc32_bytes= }")
-        self.packet_bits = np.concatenate ( [ self.payload_bits , self.crc32_bits ] )
-
-    def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
-        np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) ) # zawsze MSB first
+    def create_packet_bytes ( self ) -> None:
+        self.packet_bytes = np.concatenate ( [ self.payload_bytes , self.crc32_bytes ] )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.payload_bits.shape= } , dtype={ self.payload_bits.dtype= }"
             f"{ self.payload_bytes.shape= } , dtype={ self.payload_bytes.dtype= }"
-            f"{ self.crc32_bits.shape= } , dtype={ self.crc32_bits.dtype= }"
             f"{ self.crc32_bytes.shape= } , dtype={ self.crc32_bytes.dtype= }"
         )
 
