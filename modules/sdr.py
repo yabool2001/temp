@@ -111,7 +111,7 @@ def tx_once_v0_1_6 ( samples , sdr ) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
     sdr.tx ( samples )
-    if settings["log"]["verbose_0"] : print ( f"[s] Sample sent!" )
+    if settings["log"]["verbose_0"] : print ( f"[t] Sample sent!" )
 
 def tx_cyclic_v0_1_6 ( samples , sdr ) :
     sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
