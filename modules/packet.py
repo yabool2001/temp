@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 from pathlib import Path
 from scipy.signal import find_peaks
 
+np.set_printoptions(threshold=np.inf, linewidth=np.inf)
 script_filename = os.path.basename ( __file__ )
 
 # Wczytaj plik TOML z konfiguracją
@@ -162,6 +163,38 @@ def gen_bits ( bytes ) :
 
 def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
     return np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) ).astype ( np.uint8 ) # zawsze MSB first
+
+def dec2bits ( dec : np.uint8 | np.uint16 | np.uint32 | np.uint64 , num_bits : int ) -> NDArray[ np.uint8 ] :
+    """
+    Zamienia liczbę dziesiętną na tablicę bitów (MSB first), biorąc ostatnie num_bits bitów z prawej strony.
+
+    Parametry:
+    -----------
+    dec : np.uint8 | np.uint16 | np.uint32 | np.uint64
+        Liczba dziesiętna do konwersji.
+    num_bits : int
+        Liczba bitów do wyciągnięcia (ostatnie num_bits bitów). Musi być <= liczbie bitów w typie dec.
+
+    Zwraca:
+    --------
+    NDArray[np.uint8]
+        Tablica bitów typu uint8, długość num_bits.
+    """
+    if isinstance ( dec , np.uint8 ) :
+        max_bits = 8
+    elif isinstance ( dec , np.uint16 ) :
+        max_bits = 16
+    elif isinstance ( dec , np.uint32 ) :
+        max_bits = 32
+    elif isinstance ( dec , np.uint64 ) :
+        max_bits = 64
+    else :
+        raise TypeError ( "dec musi być typu np.uint8, np.uint16, np.uint32 lub np.uint64" )
+    
+    if num_bits > max_bits :
+        raise ValueError ( f"num_bits ({num_bits}) nie może być większa niż liczba bitów w typie dec ({max_bits})" )
+    
+    return np.array ( [ ( dec >> i ) & 1 for i in range ( num_bits - 1 , -1 , -1 ) ] , dtype = np.uint8 )
 
 def pad_bits2bytes ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
     # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
@@ -477,27 +510,26 @@ class TxFrame_v0_1_8 :
     sync_sequence_bits : NDArray[ np.uint8 ] = field ( init = False )
     packet_len_bits : NDArray[ np.uint8 ] = field ( init = False )
     frame_bits : NDArray[ np.uint8 ] = field ( init = False )
+    frame_bytes : NDArray[ np.uint8 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.create_sync_sequence_bits ()
         self.create_packet_len_bits ()
         self.create_frame_bits ()
+        self.frame_bytes = pad_bits2bytes ( self.frame_bits )
 
     def create_sync_sequence_bits ( self ) -> None :
         self.sync_sequence_bits = BARKER13_BITS
 
     def create_packet_len_bits ( self ) -> None :
-        self.packet_len_bits = np.unpackbits ( np.array ( [ self.packet_len ] , dtype = np.uint16 ).view ( np.uint8 ) ) [ -PACKET_LEN_BITS : ].astype ( np.uint8 )
+        self.packet_len_bits = dec2bits ( self.packet_len , PACKET_LEN_BITS )
 
     def create_frame_bits ( self ) -> None :
         self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.sync_sequence_bits.shape= } , dtype={ self.sync_sequence_bits.dtype= }"
-            f"{ self.packet_len_bits.shape= } , dtype={ self.packet_len_bits.dtype= }"
-            f"{ self.frame_bits.shape= } , dtype={ self.frame_bits.dtype= }"
-        )
+            f"{ self.frame_bytes= }, { self.frame_bits= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_8 :
@@ -508,7 +540,6 @@ class TxPacket_v0_1_8 :
     # Pola uzupełnianie w __post_init__
     payload_bits : NDArray[ np.uint8 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    crc32_bits : NDArray[ np.uint8 ] = field ( init = False )
     crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
     packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
     packet_len : np.uint16 = field ( init = False )
@@ -531,11 +562,6 @@ class TxPacket_v0_1_8 :
             if len ( payload_arr ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN * 8 :
                 raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
             self.payload_bytes = pad_bits2bytes ( payload_arr )
-            # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
-            #pad = ( -len ( payload_arr ) ) % 8
-            #if pad :
-            #    payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
-            #self.payload_bytes = np.packbits ( payload_arr )
         else :
             # ------------------ payload podany jako bajty -----------------
             if payload_arr.max () > 255 :
@@ -544,7 +570,6 @@ class TxPacket_v0_1_8 :
                 raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
             if len ( payload_arr ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN :
                 raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
-            #self.payload_bytes = payload_arr.copy ()
             self.payload_bytes = payload_arr
 
     def create_crc32_bytes ( self ) -> None:
@@ -556,9 +581,7 @@ class TxPacket_v0_1_8 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.payload_bytes.shape= } , dtype={ self.payload_bytes.dtype= }"
-            f"{ self.crc32_bytes.shape= } , dtype={ self.crc32_bytes.dtype= }"
-        )
+            f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxPacket :
