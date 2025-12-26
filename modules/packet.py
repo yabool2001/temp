@@ -398,42 +398,6 @@ class RxSamples_v0_1_7 :
         #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
         self.samples_filtered = self.samples_filtered [ start : end ]
 
-@dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_8 :
-    
-    samples : NDArray[ np.complex128 ]
-
-    # Pola uzupełnianie w __post_init__
-    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    sync_seguence_peaks : NDArray[ np.uint32 ] | None = field ( init = False )
-
-    def __post_init__ ( self ) -> None :
-        self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-    
-    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
-        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
-
-    def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peaks is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
-            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
-        else :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
-            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker )
-
-    def __repr__ ( self ) -> str :
-        return (
-            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
-        )
-
-    def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
-        if start < 0 or end > ( self.samples_filtered.size - 1 ) :
-            raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
-        if start >= end :
-            raise ValueError ( "Start must be < end" )
-        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
-        self.samples_filtered = self.samples_filtered [ start : end ]
 
 @dataclass ( slots = True , eq = False )
 class RxFrame_v0_1_8 :
@@ -537,6 +501,53 @@ class RxPackets :
         if start < 0 or end > ( self.samples.size - 1 ) :
             raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
         self.samples = self.samples [ start : end + 1 ]
+
+@dataclass ( slots = True , eq = False )
+class TxSamples_v0_1_8 :
+    
+    payload: list | tuple | np.ndarray = field ( default_factory = list )
+    is_bits : bool = False
+    
+    # Pola uzupełnianie w __post_init__
+    samples_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    samples_bits : NDArray[ np.uint8 ] = field ( init = False )
+    samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
+    samples4pluto : NDArray[ np.uint8 ] = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        
+        self.create_samples_bytes ()
+        self.create_samples_bits ()
+        self.create_samples_bpsk_symbols ()
+        self.create_samples_4pluto ()
+
+    def create_samples_bytes ( self ) -> None :
+        tx_packet = TxPacket_v0_1_8 ( payload = self.payload , is_bits = self.is_bits )
+        tx_frame = TxFrame_v0_1_8 ( packet_len = tx_packet.packet_len )
+        self.samples_bytes = np.concatenate ( ( tx_frame.frame_bytes , tx_packet.packet_bytes ) )
+
+    def create_samples_bits ( self ) -> None:
+        self.samples_bits = bytes2bits ( self.samples_bytes )
+
+    def create_samples_bpsk_symbols ( self ) -> None :
+        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.samples_bits )
+
+    def create_samples_4pluto ( self ) -> None :
+        samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+        self.samples4pluto = sdr.scale_to_pluto_dac ( samples )
+
+    def plot_samples_symbols ( self , title = "" ) -> None :
+        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
+        plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
+
+    def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title}" , marker_squares = marker )
+
+    def plot_samples_spectrum ( self , title = "" ) -> None :
+        plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.samples_bits= } { self.samples_bytes= } { self.samples_bpsk_symbols= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxFrame_v0_1_8 :
