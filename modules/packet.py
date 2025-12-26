@@ -361,6 +361,14 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
         print ( f"Brak całej ramki." )
         return None
 
+def count_bytes ( payload , is_bits : bool = False ) -> np.uint64 :
+    payload_arr = np.asarray ( payload , dtype = np.uint8 ).ravel ()
+    if is_bits :
+        payload_bytes_len = len ( payload_arr ) // 8
+    else :
+        payload_bytes_len = len ( payload_arr )
+    return np.uint64 ( payload_bytes_len )
+
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_7 :
     
@@ -619,7 +627,7 @@ class TxSamples_v0_1_8 :
 
     def plot_symbols ( self , title = "" ) -> None :
         plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
-        plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
+        #plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
 
     def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
@@ -641,6 +649,8 @@ class TxPluto_v0_1_8 :
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
+        if count_bytes ( self.payload , self.is_bits ) > 1500 :
+            raise ValueError ( "Payload size cannot exceed 1500 bytes" )
         self.create_samples_4pluto ()
 
     def create_samples_4pluto ( self ) -> None :
@@ -658,92 +668,3 @@ class TxPluto_v0_1_8 :
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.samples4pluto.size= }" )
-
-@dataclass ( slots = True , eq = False )
-class TxPacket :
-    
-    payload: list | tuple | np.ndarray = field ( default_factory = list )
-    is_bits : bool = False
-    
-    # Pola uzupełnianie w __post_init__
-    payload_bits : NDArray[ np.uint8 ] = field ( init = False )
-    payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    payload_symbols : NDArray[ np.complex128 ] = field ( init = False )
-    payload_samples : NDArray[ np.complex128 ] = field ( init = False )
-    packet_bits : NDArray[ np.uint8 ] = field ( init = False )
-    packet_symbols : NDArray[ np.uint8 ] = field ( init = False )
-    packet_samples : NDArray[ np.uint8 ] = field ( init = False )
-
-    def __post_init__ ( self ) -> None :
-        self.create_payload_bits_and_bytes ()
-        self.create_packet_bits ()
-        self.payload_symbols = self.create_symbols ( self.payload_bits )
-        self.packet_symbols = self.create_symbols ( self.packet_bits )
-        self.payload_samples = self.create_samples_4pluto ( self.payload_symbols )
-        self.packet_samples = self.create_samples_4pluto ( self.packet_symbols )
-
-    def create_payload_bits_and_bytes ( self ) -> None :
-        if not self.payload:
-            raise ValueError ( "Error: Payload is empty!" )
-        payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
-        if self.is_bits :         
-            if payload_arr.max () > 1 :
-                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
-            self.payload_bits = payload_arr.copy ()
-            # dopełnij do pełnych bajtów (z prawej zerami) i spakuj
-            pad = ( -len ( payload_arr ) ) % 8
-            if pad :
-                payload_arr = np.concatenate ( [ payload_arr , np.zeros ( pad , dtype = np.uint8 ) ] )
-            self.payload_bytes = np.packbits ( payload_arr )
-        else :
-            # ------------------ payload podany jako bajty -----------------
-            if payload_arr.max () > 255 :
-                raise ValueError ( "Error: Payload has not all values in 0 - 255!")
-            self.payload_bytes = payload_arr.copy ()
-            self.payload_bits = np.unpackbits ( self.payload_bytes )   # zawsze MSB first
-
-    def create_packet_bits ( self ) -> None:
-        length_bytes = [ len ( self.payload_bytes ) - 1 ]
-        crc32 = zlib.crc32 ( self.payload_bytes )
-        crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
-        print ( f"{ BARKER13_W_PADDING_BITS= }, { length_bytes= }, { self.payload_bytes= }, { crc32_bytes= }")
-        preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
-        
-        header_bits = gen_bits ( length_bytes )
-        crc32_bits = gen_bits ( crc32_bytes )
-        self.packet_bits = np.concatenate ( [ preamble_bits , header_bits , self.payload_bits , crc32_bits ] )
-
-    def create_symbols ( self , bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
-        return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits )
-
-    def create_samples_4pluto ( self , symbols : NDArray[ np.complex128 ] ) -> None :
-        samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( symbols ) ).astype ( np.complex128 , copy = False )
-        return sdr.scale_to_pluto_dac ( samples )
-
-    def create_payload_samples_4pluto ( self ) -> None :
-        self.payload_samples = np.ravel (
-            filters.apply_tx_rrc_filter_v0_1_6 ( self.payload_symbols )
-        ).astype ( np.complex128 , copy = False )
-        self.payload_samples = sdr.scale_to_pluto_dac ( self.payload_samples )
-
-    def plot_symbols ( self , symbols : NDArray[ np.complex128 ] , title = "" ) -> None :
-        plot.plot_symbols ( symbols , f"{title}" )
-        plot.complex_symbols_v0_1_6 ( symbols , f"{title}" )
-
-    def plot_waveform ( self , samples : NDArray[ np.complex128 ] , title = "" , marker : bool = False ) -> None :
-        plot.complex_waveform ( samples , f"{title}" , marker_squares = marker )
-
-    def plot_spectrum ( self , samples : NDArray[ np.complex128 ] , title = "" ) -> None :
-        plot.spectrum_occupancy ( samples , 1024 , title )
-
-    def bytes2bits ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
-        np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
-
-    def __repr__ ( self ) -> str :
-        return (
-            f"{ self.bits.shape= } , dtype={ self.bits.dtype= }"
-            f"{ self.bytes.shape= } , dtype={ self.bytes.dtype= }"
-            f"{ self.symbols.shape= } , dtype={ self.symbols.dtype= }"
-            f"{ self.samples.shape= } , dtype={ self.samples.dtype= }"
-        )
-    
