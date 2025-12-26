@@ -538,7 +538,7 @@ class TxSamples_v0_1_8 :
 
     def plot_samples_symbols ( self , title = "" ) -> None :
         plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
-        plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
+        #plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
 
     def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title}" , marker_squares = marker )
@@ -547,7 +547,7 @@ class TxSamples_v0_1_8 :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.samples_bits= } { self.samples_bytes= } { self.samples_bpsk_symbols= }" )
+        return ( f"{ self.samples_bytes= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxFrame_v0_1_8 :
