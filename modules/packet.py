@@ -503,83 +503,6 @@ class RxPackets :
         self.samples = self.samples [ start : end + 1 ]
 
 @dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_8 :
-    
-    payload: list | tuple | np.ndarray = field ( default_factory = list )
-    is_bits : bool = False
-    
-    # Pola uzupełnianie w __post_init__
-    samples_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    samples_bits : NDArray[ np.uint8 ] = field ( init = False )
-    samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
-    samples4pluto : NDArray[ np.uint8 ] = field ( init = False )
-
-    def __post_init__ ( self ) -> None :
-        
-        self.create_samples_bytes ()
-        self.create_samples_bits ()
-        self.create_samples_bpsk_symbols ()
-        self.create_samples_4pluto ()
-
-    def create_samples_bytes ( self ) -> None :
-        tx_packet = TxPacket_v0_1_8 ( payload = self.payload , is_bits = self.is_bits )
-        tx_frame = TxFrame_v0_1_8 ( packet_len = tx_packet.packet_len )
-        self.samples_bytes = np.concatenate ( ( tx_frame.frame_bytes , tx_packet.packet_bytes ) )
-
-    def create_samples_bits ( self ) -> None:
-        self.samples_bits = bytes2bits ( self.samples_bytes )
-
-    def create_samples_bpsk_symbols ( self ) -> None :
-        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.samples_bits )
-
-    def create_samples_4pluto ( self ) -> None :
-        samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-        self.samples4pluto = sdr.scale_to_pluto_dac ( samples )
-
-    def plot_samples_symbols ( self , title = "" ) -> None :
-        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
-        #plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
-
-    def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title}" , marker_squares = marker )
-
-    def plot_samples_spectrum ( self , title = "" ) -> None :
-        plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
-
-    def __repr__ ( self ) -> str :
-        return ( f"{ self.samples_bytes= }" )
-
-@dataclass ( slots = True , eq = False )
-class TxFrame_v0_1_8 :
-
-    packet_len : np.uint16
-        
-    # Pola uzupełnianie w __post_init__
-    sync_sequence_bits : NDArray[ np.uint8 ] = field ( init = False )
-    packet_len_bits : NDArray[ np.uint8 ] = field ( init = False )
-    frame_bits : NDArray[ np.uint8 ] = field ( init = False )
-    frame_bytes : NDArray[ np.uint8 ] = field ( init = False )
-
-    def __post_init__ ( self ) -> None :
-        self.create_sync_sequence_bits ()
-        self.create_packet_len_bits ()
-        self.create_frame_bits ()
-        self.frame_bytes = pad_bits2bytes ( self.frame_bits )
-
-    def create_sync_sequence_bits ( self ) -> None :
-        self.sync_sequence_bits = BARKER13_BITS
-
-    def create_packet_len_bits ( self ) -> None :
-        self.packet_len_bits = dec2bits ( self.packet_len , PACKET_LEN_BITS )
-
-    def create_frame_bits ( self ) -> None :
-        self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
-
-    def __repr__ ( self ) -> str :
-        return (
-            f"{ self.frame_bytes= }, { self.frame_bits= }, { self.packet_len= }" )
-
-@dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_8 :
     
     payload : list | tuple | np.ndarray = field ( default_factory = list )
@@ -632,6 +555,111 @@ class TxPacket_v0_1_8 :
             f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
+class TxFrame_v0_1_8 :
+
+    packet_len : np.uint16
+        
+    # Pola uzupełnianie w __post_init__
+    sync_sequence_bits : NDArray[ np.uint8 ] = field ( init = False )
+    packet_len_bits : NDArray[ np.uint8 ] = field ( init = False )
+    frame_bits : NDArray[ np.uint8 ] = field ( init = False )
+    frame_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    tx_packet : TxPacket_v0_1_8 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.create_sync_sequence_bits ()
+        self.create_packet_len_bits ()
+        self.create_frame_bits ()
+        self.frame_bytes = pad_bits2bytes ( self.frame_bits )
+
+    def create_sync_sequence_bits ( self ) -> None :
+        self.sync_sequence_bits = BARKER13_BITS
+
+    def create_packet_len_bits ( self ) -> None :
+        self.packet_len_bits = dec2bits ( self.packet_len , PACKET_LEN_BITS )
+
+    def create_frame_bits ( self ) -> None :
+        self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.frame_bytes= }, { self.frame_bits= }, { self.packet_len= }" )
+
+@dataclass ( slots = True , eq = False )
+class TxSamples_v0_1_8 :
+    
+    payload: list | tuple | np.ndarray = field ( default_factory = list )
+    is_bits : bool = False
+    
+    # Pola uzupełnianie w __post_init__
+    samples_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    samples_bits : NDArray[ np.uint8 ] = field ( init = False )
+    samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
+    samples : NDArray[ np.complex128 ] = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.create_samples_bytes ()
+        self.create_samples_bits ()
+        self.create_samples_bpsk_symbols ()
+        self.create_samples_4pluto ()
+
+    def create_samples_bytes ( self ) -> None :
+        tx_packet = TxPacket_v0_1_8 ( payload = self.payload , is_bits = self.is_bits )
+        tx_frame = TxFrame_v0_1_8 ( packet_len = tx_packet.packet_len )
+        self.samples_bytes = np.concatenate ( ( tx_frame.frame_bytes , tx_packet.packet_bytes ) )
+
+    def create_samples_bits ( self ) -> None:
+        self.samples_bits = bytes2bits ( self.samples_bytes )
+
+    def create_samples_bpsk_symbols ( self ) -> None :
+        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.samples_bits )
+
+    def create_samples_4pluto ( self ) -> None :
+        self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+
+    def plot_symbols ( self , title = "" ) -> None :
+        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
+        plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
+
+    def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+
+    def plot_samples_spectrum ( self , title = "" ) -> None :
+        plot.spectrum_occupancy ( self.samples , 1024 , title )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.samples_bytes= }, { self.samples.size= }" )
+
+@dataclass ( slots = True , eq = False )
+class TxPluto_v0_1_8 :
+    
+    payload: list | tuple | np.ndarray = field ( default_factory = list )
+    is_bits : bool = False
+    
+    # Pola uzupełnianie w __post_init__
+    tx_samples : TxSamples_v0_1_8 = field ( init = False )
+    samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.create_samples_4pluto ()
+
+    def create_samples_4pluto ( self ) -> None :
+        self.tx_samples = TxSamples_v0_1_8 ( payload = self.payload , is_bits = self.is_bits )
+        self.samples4pluto = sdr.scale_to_pluto_dac ( self.tx_samples.samples )
+
+    def plot_symbols ( self , title = "" ) -> None :
+        self.tx_samples.plot_symbols ( title )
+
+    def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title}" , marker_squares = marker )
+
+    def plot_samples_spectrum ( self , title = "" ) -> None :
+        plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.samples4pluto.size= }" )
+
+@dataclass ( slots = True , eq = False )
 class TxPacket :
     
     payload: list | tuple | np.ndarray = field ( default_factory = list )
@@ -647,7 +675,6 @@ class TxPacket :
     packet_samples : NDArray[ np.uint8 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        
         self.create_payload_bits_and_bytes ()
         self.create_packet_bits ()
         self.payload_symbols = self.create_symbols ( self.payload_bits )

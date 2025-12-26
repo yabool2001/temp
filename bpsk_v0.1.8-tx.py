@@ -20,12 +20,11 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-tx_samples = packet.TxSamples_v0_1_8 ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
-print ( f"\n{ script_filename } { tx_samples}" )
-tx_samples.plot_samples_symbols ( script_filename + " BPSK packet symbols" )
-tx_samples.plot_samples_waveform ( script_filename + " BPSK packet waveform samples" , False )
-tx_samples.plot_samples_spectrum ( script_filename + " BPSK packet spectrum occupancy" )
-
+tx_pluto = packet.TxPluto_v0_1_8 ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
+print ( f"\n{ script_filename } { tx_pluto}" )
+tx_pluto.plot_symbols ( script_filename + " BPSK packet symbols" )
+tx_pluto.plot_samples_waveform ( script_filename + " BPSK packet waveform samples" , False )
+tx_pluto.plot_samples_spectrum ( script_filename + " BPSK packet spectrum occupancy" )
 '''
 pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
 
