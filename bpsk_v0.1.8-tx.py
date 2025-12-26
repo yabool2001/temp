@@ -22,10 +22,10 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 tx_pluto = packet.TxPluto_v0_1_8 ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
 print ( f"\n{ script_filename } { tx_pluto}" )
-tx_pluto.plot_symbols ( script_filename + " BPSK packet symbols" )
-tx_pluto.plot_samples_waveform ( script_filename + " BPSK packet waveform samples" , False )
-tx_pluto.plot_samples_spectrum ( script_filename + " BPSK packet spectrum occupancy" )
-'''
+#tx_pluto.plot_symbols ( script_filename + " BPSK packet symbols" )
+#tx_pluto.plot_samples_waveform ( script_filename + " BPSK packet waveform samples" , False )#
+#tx_pluto.plot_samples_spectrum ( script_filename + " BPSK packet spectrum occupancy" )
+
 pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
 
 stdscr = curses.initscr ()
@@ -40,10 +40,10 @@ try :
         key = stdscr.getkey ()
         if key ==  't' :
             t.sleep ( 1 )  # anty-dubler
-            sdr.tx_once_v0_1_6 ( tx_packet.packet_samples , pluto_tx )
+            sdr.tx_once_v0_1_6 ( tx_pluto.samples4pluto , pluto_tx )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
-            sdr.tx_cyclic_v0_1_6 ( tx_packet.packet_samples , pluto_tx )
+            sdr.tx_cyclic_v0_1_6 ( tx_pluto.samples4pluto , pluto_tx )
         elif key == 's' :
             t.sleep ( 1 ) # anty-dubler
             sdr.stop_tx_cyclic ( pluto_tx )
@@ -52,4 +52,3 @@ finally :
     curses.echo ()
     stdscr.keypad ( False )
     curses.endwin ()
-'''

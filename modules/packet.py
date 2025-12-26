@@ -421,7 +421,7 @@ class RxFrame_v0_1_8 :
     has_sync_sequence : bool = False
 
     def __post_init__ ( self ) -> None :
-        self.plot_waveform ( f"RxFrame_v0_1_7 samples_filtered { self.samples_filtered.size= }" , marker = True )
+        #self.plot_waveform ( f"RxFrame_v0_1_7 samples_filtered { self.samples_filtered.size= }" , marker = True )
         self.process_frame ()
     
     def process_frame ( self ) -> None :
