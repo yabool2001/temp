@@ -683,6 +683,7 @@ class TxPluto_v0_1_8 :
     
     payload: list | tuple | np.ndarray = field ( default_factory = list )
     is_bits : bool = False
+    pluto_tx = field ( init = False )
     
     # Pola uzupełnianie w __post_init__
     tx_samples : TxSamples_v0_1_8 = field ( init = False )
@@ -691,6 +692,7 @@ class TxPluto_v0_1_8 :
     def __post_init__ ( self ) -> None :
         if count_bytes ( self.payload , self.is_bits ) > 1500 :
             raise ValueError ( "Payload size cannot exceed 1500 bytes" )
+        self.init_pluto_tx ()
         self.create_samples_4pluto ()
 
     def create_samples_4pluto ( self ) -> None :
@@ -705,6 +707,19 @@ class TxPluto_v0_1_8 :
 
     def plot_samples_spectrum ( self , title = "" ) -> None :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
+    
+    def init_pluto_tx ( self ) -> None :
+        self.pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
+
+    def tx_once ( self ) -> None :
+        self.pluto_tx.tx_destroy_buffer ()
+        self.pluto_tx.tx_cyclic_buffer = False
+        self.pluto_tx.tx ( self.samples4pluto )
+
+    def tx_cyclic_v0_1_6 ( samples , sdr ) :
+        sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
+        sdr.tx_cyclic_buffer = True
+        sdr.tx ( samples )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.samples4pluto.size= }" )
