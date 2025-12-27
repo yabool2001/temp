@@ -370,44 +370,44 @@ def count_bytes ( payload , has_bits : bool = False ) -> np.uint64 :
     return np.uint64 ( payload_bytes_len )
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_8 :
+class RxPackets :
     
     samples : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    has_amp_greater_than_ths : bool = False
-    ths : float = 1000.0
+    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
+    sync_power_db : float | None = field ( init = False )
+    max_amplitude : float | None = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.filter_samples ()
-        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-        #self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.samples_filtered = self.filter_samples ()
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
     
-    def filter_samples ( self ) -> None :
-        self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
+        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
-    def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peaks is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
-            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
+    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
+    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
+    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
+    #    return payload_bits
+    
+    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
+        if peaks and self.sync_seguence_peak_idxs is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
-            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return (
             f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
         )
 
-    def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
-        if start < 0 or end > ( self.samples_filtered.size - 1 ) :
-            raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
-        if start >= end :
-            raise ValueError ( "Start must be < end" )
-        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
-        self.samples_filtered = self.samples_filtered [ start : end ]
-
+    def clip_samples ( self , start : int , end : int ) -> None :
+        """Trim internal samples to the inclusive [ start , end ] range."""
+        if start < 0 or end > ( self.samples.size - 1 ) :
+            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
+        self.samples = self.samples [ start : end + 1 ]
 
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_7 :
@@ -445,7 +445,6 @@ class RxSamples_v0_1_7 :
             raise ValueError ( "Start must be < end" )
         #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
         self.samples_filtered = self.samples_filtered [ start : end ]
-
 
 @dataclass ( slots = True , eq = False )
 class RxFrame_v0_1_8 :
@@ -513,44 +512,46 @@ class RxFrame_v0_1_8 :
         )
 
 @dataclass ( slots = True , eq = False )
-class RxPackets :
+class RxSamples_v0_1_8 :
     
     samples : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
+    rx_frame_ctx = RxFrame_v0_1_8 = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
-    sync_power_db : float | None = field ( init = False )
-    max_amplitude : float | None = field ( init = False )
+    has_amp_greater_than_ths : bool = False
+    ths : float = 1000.0
 
     def __post_init__ ( self ) -> None :
-        self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-    
-    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
-        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+        self.filter_samples ()
+        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
+        self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )
 
-    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
-    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
-    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
-    #    return payload_bits
+        #self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
     
-    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peak_idxs is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
+    def filter_samples ( self ) -> None :
+        self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+
+    def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
+        if peaks and self.sync_seguence_peaks is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
+            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return (
             f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
         )
 
-    def clip_samples ( self , start : int , end : int ) -> None :
-        """Trim internal samples to the inclusive [ start , end ] range."""
-        if start < 0 or end > ( self.samples.size - 1 ) :
-            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
-        self.samples = self.samples [ start : end + 1 ]
+    def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
+        if start < 0 or end > ( self.samples_filtered.size - 1 ) :
+            raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
+        if start >= end :
+            raise ValueError ( "Start must be < end" )
+        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
+        self.samples_filtered = self.samples_filtered [ start : end ]
 
 @dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_8 :
