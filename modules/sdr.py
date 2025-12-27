@@ -4,7 +4,7 @@ import json
 import numpy as np
 import plotly.express as px
 import os
-import time 
+import time , tomllib
 
 from dataclasses import dataclass, field
 from modules import plot , filters
@@ -12,9 +12,15 @@ from numpy.typing import NDArray
 
 script_filename = os.path.basename ( __file__ )
 
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
+
 with open ( "settings.json" , "r" ) as settings_file :
     settings = json.load ( settings_file )
     pluto = settings[ "ADALM-Pluto" ]
+
+PLUTO_TX_SN = toml_settings["ADALM-Pluto"]["URI"]["SN_TX"]
+PLUTO_RX_SN = toml_settings["ADALM-Pluto"]["URI"]["SN_RX"]
 
 TX_SN = pluto[ "URI" ][ "SN_TX" ]
 RX_SN = pluto[ "URI" ][ "SN_RX" ]
