@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 
 from pathlib import Path
 from scipy.signal import find_peaks
+from typing import Any
 
 np.set_printoptions(threshold=np.inf, linewidth=np.inf)
 script_filename = os.path.basename ( __file__ )
@@ -507,9 +508,7 @@ class RxFrame_v0_1_8 :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
-        return (
-            f"{ self.samples_filtered.shape= } , dtype = { self.samples_filtered.dtype= }"
-        )
+        return ( f"{ self.samples_filtered.shape= } , dtype = { self.samples_filtered.dtype= }")
 
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_8 :
@@ -517,7 +516,7 @@ class RxSamples_v0_1_8 :
     samples : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
-    rx_frame_ctx = RxFrame_v0_1_8 = field ( init = False )
+    rx_frame_ctx : RxFrame_v0_1_8 = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
@@ -690,7 +689,7 @@ class TxPluto_v0_1_8 :
 
     payload : list | tuple | np.ndarray = field ( default_factory = list )
     has_bits : bool = False
-    pluto_tx_ctx = field ( init = False )
+    pluto_tx_ctx : Any = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
@@ -714,7 +713,7 @@ class TxPluto_v0_1_8 :
         self.pluto_tx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
 
     # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
-    def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool ) :
+    def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False) :
         self.payload = payload
         self.has_bits = has_bits
         self.create_samples_4pluto ()
@@ -732,4 +731,4 @@ class TxPluto_v0_1_8 :
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
     def __repr__ ( self ) -> str :
-        return ( f"{self.pluto_tx_ctx}/n{ self.samples4pluto.size= }" )
+        return ( f"{self.pluto_tx_ctx=}" )

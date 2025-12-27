@@ -21,7 +21,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 tx_pluto = packet.TxPluto_v0_1_8 ()
-print ( f"\n{ script_filename= } { tx_pluto= }" )
+print ( f"\n{ script_filename= } { tx_pluto }" )
 #tx_pluto.plot_symbols ( script_filename + " BPSK packet symbols" )
 #tx_pluto.plot_samples_waveform ( script_filename + " BPSK packet waveform samples" , False )#
 #tx_pluto.plot_samples_spectrum ( script_filename + " BPSK packet spectrum occupancy" )
