@@ -4,6 +4,7 @@ import numpy as np
 import os
 import tomllib
 
+from adi import Pluto
 from dataclasses import dataclass , field
 from modules import filters , modulation, plot , sdr
 from numpy.typing import NDArray
@@ -689,7 +690,7 @@ class TxPluto_v0_1_8 :
 
     payload : list | tuple | np.ndarray = field ( default_factory = list )
     has_bits : bool = False
-    pluto_tx_ctx : Any = field ( init = False )
+    pluto_tx_ctx : Pluto = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
