@@ -361,9 +361,9 @@ def get_payload_bytes ( samples , rrc_span , sps ) :
         print ( f"Brak całej ramki." )
         return None
 
-def count_bytes ( payload , is_bits : bool = False ) -> np.uint64 :
+def count_bytes ( payload , has_bits : bool = False ) -> np.uint64 :
     payload_arr = np.asarray ( payload , dtype = np.uint8 ).ravel ()
-    if is_bits :
+    if has_bits :
         payload_bytes_len = len ( payload_arr ) // 8
     else :
         payload_bytes_len = len ( payload_arr )
@@ -499,9 +499,10 @@ class RxFrame_v0_1_8 :
                         packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                         self.packet_len_dec = bits_2_int ( packet_len_bits )
     
-    def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
-        payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
-        return payload_bits
+    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
+    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
+    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
+    #    return payload_bits
     
     def plot_waveform ( self , title = "" , marker : bool = False ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title}" , marker_squares = marker )
@@ -529,9 +530,10 @@ class RxPackets :
     def filter_samples ( self ) -> NDArray[ np.complex128 ] :
         return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
-    def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
-        payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
-        return payload_bits
+    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
+    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
+    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
+    #    return payload_bits
     
     def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peak_idxs is not None :
@@ -554,7 +556,7 @@ class RxPackets :
 class TxPacket_v0_1_8 :
     
     payload : list | tuple | np.ndarray = field ( default_factory = list )
-    is_bits : bool = False
+    has_bits : bool = False
     
     # Pola uzupełnianie w __post_init__
     payload_bits : NDArray[ np.uint8 ] = field ( init = False )
@@ -573,7 +575,7 @@ class TxPacket_v0_1_8 :
         if not self.payload or len ( self.payload ) == 0 or self.payload is None :
             raise ValueError ( "Error: Payload is empty!" )
         payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
-        if self.is_bits :         
+        if self.has_bits :         
             if payload_arr.max () > 1 :
                 raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
             if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * 8 :
@@ -637,7 +639,7 @@ class TxFrame_v0_1_8 :
 class TxSamples_v0_1_8 :
     
     payload: list | tuple | np.ndarray = field ( default_factory = list )
-    is_bits : bool = False
+    has_bits : bool = False
     
     # Pola uzupełnianie w __post_init__
     samples_bytes : NDArray[ np.uint8 ] = field ( init = False )
@@ -652,7 +654,7 @@ class TxSamples_v0_1_8 :
         self.create_samples_4pluto ()
 
     def create_samples_bytes ( self ) -> None :
-        tx_packet = TxPacket_v0_1_8 ( payload = self.payload , is_bits = self.is_bits )
+        tx_packet = TxPacket_v0_1_8 ( payload = self.payload , has_bits = self.has_bits )
         tx_frame = TxFrame_v0_1_8 ( packet_len = tx_packet.packet_len )
         self.samples_bytes = np.concatenate ( ( tx_frame.frame_bytes , tx_packet.packet_bytes ) )
 
@@ -686,16 +688,16 @@ class TxPluto_v0_1_8 :
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
 
     payload : list | tuple | np.ndarray = field ( default_factory = list )
-    bits : bool = False
+    has_bits : bool = False
     pluto_tx_ctx = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
 
     def create_samples_4pluto ( self ) -> None :
-        if count_bytes ( self.payload , self.is_bits ) > 1500 :
+        if count_bytes ( self.payload , self.has_bits ) > 1500 :
             raise ValueError ( "Payload size cannot exceed 1500 bytes" )
-        self.tx_samples = TxSamples_v0_1_8 ( payload = self.payload , is_bits = self.is_bits )
+        self.tx_samples = TxSamples_v0_1_8 ( payload = self.payload , has_bits = self.has_bits )
         self.samples4pluto = sdr.scale_to_pluto_dac ( self.tx_samples.samples )
 
     def plot_symbols ( self , title = "" ) -> None :
@@ -710,28 +712,23 @@ class TxPluto_v0_1_8 :
     def init_pluto_tx ( self ) -> None :
         self.pluto_tx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
 
-    def tx_once ( self , payload : list | tuple | np.ndarray , bits : bool ) -> None :
+    # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
+    def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool ) :
         self.payload = payload
-        self.bits = bits
+        self.has_bits = has_bits
         self.create_samples_4pluto ()
         self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_cyclic_buffer = False
+        if mode == "once" :
+            self.pluto_tx_ctx.tx_cyclic_buffer = False
+        elif mode == "cyclic" :
+            self.pluto_tx_ctx.tx_cyclic_buffer = True
+        else :
+            raise ValueError ( "Error: tx mode can be once or cyclic!" )
         self.pluto_tx_ctx.tx ( self.samples4pluto )
 
-    def tx_cyclic ( self , payload : list | tuple | np.ndarray , bits : bool ) :
-        self.payload = payload
-        self.bits = bits
-        self.create_samples_4pluto ()
-        self.pluto_tx_ctx.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
-        self.pluto_tx_ctx.tx_cyclic_buffer = True
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-
-    def stop_tx_cyclic ( self , payload : list | tuple | np.ndarray , bits : bool ) :
-        self.payload = payload
-        self.bits = bits
-        self.create_samples_4pluto ()
+    def stop_tx_cyclic ( self ) :
         self.pluto_tx_ctx.tx_destroy_buffer ()
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.samples4pluto.size= }" )
+        return ( f"{self.pluto_tx_ctx}/n{ self.samples4pluto.size= }" )
