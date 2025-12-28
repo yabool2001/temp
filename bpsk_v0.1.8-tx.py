@@ -22,6 +22,7 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
+plt = False
 tx_pluto = packet.TxPluto_v0_1_8 ()
 print ( f"\n{ script_filename= } { tx_pluto }" )
 
@@ -41,9 +42,10 @@ try :
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
             print ( f"[t] Sample sent!" )
-            tx_pluto.plot_symbols ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
-            tx_pluto.plot_samples_waveform ( script_filename , False )
-            tx_pluto.plot_samples_spectrum ( script_filename )
+            if plt :
+                tx_pluto.plot_symbols ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
+                tx_pluto.plot_samples_waveform ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" , False )
+                tx_pluto.plot_samples_spectrum ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.tx ( mode = "cyclic" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )

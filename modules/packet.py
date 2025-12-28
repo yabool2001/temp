@@ -94,7 +94,7 @@ SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
 PACKET_LEN_BITS = 11
 CRC32_LEN_BITS = 32
 MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 2 ** PACKET_LEN_BITS - 1 )
-MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 - 4  # MTU - CRC32 packet length byte
+MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 # MTU dla IP over ETHERNET
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
@@ -371,6 +371,10 @@ def count_bytes ( payload , has_bits : bool = False ) -> np.uint64 :
         payload_bytes_len = len ( payload_arr )
     return np.uint64 ( payload_bytes_len )
 
+def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
+    crc32 = zlib.crc32 ( bytes )
+    return np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
+
 @dataclass ( slots = True , eq = False )
 class RxPackets :
     
@@ -594,9 +598,8 @@ class TxPacket_v0_1_8 :
                 raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
             self.payload_bytes = payload_arr
 
-    def create_crc32_bytes ( self ) -> None:
-        crc32 = zlib.crc32 ( self.payload_bytes )
-        self.crc32_bytes = np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
+    def create_crc32_bytes ( self ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
 
     def create_packet_bytes ( self ) -> None:
         self.packet_bytes = np.concatenate ( [ self.payload_bytes , self.crc32_bytes ] )
@@ -696,8 +699,8 @@ class TxPluto_v0_1_8 :
         self.init_pluto_tx ()
 
     def create_samples_4pluto ( self ) -> None :
-        if count_bytes ( self.payload , self.has_bits ) > 1500 :
-            raise ValueError ( "Payload size cannot exceed 1500 bytes" )
+        if count_bytes ( self.payload , self.has_bits ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN :
+            raise ValueError ( "Payload size cannot exceed 1500 bytes (IP over ETHERNET MTU)" )
         self.tx_samples = TxSamples_v0_1_8 ( payload = self.payload , has_bits = self.has_bits )
         self.samples4pluto = sdr.scale_to_pluto_dac ( self.tx_samples.samples )
 
