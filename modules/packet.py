@@ -624,10 +624,9 @@ class TxFrame_v0_1_8 :
     def __post_init__ ( self ) -> None :
         self.create_sync_sequence_bits ()
         self.create_packet_len_bits ()
-        self.create_frame_bits () # to jest źle i do poprawy o nie uwzględnia crc32
-        frame_bytes_before_crc32 = pad_bits2bytes ( np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] ) )
-        self.create_crc32_bytes ( frame_bytes_before_crc32 )
-        self.frame_bytes = np.concatenate ( [ frame_bytes_before_crc32 , self.crc32_bytes ] )
+        frame_main_bytes = pad_bits2bytes ( np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] ) )
+        self.create_crc32_bytes ( frame_main_bytes )
+        self.frame_bytes = np.concatenate ( [ frame_main_bytes , self.crc32_bytes ] )
 
     def create_sync_sequence_bits ( self ) -> None :
         self.sync_sequence_bits = BARKER13_BITS
@@ -638,12 +637,12 @@ class TxFrame_v0_1_8 :
     def create_frame_bits ( self ) -> None :
         self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
 
-    def create_crc32_bytes ( self , frame ) -> None :
-        self.crc32_bytes = create_crc32_bytes ( frame )
+    def create_crc32_bytes ( self , frame_main_bytes ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( frame_main_bytes )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.frame_bytes= }, { self.frame_bits= }, { self.packet_len= }" )
+            f"{ self.frame_bytes= }, { self.frame_bits.size= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples_v0_1_8 :

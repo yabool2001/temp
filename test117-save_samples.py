@@ -10,7 +10,7 @@ Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 plt = True
 wrt = True
 
-filename = "np.samples/rx_samples_1.npy"
+filename = "np.samples/rx_samples_0.1.8_.npy"
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
@@ -18,7 +18,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 pluto_rx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_RX"] )
-for i in range ( 0 , 100 ) : # Clear buffer just to be safe
+for i in range ( 0 , 1 ) : # Clear buffer just to be safe
     raw_data = sdr.rx_samples ( pluto_rx )
 print ( "Start Pluto Rx!" )
 while True :
