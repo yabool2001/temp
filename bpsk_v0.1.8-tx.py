@@ -15,6 +15,8 @@ import tomllib
 #from pathlib import Path
 from modules import packet , modulation , plot , sdr
 
+np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
+
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -42,12 +44,18 @@ try :
         if key ==  't' :
             t.sleep ( 1 )  # anty-dubler
             tx_pluto.tx ( mode = "once" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
+            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            print ( f"[t] Sample sent!" )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.tx ( mode = "cyclic" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
+            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            print ( f"[c] Tx cyclic started..." )
         elif key == 's' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.stop_tx_cyclic ()
+            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            print ( "[s] Tc cyclic stopped" )
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     curses.echo ()

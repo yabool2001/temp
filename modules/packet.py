@@ -13,7 +13,7 @@ from pathlib import Path
 from scipy.signal import find_peaks
 from typing import Any
 
-np.set_printoptions(threshold=np.inf, linewidth=np.inf)
+np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 script_filename = os.path.basename ( __file__ )
 
 # Wczytaj plik TOML z konfiguracją
