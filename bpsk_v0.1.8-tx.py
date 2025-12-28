@@ -24,12 +24,6 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 tx_pluto = packet.TxPluto_v0_1_8 ()
 print ( f"\n{ script_filename= } { tx_pluto }" )
-#tx_pluto.plot_symbols ( script_filename + " BPSK packet symbols" )
-#tx_pluto.plot_samples_waveform ( script_filename + " BPSK packet waveform samples" , False )#
-#tx_pluto.plot_samples_spectrum ( script_filename + " BPSK packet spectrum occupancy" )
-
-# Usunąć
-#pluto_tx = sdr.init_pluto_v3 ( settings["ADALM-Pluto"]["URI"]["SN_TX"] )
 
 stdscr = curses.initscr ()
 curses.noecho ()
@@ -45,7 +39,11 @@ try :
             t.sleep ( 1 )  # anty-dubler
             tx_pluto.tx ( mode = "once" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
             print ( f"[t] Sample sent!" )
+            tx_pluto.plot_symbols ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
+            tx_pluto.plot_samples_waveform ( script_filename , False )
+            tx_pluto.plot_samples_spectrum ( script_filename )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.tx ( mode = "cyclic" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
