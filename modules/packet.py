@@ -618,13 +618,16 @@ class TxFrame_v0_1_8 :
     packet_len_bits : NDArray[ np.uint8 ] = field ( init = False )
     frame_bits : NDArray[ np.uint8 ] = field ( init = False )
     frame_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
     tx_packet : TxPacket_v0_1_8 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.create_sync_sequence_bits ()
         self.create_packet_len_bits ()
-        self.create_frame_bits ()
-        self.frame_bytes = pad_bits2bytes ( self.frame_bits )
+        self.create_frame_bits () # to jest źle i do poprawy o nie uwzględnia crc32
+        frame_bytes_before_crc32 = pad_bits2bytes ( np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] ) )
+        self.create_crc32_bytes ( frame_bytes_before_crc32 )
+        self.frame_bytes = np.concatenate ( [ frame_bytes_before_crc32 , self.crc32_bytes ] )
 
     def create_sync_sequence_bits ( self ) -> None :
         self.sync_sequence_bits = BARKER13_BITS
@@ -634,6 +637,9 @@ class TxFrame_v0_1_8 :
 
     def create_frame_bits ( self ) -> None :
         self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
+
+    def create_crc32_bytes ( self , frame ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( frame )
 
     def __repr__ ( self ) -> str :
         return (
