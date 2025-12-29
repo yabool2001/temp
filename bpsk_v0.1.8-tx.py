@@ -36,12 +36,12 @@ print ( " - 's' aby zatrzymać transmisję cykliczną" )
 try :
     while True :
         key = stdscr.getkey ()
-        if key ==  't' :
+        if key ==  'o' :
             t.sleep ( 1 )  # anty-dubler
             tx_pluto.tx ( mode = "once" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
-            print ( f"[t] Sample sent!" )
+            print ( f"[o] Sample sent!" )
             if plt :
                 tx_pluto.plot_symbols ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
                 tx_pluto.plot_samples_waveform ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" , False )
@@ -56,6 +56,24 @@ try :
             tx_pluto.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( "[s] Tc cyclic stopped" )
+        elif key == 't' :
+            print ( "[t] Tester mode running..." )
+            t.sleep ( 1 )  # anty-dubler
+            tx_pluto.stop_tx_cyclic ()
+            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            for i in range ( 5 ) :
+                tx_pluto.tx ( mode = "once" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
+                print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+                print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
+                print ( f"[t] Sample {i+1}/5 sent!" )
+                if plt :
+                    tx_pluto.plot_symbols ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
+                    tx_pluto.plot_samples_waveform ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" , False )
+                    tx_pluto.plot_samples_spectrum ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
+                t.sleep ( 0.5 )  # odstęp między pakietami
+            print ( "[t] Tester mode stopped." )
+        elif key == '\x1b':  # ESCAPE
+            break
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     curses.echo ()

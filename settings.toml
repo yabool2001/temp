@@ -7,6 +7,7 @@ BARKER7_BITS = [ 0 , 0 , 0 , 1 , 1 , 0 , 1 ]
 BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
 PADDING_BITS = [ 0 , 0 , 0 ]                                            # Padding to 16 bits for BARKER13 (added at the end - LSB)
 PAYLOAD_4BYTES_DEC = [ 15, 15 , 15 , 15 ]
+PAYLOAD_NONE = []
 cuda = "True"
 
 [ADALM-Pluto]
