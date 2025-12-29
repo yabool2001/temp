@@ -62,9 +62,9 @@ try :
             tx_pluto.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             for i in range(0, 2**32):
-                payload1 = np.array(list(i.to_bytes(4, 'big')), dtype=np.uint8)
-                #ttx_pluto.tx ( mode = "once" , payload = payload1 ) )
-                print ( f"[t] Sample {payload1} sent!" )
+                payload1 = list ( i.to_bytes ( 4 , 'big' ) )
+                tx_pluto.tx ( mode = "once" , payload = payload1 )
+                #print ( f"[t] Sample {payload1} sent!" )
                 #if key := stdscr.getch() != -1:
                 #    break
             print ( "[t] Tester mode stopped." )

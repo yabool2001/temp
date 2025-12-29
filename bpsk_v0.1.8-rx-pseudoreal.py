@@ -23,6 +23,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 filename_samples_1 = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
 samples_1 = ops_file.open_samples_from_npf ( filename_samples_1 )
 
+payload100bytes
+
 rx_pluto = packet.RxPluto_v0_1_8 ()
 print ( f"\n{ script_filename= } { rx_pluto }" )
 rx_pluto.rx ()
