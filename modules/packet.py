@@ -98,8 +98,8 @@ MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 # MTU dla IP over ETHERNET
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
-    plt = False
-    wrt = True
+    plt = True
+    wrt = False
     sync = False
     base_path = Path ( "logs/correlation_results.csv" )
     corr_2_amp_min_ratio = 12.0
@@ -518,21 +518,24 @@ class RxFrame_v0_1_8 :
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_8 :
     
-    samples : NDArray[ np.complex128 ]
+    pluto_rx_ctx : Pluto
 
     # Pola uzupełnianie w __post_init__
-    rx_frame_ctx : RxFrame_v0_1_8 = field ( init = False )
+    samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
 
     def __post_init__ ( self ) -> None :
+        self.rx ()
         self.filter_samples ()
-        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-        self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )
+        self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        #self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
+        #self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )
 
-        #self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-    
+    def rx ( self ) -> None :
+        self.samples = self.pluto_rx_ctx.rx ()
+
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
@@ -556,6 +559,27 @@ class RxSamples_v0_1_8 :
             raise ValueError ( "Start must be < end" )
         #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
         self.samples_filtered = self.samples_filtered [ start : end ]
+
+@dataclass ( slots = True , eq = False )
+class RxPluto_v0_1_8 :
+
+    # Pola uzupełnianie w __post_init__
+    pluto_rx_ctx : Pluto = field ( init = False )
+    samples : RxSamples_v0_1_8 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.init_pluto_rx ()
+
+    def init_pluto_rx ( self ) -> None :
+        self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
+
+    def rx ( self ) -> RxSamples_v0_1_8 :
+        self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.pluto_rx_ctx= }"
+        )
 
 @dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_8 :

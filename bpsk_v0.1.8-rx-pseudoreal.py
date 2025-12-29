@@ -13,24 +13,23 @@ import time as t
 import tomllib
 
 #from pathlib import Path
-from modules import ops_file , packet , sdr
+from modules import ops_file , packet
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-filename_samples_1 = "logs/rx_samples_32768_1.npy"
-filename_samples_2 = "logs/rx_samples_32768_2.npy"
-filename_samples_3 = "logs/rx_samples_32768_3_1sample.npy"
-filename_samples_9 = "logs/rx_samples_32768_9_empty.npy"
+filename_samples_1 = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
 samples_1 = ops_file.open_samples_from_npf ( filename_samples_1 )
-samples_2 = ops_file.open_samples_from_npf ( filename_samples_2 )
-samples_3 = ops_file.open_samples_from_npf ( filename_samples_3 )
-samples_9 = ops_file.open_samples_from_npf ( filename_samples_9 )
 
-rx_samples = packet.RxSamples_v0_1_7 ( samples = samples_1 )
+rx_pluto = packet.RxPluto_v0_1_8 ()
+print ( f"\n{ script_filename= } { rx_pluto }" )
+rx_pluto.rx ()
+rx_pluto.samples.plot_complex_waveform ( f"{script_filename} RX samples from PlutoSDR" , marker = False )
+print ( f"{rx_pluto.samples.sync_seguence_peaks=}" )
 
+'''
 if rx_samples.sync_seguence_peaks is not None :
     print ( rx_samples.sync_seguence_peaks.size )
     rx_samples.plot_complex_waveform ( f"{script_filename}" , marker = False , peaks = True )
@@ -39,7 +38,7 @@ if rx_samples.sync_seguence_peaks is not None :
         print ( f"{ idx= } {rx_frame.has_sync_sequence=}" )
 else :
     print ( "No sync sequence peaks found" )
-
+'''
 
 '''
 tx_packet = packet.TxPacket ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
