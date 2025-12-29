@@ -157,7 +157,7 @@ def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , syn
             for idx in peaks :
                 writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
 
-        return peaks
+    return peaks
 
 
 def gen_bits ( bytes ) :
@@ -456,13 +456,16 @@ class RxSamples_v0_1_7 :
 class RxFrame_v0_1_8 :
     
     samples_filtered : NDArray[ np.complex128 ]
+    sync_sequence_start_idx : np.uint32
 
     # Pola uzupełnianie w __post_init__
-    sync_sequence_start_idx : np.uint32 | None = field ( init = False )
     sync_sequence_end_idx : np.uint32 | None = field ( init = False )
     packet_len_start_idx : np.uint32 | None = field ( init = False )
     packet_len_end_idx : np.uint32 | None = field ( init = False )
+    crc32_start_idx : np.uint32 | None = field ( init = False )
+    crc32_end_idx : np.uint32 | None = field ( init = False )
     packet_len_dec : np.uint32 | None = field ( init = False )
+    crc32_bytes : NDArray[ np.uint8 ] | None = field ( init = False )
     has_sync_sequence : bool = False
 
     def __post_init__ ( self ) -> None :
@@ -475,6 +478,8 @@ class RxFrame_v0_1_8 :
         self.sync_sequence_end_idx = self.sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
         self.packet_len_start_idx = self.sync_sequence_end_idx
         self.packet_len_end_idx = self.packet_len_start_idx + ( PACKET_LEN_BITS * sps )
+        self.crc32_start_idx = self.packet_len_end_idx
+        self.crc32_end_idx = self.crc32_start_idx + ( CRC32_LEN_BITS * sps )
         sync_sequence_symbols = self.samples_filtered [ self.sync_sequence_start_idx : self.sync_sequence_end_idx : sps ]
         sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
@@ -482,6 +487,9 @@ class RxFrame_v0_1_8 :
             packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
             packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
             self.packet_len_dec = bits_2_int ( packet_len_bits )
+            self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+            crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+            self.crc32_bytes = pad_bits2bytes ( crc32_bits )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
@@ -489,6 +497,9 @@ class RxFrame_v0_1_8 :
                 packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                 self.packet_len_dec = bits_2_int ( packet_len_bits )
+                self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+                crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+                self.crc32_bytes = pad_bits2bytes ( crc32_bits )
             else :
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
@@ -496,6 +507,9 @@ class RxFrame_v0_1_8 :
                     packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                     packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                     self.packet_len_dec = bits_2_int ( packet_len_bits )
+                    self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+                    crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+                    self.crc32_bytes = pad_bits2bytes ( crc32_bits )
                 else :
                     sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
                     if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
@@ -503,12 +517,18 @@ class RxFrame_v0_1_8 :
                         packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                         packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                         self.packet_len_dec = bits_2_int ( packet_len_bits )
+                        self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+                        self.crc32_bytes = pad_bits2bytes ( crc32_bits )
     
     # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
     #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
     #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
     #    return payload_bits
-    
+
+    def create_crc32_bytes ( self , frame_main_bytes ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( frame_main_bytes )
+
     def plot_waveform ( self , title = "" , marker : bool = False ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title}" , marker_squares = marker )
 
@@ -526,11 +546,14 @@ class RxSamples_v0_1_8 :
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    frame : RxFrame_v0_1_8 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.rx ()
         self.filter_samples ()
         self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        if self.sync_seguence_peaks.size > 0 :
+            self.frame = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered , sync_sequence_start_idx = self.sync_seguence_peaks[0] )
         #self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
         #self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )
 

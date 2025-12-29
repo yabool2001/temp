@@ -26,6 +26,8 @@ plt = False
 tx_pluto = packet.TxPluto_v0_1_8 ()
 print ( f"\n{ script_filename= } { tx_pluto }" )
 
+payload256bytes = list ( range ( 256 ) )
+
 stdscr = curses.initscr ()
 curses.noecho ()
 stdscr.keypad ( True )
@@ -57,17 +59,11 @@ try :
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( "[s] Tc cyclic stopped" )
         elif key == 't' :
-            print ( "[t] Tester mode running..." )
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.stop_tx_cyclic ()
+            tx_pluto.tx ( mode = "cyclic" , payload = payload256bytes )
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            for i in range(0, 2**32):
-                payload1 = list ( i.to_bytes ( 4 , 'big' ) )
-                tx_pluto.tx ( mode = "once" , payload = payload1 )
-                #print ( f"[t] Sample {payload1} sent!" )
-                #if key := stdscr.getch() != -1:
-                #    break
-            print ( "[t] Tester mode stopped." )
+            print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
+            print ( "[t] Tester mode send bytes." )
         elif key == '\x1b':  # ESCAPE
             break
         t.sleep ( 0.05 )  # odciążenie CPU
