@@ -525,6 +525,7 @@ class RxSamples_v0_1_8 :
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
+    sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.rx ()

@@ -61,16 +61,12 @@ try :
             t.sleep ( 1 )  # anty-dubler
             tx_pluto.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            for i in range ( 5 ) :
-                tx_pluto.tx ( mode = "once" , payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
-                print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-                print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
-                print ( f"[t] Sample {i+1}/5 sent!" )
-                if plt :
-                    tx_pluto.plot_symbols ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
-                    tx_pluto.plot_samples_waveform ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" , False )
-                    tx_pluto.plot_samples_spectrum ( f"{script_filename} {tx_pluto.tx_samples.samples_bytes=}" )
-                t.sleep ( 0.5 )  # odstęp między pakietami
+            for i in range(0, 2**32):
+                payload1 = np.array(list(i.to_bytes(4, 'big')), dtype=np.uint8)
+                #ttx_pluto.tx ( mode = "once" , payload = payload1 ) )
+                print ( f"[t] Sample {payload1} sent!" )
+                #if key := stdscr.getch() != -1:
+                #    break
             print ( "[t] Tester mode stopped." )
         elif key == '\x1b':  # ESCAPE
             break
