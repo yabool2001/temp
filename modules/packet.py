@@ -773,7 +773,7 @@ class TxPluto_v0_1_8 :
     
     def init_pluto_tx ( self ) -> None :
         #self.pluto_tx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
-        print ( f"{ self.pluto_tx_ctx= }")
+        print ( f"Nowe")
 
     # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
     def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False) :
