@@ -474,7 +474,8 @@ class RxFrame_v0_1_8 :
     
     def process_frame ( self ) -> None :
         sps = modulation.SPS
-        #self.sync_sequence_start_idx = filters.SPAN * sps // 2
+        self.sync_sequence_start_idx = self.sync_sequence_start_idx + filters.SPAN * sps // 2
+        # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         self.sync_sequence_end_idx = self.sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
         self.packet_len_start_idx = self.sync_sequence_end_idx
         self.packet_len_end_idx = self.packet_len_start_idx + ( PACKET_LEN_BITS * sps )
@@ -487,8 +488,8 @@ class RxFrame_v0_1_8 :
             packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
             packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
             self.packet_len_dec = bits_2_int ( packet_len_bits )
-            self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
-            crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+            crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+            crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
             self.crc32_bytes = pad_bits2bytes ( crc32_bits )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
@@ -497,18 +498,18 @@ class RxFrame_v0_1_8 :
                 packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                 self.packet_len_dec = bits_2_int ( packet_len_bits )
-                self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
-                crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+                crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+                crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
                 self.crc32_bytes = pad_bits2bytes ( crc32_bits )
             else :
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                     self.has_sync_sequence = True
                     packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
-                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
+                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag ) # czy tu ma być na pewno imag i czy znak jest ok ? przeanalizować
                     self.packet_len_dec = bits_2_int ( packet_len_bits )
-                    self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
-                    crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+                    crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+                    crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
                     self.crc32_bytes = pad_bits2bytes ( crc32_bits )
                 else :
                     sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
@@ -517,8 +518,8 @@ class RxFrame_v0_1_8 :
                         packet_len_symbols = self.samples_filtered [ self.packet_len_start_idx : self.packet_len_end_idx : sps ]
                         packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                         self.packet_len_dec = bits_2_int ( packet_len_bits )
-                        self.crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
-                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( self.crc32_symbols.real )
+                        crc32_symbols = self.samples_filtered [ self.crc32_start_idx : self.crc32_end_idx : sps ]
+                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
                         self.crc32_bytes = pad_bits2bytes ( crc32_bits )
     
     # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
