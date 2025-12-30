@@ -24,7 +24,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 plt = False
 tx_pluto = packet.TxPluto_v0_1_8 ()
-print ( f"\n{ script_filename= } { tx_pluto }" )
+print ( f"\n{ script_filename= } { tx_pluto= }" )
 
 payload256bytes = list ( range ( 256 ) )
 

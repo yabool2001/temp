@@ -745,11 +745,13 @@ class TxPluto_v0_1_8 :
     
     # Pola uzupełnianie w __post_init__
     tx_samples : TxSamples_v0_1_8 = field ( init = False )
+
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
 
     payload : list | tuple | np.ndarray = field ( default_factory = list )
     has_bits : bool = False
-    pluto_tx_ctx : Pluto = field ( init = False )
+    #pluto_tx_ctx : Pluto = field ( init = False )
+    pluto_tx_ctx : Pluto = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
@@ -770,7 +772,8 @@ class TxPluto_v0_1_8 :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
     
     def init_pluto_tx ( self ) -> None :
-        self.pluto_tx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
+        #self.pluto_tx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
+        print ( f"{ self.pluto_tx_ctx= }")
 
     # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
     def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False) :
