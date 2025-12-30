@@ -474,7 +474,7 @@ class RxFrame_v0_1_8 :
     
     def process_frame ( self ) -> None :
         sps = modulation.SPS
-        self.sync_sequence_start_idx = filters.SPAN * sps // 2
+        #self.sync_sequence_start_idx = filters.SPAN * sps // 2
         self.sync_sequence_end_idx = self.sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
         self.packet_len_start_idx = self.sync_sequence_end_idx
         self.packet_len_end_idx = self.packet_len_start_idx + ( PACKET_LEN_BITS * sps )
@@ -543,6 +543,7 @@ class RxSamples_v0_1_8 :
     # Pola uzupełnianie w __post_init__
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    has_sync_sequence : bool = False
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
@@ -553,6 +554,7 @@ class RxSamples_v0_1_8 :
         self.filter_samples ()
         self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
         if self.sync_seguence_peaks.size > 0 :
+            self.has_sync_sequence = True
             self.frame = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered , sync_sequence_start_idx = self.sync_seguence_peaks[0] )
         #self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
         #self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )

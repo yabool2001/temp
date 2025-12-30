@@ -27,10 +27,9 @@ rx_pluto = packet.RxPluto_v0_1_8 ()
 print ( f"\n{ script_filename= } { rx_pluto }" )
 rx_pluto.rx ()
 rx_pluto.samples.plot_complex_waveform ( f"{script_filename} RX samples from PlutoSDR" , marker = False )
-print ( f"{rx_pluto.samples.sync_seguence_peaks=}" )
-
-##### Tu się zatrzymałem w nocy 29 grudnia.
-print ( f"{rx_pluto.samples.frame.crc32_bytes=}" )
+if rx_pluto.samples.has_sync_sequence :
+    print ( f"{rx_pluto.samples.sync_seguence_peaks=}" )
+    print ( f"{rx_pluto.samples.frame.crc32_bytes=}" )
 
 '''
 if rx_samples.sync_seguence_peaks is not None :
