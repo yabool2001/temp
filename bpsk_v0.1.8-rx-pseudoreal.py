@@ -24,12 +24,14 @@ filename_samples_1 = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
 samples_1 = ops_file.open_samples_from_npf ( filename_samples_1 )
 
 rx_pluto = packet.RxPluto_v0_1_8 ()
-print ( f"\n{ script_filename= } { rx_pluto }" )
-rx_pluto.rx ()
-rx_pluto.samples.plot_complex_waveform ( f"{script_filename} RX samples from PlutoSDR" , marker = False )
-if rx_pluto.samples.has_sync_sequence :
-    print ( f"{rx_pluto.samples.sync_seguence_peaks=}" )
-    print ( f"{rx_pluto.samples.frame.crc32_bytes=}" )
+print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples= }" )
+rx_pluto.samples.rx()
+print ( f"\n{ script_filename= } { rx_pluto.samples= } { rx_pluto.samples.samples_filtered.size= } , dtype = { rx_pluto.samples.samples_filtered.dtype= }" )
+#rx_pluto.rx ()
+#rx_pluto.samples.plot_complex_waveform ( f"{script_filename} RX samples from PlutoSDR" , marker = False )
+#if rx_pluto.samples.has_sync_sequence :
+#    print ( f"{rx_pluto.samples.sync_seguence_peaks=}" )
+#    print ( f"{rx_pluto.samples.frame.crc32_bytes=}" )
 
 '''
 if rx_samples.sync_seguence_peaks is not None :

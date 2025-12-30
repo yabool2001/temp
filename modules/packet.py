@@ -551,17 +551,20 @@ class RxSamples_v0_1_8 :
     frame : RxFrame_v0_1_8 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.rx ()
-        self.filter_samples ()
-        self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-        if self.sync_seguence_peaks.size > 0 :
-            self.has_sync_sequence = True
-            self.frame = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered , sync_sequence_start_idx = self.sync_seguence_peaks[0] )
-        #self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-        #self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )
+        self.samples = np.array ( [] , dtype = np.complex128 )
+        #self.rx ()
+        #self.filter_samples ()
+        #self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        #if self.sync_seguence_peaks.size > 0 :
+        #    self.has_sync_sequence = True
+        #    self.frame = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered , sync_sequence_start_idx = self.sync_seguence_peaks[0] )
+        
+        '''self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
+        self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )'''
 
     def rx ( self ) -> None :
         self.samples = self.pluto_rx_ctx.rx ()
+        self.filter_samples ()
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
@@ -576,7 +579,7 @@ class RxSamples_v0_1_8 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
+            f"{ self.samples.size= }, dtype = { self.samples.dtype= }"
         )
 
     def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
@@ -595,13 +598,11 @@ class RxPluto_v0_1_8 :
     samples : RxSamples_v0_1_8 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.init_pluto_rx ()
-
-    def init_pluto_rx ( self ) -> None :
         self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
-
-    def rx ( self ) -> RxSamples_v0_1_8 :
         self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
+
+    #def rx ( self ) -> RxSamples_v0_1_8 :
+    #    self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
 
     def __repr__ ( self ) -> str :
         return (
