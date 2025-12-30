@@ -452,13 +452,53 @@ class RxSamples_v0_1_7 :
         #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
         self.samples_filtered = self.samples_filtered [ start : end ]
 
-@dataclass ( slots = True , eq = False )
-class RxFrame_v0_1_8 :
+class RxPacket_v0_1_8 :
     
-    samples_filtered : NDArray[ np.complex128 ]
-    sync_sequence_start_idx : np.uint32
+    samples : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
+    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
+    sync_power_db : float | None = field ( init = False )
+    max_amplitude : float | None = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.samples_filtered = self.filter_samples ()
+        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+    
+    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
+        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+
+    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
+    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
+    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
+    #    return payload_bits
+    
+    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
+        if peaks and self.sync_seguence_peak_idxs is not None :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
+        )
+
+    def clip_samples ( self , start : int , end : int ) -> None :
+        """Trim internal samples to the inclusive [ start , end ] range."""
+        if start < 0 or end > ( self.samples.size - 1 ) :
+            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
+        self.samples = self.samples [ start : end + 1 ]
+
+
+@dataclass ( slots = True , eq = False )
+class RxFrames_v0_1_8 :
+    
+    samples_filtered : NDArray[ np.complex128 ]
+
+    # Pola uzupełnianie w __post_init__
+    sync_sequence_start_idx : np.uint32 | None = field ( init = False )
     sync_sequence_end_idx : np.uint32 | None = field ( init = False )
     packet_len_start_idx : np.uint32 | None = field ( init = False )
     packet_len_end_idx : np.uint32 | None = field ( init = False )
@@ -469,8 +509,8 @@ class RxFrame_v0_1_8 :
     has_sync_sequence : bool = False
 
     def __post_init__ ( self ) -> None :
-        #self.plot_waveform ( f"RxFrame_v0_1_7 samples_filtered { self.samples_filtered.size= }" , marker = True )
-        self.process_frame ()
+        self.packets = 
+        self.process_frames ()
     
     def process_frame ( self ) -> None :
         sps = modulation.SPS
@@ -534,7 +574,7 @@ class RxFrame_v0_1_8 :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.samples_filtered.shape= } , dtype = { self.samples_filtered.dtype= }")
+        return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_8 :
@@ -548,7 +588,7 @@ class RxSamples_v0_1_8 :
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    frame : RxFrame_v0_1_8 = field ( init = False )
+    frames : RxFrames_v0_1_8 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.samples = np.array ( [] , dtype = np.complex128 )
@@ -565,6 +605,10 @@ class RxSamples_v0_1_8 :
     def rx ( self ) -> None :
         self.samples = self.pluto_rx_ctx.rx ()
         self.filter_samples ()
+    
+    def detect_sync_sequence_peaks ( self ) -> None :
+        self.frames = RxFrames_v0_1_8 ( samples_filtered = self.samples_filtered )
+        pass
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
