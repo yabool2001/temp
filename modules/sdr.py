@@ -60,7 +60,7 @@ class TxSamples :
     def __repr__( self ) -> str:
         return f"TxSamples ( samples.shape = { self.samples.shape }, dtype={ self.samples.dtype } )"
 
-def init_pluto_v3 ( sn ) :
+def init_pluto_v3 ( sn : str) :
     uri = get_uri ( sn )
     sdr = adi.Pluto ( uri )
     sdr.tx_lo = F_C
