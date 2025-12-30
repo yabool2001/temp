@@ -430,11 +430,12 @@ class RxFrames_v0_1_8 :
     crc32_end_idx : np.uint32 | None = field ( init = False )
     packet_len_dec : np.uint32 | None = field ( init = False )
     crc32_bytes : NDArray[ np.uint8 ] | None = field ( init = False )
+    sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
     has_sync_sequence : bool = False
     packets : list[ RxPacket_v0_1_8 ] = field ( default_factory = list ) 
 
     def __post_init__ ( self ) -> None :
-        
+        self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
         self.process_frames ()
     
     def process_frame ( self ) -> None :
@@ -524,19 +525,17 @@ class RxSamples_v0_1_8 :
         #    self.has_sync_sequence = True
         #    self.frame = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered , sync_sequence_start_idx = self.sync_seguence_peaks[0] )
         
-        '''self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-        self.rx_frame_ctx = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered )'''
+        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
     def rx ( self ) -> None :
         self.samples = self.pluto_rx_ctx.rx ()
-        self.filter_samples ()
-    
-    def detect_sync_sequence_peaks ( self ) -> None :
-        self.frames = RxFrames_v0_1_8 ( samples_filtered = self.samples_filtered )
-        pass
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+
+    def detect_frames ( self ) -> None :
+        self.filter_samples ()
+        self.frames = RxFrames_v0_1_8 ( samples_filtered = self.samples_filtered )
 
     def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peaks is not None :
