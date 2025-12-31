@@ -461,7 +461,7 @@ class RxFrames_v0_1_8 :
             crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 has_frame = True
-                packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                 print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
@@ -476,7 +476,7 @@ class RxFrames_v0_1_8 :
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                     has_frame = True
-                    packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                    packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                     print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
             else :
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
@@ -491,7 +491,7 @@ class RxFrames_v0_1_8 :
                     crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         has_frame = True
-                        packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                        packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps] )
                         print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                 else :
                     sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
@@ -506,7 +506,7 @@ class RxFrames_v0_1_8 :
                         crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                             has_frame = True
-                            packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                            packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                             print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )        
     # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
     #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
