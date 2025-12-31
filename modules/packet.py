@@ -401,6 +401,7 @@ class RxPacket_v0_1_8 :
         sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
         sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+            pass
 
     def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peak_idxs is not None :
@@ -454,48 +455,59 @@ class RxFrames_v0_1_8 :
             packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
             packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
             packet_len_dec = bits_2_int ( packet_len_bits )
-            crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps * packet_len_dec * PACKET_BYTE_LEN_BITS ]
+            crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
             crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
             crc32_bytes_read = pad_bits2bytes ( crc32_bits )
             crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 has_frame = True
-                packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx ] )
+                packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
                 print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                self.has_sync_sequence = True
+                has_sync_sequence = True
                 packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
-                self.packet_len_dec = bits_2_int ( packet_len_bits )
+                packet_len_dec = bits_2_int ( packet_len_bits )
                 crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
                 crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
                 crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                     has_frame = True
+                    packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                    print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
             else :
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                    self.has_sync_sequence = True
+                    has_sync_sequence = True
                     packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
-                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag ) # czy tu ma być na pewno imag i czy znak jest ok ? przeanalizować
-                    self.packet_len_dec = bits_2_int ( packet_len_bits )
+                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -packet_len_symbols.real ) # czy tu ma być na pewno imag i czy znak jest ok ? przeanalizować
+                    packet_len_dec = bits_2_int ( packet_len_bits )
                     crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
-                    crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
-                    self.crc32_bytes = pad_bits2bytes ( crc32_bits )
+                    crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -crc32_symbols.real )
+                    crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+                    crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
+                    if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                        has_frame = True
+                        packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                        print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                 else :
                     sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
                     if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                        self.has_sync_sequence = True
+                        has_sync_sequence = True
                         packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
-                        packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
+                        packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -packet_len_symbols.imag )
                         self.packet_len_dec = bits_2_int ( packet_len_bits )
                         crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
-                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
-                        self.crc32_bytes = pad_bits2bytes ( crc32_bits )
-    
+                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -crc32_symbols.imag )
+                        crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+                        crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
+                        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                            has_frame = True
+                            packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS ] )
+                            print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )        
     # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
     #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
     #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
