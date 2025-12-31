@@ -450,6 +450,10 @@ class RxFrames_v0_1_8 :
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
         crc32_start_idx = packet_len_end_idx
         crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * sps )
+        if crc32_end_idx + ( MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * PACKET_BYTE_LEN_BITS * sps ) > self.samples_filtered.size :
+            print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
+            self.samples_leftovers_start_idx = sync_sequence_start_idx
+            return
         sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
         sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
