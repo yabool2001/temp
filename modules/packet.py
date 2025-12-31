@@ -380,9 +380,9 @@ def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
 class RxPacket_v0_1_8 :
     
     samples_filtered : NDArray[ np.complex128 ]
-
+    has_packet : bool = field ( init = False )
+    payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
     # Pola uzupełnianie w __post_init__
-    
 
     def __post_init__ ( self ) -> None :
         self.process_packet ( self.samples_filtered )
@@ -392,16 +392,16 @@ class RxPacket_v0_1_8 :
         sps = modulation.SPS
         
         payload_end_idx = len ( samples_filtered ) - ( CRC32_LEN_BITS * sps )
-        # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
-        sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
-        packet_len_start_idx = sync_sequence_end_idx
-        packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
-        crc32_start_idx = packet_len_end_idx
-        crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * sps )
-        sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
-        sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
-        if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-            pass
+        payload_symbols = self.samples_filtered [ : payload_end_idx : sps ]
+        crc32_symbols = self.samples_filtered [ payload_end_idx : : sps ]
+        payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols.real )
+        payload_bytes = pad_bits2bytes ( payload_bits )
+        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
+        crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+        crc32_bytes_calculated = self.create_crc32_bytes ( payload_bytes )
+        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+            self.has_packet = True
+            self.payload_bytes = payload_bytes
 
     def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peak_idxs is not None :
@@ -411,7 +411,7 @@ class RxPacket_v0_1_8 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
+            f"{ self.samples_filtered.size= }, { self.has_packet= }, { self.payload_bytes.size if self.has_packet else None= }"
         )
 
 @dataclass ( slots = True , eq = False )
