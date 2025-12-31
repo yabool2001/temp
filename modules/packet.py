@@ -499,7 +499,7 @@ class RxFrames_v0_1_8 :
                         has_sync_sequence = True
                         packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
                         packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -packet_len_symbols.imag )
-                        self.packet_len_dec = bits_2_int ( packet_len_bits )
+                        packet_len_dec = bits_2_int ( packet_len_bits )
                         crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
                         crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -crc32_symbols.imag )
                         crc32_bytes_read = pad_bits2bytes ( crc32_bits )
