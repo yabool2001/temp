@@ -6,7 +6,7 @@ import tomllib
 
 from adi import Pluto
 from dataclasses import dataclass , field
-from modules import filters , modulation, plot , sdr
+from modules import filters , modulation, ops_file, plot , sdr
 from numpy.typing import NDArray
 
 from pathlib import Path
@@ -572,36 +572,12 @@ class RxSamples_v0_1_9 :
 
     def __post_init__ ( self ) -> None :
         if self.samples_filename is not None :
-            self.load_samples_from_file ( self.samples_filename )
-        elif self.pluto_rx_ctx is not None :
-            self.rx ()
-        else :
-            raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided" )
-        
-        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-
-        # self.samples = np.array ( [] , dtype = np.complex128 )  # <-- Usunięte, bo teraz default_factory
-        #self.rx ()
-        #self.filter_samples ()
-        #self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-        #if self.sync_seguence_peaks.size > 0 :
-        #    self.has_sync_sequence = True
-        #    self.frame = RxFrame_v0_1_8 ( samples_filtered = self.samples_filtered , sync_sequence_start_idx = self.sync_seguence_peaks[0] )
-        
-        
+            self.samples = ops_file.open_samples_from_npf ( self.samples_filename )
+            self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
+            self.detect_frames ()
 
     def rx ( self ) -> None :
         self.samples = self.pluto_rx_ctx.rx ()
-
-    def load_samples_from_file ( self , filename : str ) -> None :
-        # Załóżmy, że plik CSV z kolumnami: real, imag
-        data = np.loadtxt ( filename , delimiter = ',' , dtype = np.complex128 )
-        if data.ndim == 1 :
-            # Jeśli jedna kolumna, traktuj jako complex
-            self.samples = data
-        else :
-            # Jeśli dwie kolumny, real + 1j*imag
-            self.samples = data[:, 0] + 1j * data[:, 1]
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
