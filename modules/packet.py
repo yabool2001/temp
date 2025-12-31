@@ -432,6 +432,7 @@ class RxFrames_v0_1_8 :
     crc32_bytes : NDArray[ np.uint8 ] | None = field ( init = False )
     '''
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    samples_leftovers_start_idx : NDArray[ np.uint32 ] = field ( init = False )
     #samples_payloads_bytes : list[ RxPacket_v0_1_8 ] = field ( default_factory = list )
     samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
     def __post_init__ ( self ) -> None :

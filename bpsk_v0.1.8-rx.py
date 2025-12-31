@@ -3,7 +3,7 @@
 Sekwencja uruchomienia skryptu:
 cd ~/python/temp/
 source .venv/bin/activate
-python bpsk_v0.1.6-tx.py
+python bpsk_v0.1.8-tx.py
 
 Po zakończeniu tej wersji wrócić do rozwoju wersji bpsk_v0.1.6-rx
 '''
@@ -25,7 +25,7 @@ samples_1 = ops_file.open_samples_from_npf ( filename_samples_1 )
 
 rx_pluto = packet.RxPluto_v0_1_8 ()
 print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples= }" )
-rx_pluto.samples.rx()
+rx_pluto.samples.rx ()
 rx_pluto.samples.detect_frames ()
 print ( f"\n{ script_filename= } { rx_pluto.samples= } { rx_pluto.samples.samples_filtered.size= } , dtype = { rx_pluto.samples.samples_filtered.dtype= }" )
 #rx_pluto.rx ()
