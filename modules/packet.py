@@ -380,7 +380,9 @@ def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
 class RxPacket_v0_1_8 :
     
     samples_filtered : NDArray[ np.complex128 ]
-    has_packet : bool = field ( init = False )
+    #has_packet : bool = field ( init = False )
+    has_packet : bool = False
+    has_packet : bool = field ( default_factory = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
     # Pola uzupełnianie w __post_init__
 
