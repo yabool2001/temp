@@ -398,7 +398,7 @@ class RxPacket_v0_1_8 :
         payload_bytes = pad_bits2bytes ( payload_bits )
         crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
         crc32_bytes_read = pad_bits2bytes ( crc32_bits )
-        crc32_bytes_calculated = self.create_crc32_bytes ( payload_bytes )
+        crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
             self.payload_bytes = payload_bytes
