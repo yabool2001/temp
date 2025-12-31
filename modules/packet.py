@@ -402,6 +402,7 @@ class RxPacket_v0_1_8 :
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
             self.payload_bytes = payload_bytes
+            print ( f"Detected valid packet!" )
 
     def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peak_idxs is not None :
