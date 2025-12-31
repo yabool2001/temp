@@ -558,7 +558,8 @@ class RxFrames_v0_1_9 :
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_9 :
     
-    pluto_rx_ctx : Pluto
+    pluto_rx_ctx : Pluto | None = None
+    samples_filename : str | None = None
 
     # Pola uzupełnianie w __post_init__
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -570,6 +571,13 @@ class RxSamples_v0_1_9 :
     frames : RxFrames_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
+        if self.samples_filename is not None :
+            self.load_samples_from_file ( self.samples_filename )
+        elif self.pluto_rx_ctx is not None :
+            self.rx ()
+        else :
+            raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided" )
+        
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
         # self.samples = np.array ( [] , dtype = np.complex128 )  # <-- Usunięte, bo teraz default_factory
@@ -584,6 +592,16 @@ class RxSamples_v0_1_9 :
 
     def rx ( self ) -> None :
         self.samples = self.pluto_rx_ctx.rx ()
+
+    def load_samples_from_file ( self , filename : str ) -> None :
+        # Załóżmy, że plik CSV z kolumnami: real, imag
+        data = np.loadtxt ( filename , delimiter = ',' , dtype = np.complex128 )
+        if data.ndim == 1 :
+            # Jeśli jedna kolumna, traktuj jako complex
+            self.samples = data
+        else :
+            # Jeśli dwie kolumny, real + 1j*imag
+            self.samples = data[:, 0] + 1j * data[:, 1]
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
@@ -616,20 +634,25 @@ class RxSamples_v0_1_9 :
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_9 :
 
+    samples_filename : str | None = None
+
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto = field ( init = False )
     samples : RxSamples_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
-        self.samples = RxSamples_v0_1_9 ( self.pluto_rx_ctx )
+        if self.samples_filename is not None :
+            self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = None , samples_filename = self.samples_filename )
+        else :
+            self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
+            self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
 
     #def rx ( self ) -> RxSamples_v0_1_8 :
     #    self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.pluto_rx_ctx= }"
+            f"{ self.pluto_rx_ctx= } , { self.samples_filename= }"
         )
 
 @dataclass ( slots = True , eq = False )
