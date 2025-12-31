@@ -95,6 +95,7 @@ PACKET_LEN_BITS = 11
 CRC32_LEN_BITS = 32
 MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 2 ** PACKET_LEN_BITS - 1 )
 MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 # MTU dla IP over ETHERNET
+PACKET_BYTE_LEN_BITS = 8
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
@@ -378,26 +379,29 @@ def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
 @dataclass ( slots = True , eq = False )
 class RxPacket_v0_1_8 :
     
-    samples : NDArray[ np.complex128 ]
+    samples_filtered : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
-    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    sync_seguence_peak_idxs : NDArray[ np.uint32 ] | None = field ( init = False )
-    sync_power_db : float | None = field ( init = False )
-    max_amplitude : float | None = field ( init = False )
+    
 
     def __post_init__ ( self ) -> None :
-        self.samples_filtered = self.filter_samples ()
-        self.sync_seguence_peak_idxs = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.process_packet ( self.samples_filtered )
     
-    def filter_samples ( self ) -> NDArray[ np.complex128 ] :
-        return filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+    def process_packet ( self , samples_filtered : NDArray[ np.complex128 ] ) -> None :
+        has_packet = False
+        sps = modulation.SPS
+        
+        payload_end_idx = CRC32_LEN_BITS * sps // 2
+        # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
+        sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
+        packet_len_start_idx = sync_sequence_end_idx
+        packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
+        crc32_start_idx = packet_len_end_idx
+        crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * sps )
+        sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
+        sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
+        if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
 
-    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
-    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
-    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
-    #    return payload_bits
-    
     def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peak_idxs is not None :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
@@ -409,19 +413,13 @@ class RxPacket_v0_1_8 :
             f"{ self.samples.shape= } , dtype = { self.samples.dtype= }"
         )
 
-    def clip_samples ( self , start : int , end : int ) -> None :
-        """Trim internal samples to the inclusive [ start , end ] range."""
-        if start < 0 or end > ( self.samples.size - 1 ) :
-            raise ValueError ( "start must be >= 0 & end cannot exceed samples length" )
-        self.samples = self.samples [ start : end + 1 ]
-
-
 @dataclass ( slots = True , eq = False )
 class RxFrames_v0_1_8 :
     
     samples_filtered : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
+    '''
     sync_sequence_start_idx : np.uint32 | None = field ( init = False )
     sync_sequence_end_idx : np.uint32 | None = field ( init = False )
     packet_len_start_idx : np.uint32 | None = field ( init = False )
@@ -430,8 +428,8 @@ class RxFrames_v0_1_8 :
     crc32_end_idx : np.uint32 | None = field ( init = False )
     packet_len_dec : np.uint32 | None = field ( init = False )
     crc32_bytes : NDArray[ np.uint8 ] | None = field ( init = False )
+    '''
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    has_sync_sequence : bool = False
     packets : list[ RxPacket_v0_1_8 ] = field ( default_factory = list ) 
 
     def __post_init__ ( self ) -> None :
@@ -440,6 +438,7 @@ class RxFrames_v0_1_8 :
             self.process_frame ( sync_sequence_start_idx )
     
     def process_frame ( self , sync_sequence_start_idx : np.uint32 ) -> None :
+        has_frame = has_sync_sequence = False
         sps = modulation.SPS
         sync_sequence_start_idx = sync_sequence_start_idx + filters.SPAN * sps // 2
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
@@ -451,13 +450,18 @@ class RxFrames_v0_1_8 :
         sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
         sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-            self.has_sync_sequence = True
+            has_sync_sequence = True
             packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
             packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
-            self.packet_len_dec = bits_2_int ( packet_len_bits )
-            crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
+            packet_len_dec = bits_2_int ( packet_len_bits )
+            crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps * packet_len_dec * PACKET_BYTE_LEN_BITS ]
             crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
-            crc32_bytes = pad_bits2bytes ( crc32_bits )
+            crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+            crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
+            if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                has_frame = True
+                packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx ] )
+                print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
@@ -470,7 +474,7 @@ class RxFrames_v0_1_8 :
                 crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                    print ( f"CRC32 zgodne." ) # Tutaj skończyłem 2025.12.30 w nocy
+                    has_frame = True
             else :
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
