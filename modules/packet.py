@@ -450,10 +450,6 @@ class RxFrames_v0_1_8 :
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
         crc32_start_idx = packet_len_end_idx
         crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * sps )
-        if crc32_end_idx + ( MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * PACKET_BYTE_LEN_BITS * sps ) > self.samples_filtered.size :
-            print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
-            self.samples_leftovers_start_idx = sync_sequence_start_idx
-            return
         sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
         sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
@@ -466,6 +462,10 @@ class RxFrames_v0_1_8 :
             crc32_bytes_read = pad_bits2bytes ( crc32_bits )
             crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                if crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps ) > self.samples_filtered.size :
+                    print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
+                    self.samples_leftovers_start_idx = sync_sequence_start_idx
+                    return
                 has_frame = True
                 packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                 print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
@@ -484,6 +484,10 @@ class RxFrames_v0_1_8 :
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                     has_frame = True
+                    if crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps ) > self.samples_filtered.size :
+                        print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
+                        self.samples_leftovers_start_idx = sync_sequence_start_idx
+                        return
                     packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                     print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
             else :
@@ -499,6 +503,10 @@ class RxFrames_v0_1_8 :
                     crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         has_frame = True
+                        if crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps ) > self.samples_filtered.size :
+                            print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
+                            self.samples_leftovers_start_idx = sync_sequence_start_idx
+                            return
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps] )
                         print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                 else :
@@ -513,6 +521,10 @@ class RxFrames_v0_1_8 :
                         crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                         crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                            if crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps ) > self.samples_filtered.size :
+                                print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
+                                self.samples_leftovers_start_idx = sync_sequence_start_idx
+                                return
                             has_frame = True
                             packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                             print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )        
