@@ -432,8 +432,8 @@ class RxFrames_v0_1_8 :
     crc32_bytes : NDArray[ np.uint8 ] | None = field ( init = False )
     '''
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    packets : list[ RxPacket_v0_1_8 ] = field ( default_factory = list ) 
-
+    #samples_payloads_bytes : list[ RxPacket_v0_1_8 ] = field ( default_factory = list )
+    samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
     def __post_init__ ( self ) -> None :
         self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
         for sync_sequence_start_idx in self.sync_seguence_peaks :
@@ -464,6 +464,8 @@ class RxFrames_v0_1_8 :
                 has_frame = True
                 packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : crc32_end_idx + packet_len_dec * PACKET_BYTE_LEN_BITS * sps ] )
                 print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
+                if packet.has_packet :
+                    self.samples_payloads_bytes.append ( packet.payload_bytes )
         else :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
