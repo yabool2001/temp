@@ -417,36 +417,28 @@ class RxPacket_v0_1_8 :
         )
 
 @dataclass ( slots = True , eq = False )
-class RxFrames_v0_1_8 :
+class RxFrames_v0_1_9 :
     
     samples_filtered : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
-    '''
-    sync_sequence_start_idx : np.uint32 | None = field ( init = False )
-    sync_sequence_end_idx : np.uint32 | None = field ( init = False )
-    packet_len_start_idx : np.uint32 | None = field ( init = False )
-    packet_len_end_idx : np.uint32 | None = field ( init = False )
-    crc32_start_idx : np.uint32 | None = field ( init = False )
-    crc32_end_idx : np.uint32 | None = field ( init = False )
-    packet_len_dec : np.uint32 | None = field ( init = False )
-    crc32_bytes : NDArray[ np.uint8 ] | None = field ( init = False )
-    '''
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
     samples_filtered_len : np.uint32 = field ( init = False )
-    samples_leftovers_start_idx : NDArray[ np.uint32 ] = field ( init = False )
+    samples_leftovers_start_idx : np.uint32 = field ( init = False )
     #samples_payloads_bytes : list[ RxPacket_v0_1_8 ] = field ( default_factory = list )
     samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
+    has_leftovers : bool = False
+    
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
         self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-        for sync_sequence_start_idx in self.sync_seguence_peaks :
-            self.process_frame ( sync_sequence_start_idx )
+        for idx in self.sync_seguence_peaks :
+            self.process_frame ( idx = idx )
     
-    def process_frame ( self , sync_sequence_start_idx : np.uint32 ) -> None :
+    def process_frame ( self , idx : np.uint32 ) -> None :
         has_frame = has_sync_sequence = False
         sps = modulation.SPS
-        sync_sequence_start_idx = sync_sequence_start_idx + filters.SPAN * sps // 2
+        sync_sequence_start_idx = idx + filters.SPAN * sps // 2
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
         packet_len_start_idx = sync_sequence_end_idx
@@ -467,8 +459,9 @@ class RxFrames_v0_1_8 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                 if packet_end_idx > self.samples_filtered_len :
-                    print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
-                    self.samples_leftovers_start_idx = sync_sequence_start_idx
+                    print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+                    self.samples_leftovers_start_idx = idx
+                    self.has_leftovers = True
                     return
                 has_frame = True
                 packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -490,8 +483,9 @@ class RxFrames_v0_1_8 :
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                     packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                     if packet_end_idx > self.samples_filtered_len :
-                        print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
-                        self.samples_leftovers_start_idx = sync_sequence_start_idx
+                        print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+                        self.samples_leftovers_start_idx = idx
+                        self.has_leftovers = True
                         return
                     has_frame = True
                     packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -513,8 +507,9 @@ class RxFrames_v0_1_8 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                         if packet_end_idx > self.samples_filtered_len :
-                            print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
-                            self.samples_leftovers_start_idx = sync_sequence_start_idx
+                            print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+                            self.samples_leftovers_start_idx = idx
+                            self.has_leftovers = True
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -536,8 +531,9 @@ class RxFrames_v0_1_8 :
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                             packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                             if packet_end_idx > self.samples_filtered_len :
-                                print ( f"Frame at index { sync_sequence_start_idx } is too close to the end of samples to contain a full packet. Skipping." )
-                                self.samples_leftovers_start_idx = sync_sequence_start_idx
+                                print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+                                self.samples_leftovers_start_idx = idx
+                                self.has_leftovers = True
                                 return
                             has_frame = True
                             packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -560,7 +556,7 @@ class RxFrames_v0_1_8 :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_8 :
+class RxSamples_v0_1_9 :
     
     pluto_rx_ctx : Pluto
 
@@ -571,7 +567,7 @@ class RxSamples_v0_1_8 :
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    frames : RxFrames_v0_1_8 = field ( init = False )
+    frames : RxFrames_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
@@ -594,7 +590,7 @@ class RxSamples_v0_1_8 :
 
     def detect_frames ( self ) -> None :
         self.filter_samples ()
-        self.frames = RxFrames_v0_1_8 ( samples_filtered = self.samples_filtered )
+        self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
 
     def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peaks is not None :
@@ -618,15 +614,15 @@ class RxSamples_v0_1_8 :
         self.samples_filtered = self.samples_filtered [ start : end ]
 
 @dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_8 :
+class RxPluto_v0_1_9 :
 
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto = field ( init = False )
-    samples : RxSamples_v0_1_8 = field ( init = False )
+    samples : RxSamples_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
-        self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
+        self.samples = RxSamples_v0_1_9 ( self.pluto_rx_ctx )
 
     #def rx ( self ) -> RxSamples_v0_1_8 :
     #    self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
