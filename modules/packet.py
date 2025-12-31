@@ -391,7 +391,7 @@ class RxPacket_v0_1_8 :
         has_packet = False
         sps = modulation.SPS
         
-        payload_end_idx = CRC32_LEN_BITS * sps // 2
+        payload_end_idx = len ( samples_filtered ) - ( CRC32_LEN_BITS * sps )
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * sps )
         packet_len_start_idx = sync_sequence_end_idx
