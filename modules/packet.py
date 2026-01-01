@@ -562,7 +562,8 @@ class RxSamples_v0_1_9 :
     samples_filename : str | None = None
 
     # Pola uzupełnianie w __post_init__
-    samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     has_sync_sequence : bool = False
     has_amp_greater_than_ths : bool = False
@@ -571,13 +572,15 @@ class RxSamples_v0_1_9 :
     frames : RxFrames_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        if self.samples_filename is not None :
-            self.samples = ops_file.open_samples_from_npf ( self.samples_filename )
-            self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-            self.detect_frames ()
+            samples = np.array ( [] , dtype = np.complex128 )
 
     def rx ( self ) -> None :
-        self.samples = self.pluto_rx_ctx.rx ()
+        if self.pluto_rx_ctx is not None :
+            self.samples = self.pluto_rx_ctx.rx ()
+        elif self.samples_filename is not None :
+            self.samples = ops_file.open_samples_from_npf ( self.samples_filename )
+        else :
+            raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided." )
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
@@ -585,6 +588,9 @@ class RxSamples_v0_1_9 :
     def detect_frames ( self ) -> None :
         self.filter_samples ()
         self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
+
+    def sample_initial_assesment (self) -> None :
+        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
     def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peaks is not None :
@@ -611,16 +617,20 @@ class RxSamples_v0_1_9 :
 class RxPluto_v0_1_9 :
 
     # Pola uzupełnianie w __post_init__
-    pluto_rx_ctx : Pluto = field ( init = False )
+    pluto_rx_ctx : Pluto | None = None
+    samples_filename : str | None = None
     samples : RxSamples_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
-        self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
+        if self.samples_filename is None :
+            self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
+            self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
+        else :
+            self.samples = RxSamples_v0_1_9 ( samples_filename = self.samples_filename )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.pluto_rx_ctx= }"
+            f"{ self.samples_filename= }" if self.samples_filename is not None else f"{ self.pluto_rx_ctx= }"
         )
 
 @dataclass ( slots = True , eq = False )
