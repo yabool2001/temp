@@ -617,6 +617,7 @@ class RxPluto_v0_1_9 :
     samples : RxSamples_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
+        self.pluto_rx_ctx = None
         if self.samples_filename is not None :
             self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = None , samples_filename = self.samples_filename )
         else :
@@ -628,7 +629,7 @@ class RxPluto_v0_1_9 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.pluto_rx_ctx= } , { self.samples_filename= }"
+            f"{ self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
         )
 
 @dataclass ( slots = True , eq = False )
