@@ -477,7 +477,7 @@ class RxFrames_v0_1_9 :
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
                 packet_len_dec = bits_2_int ( packet_len_bits )
                 crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
-                crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
+                crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.imag )
                 crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
@@ -541,6 +541,7 @@ class RxFrames_v0_1_9 :
                             if packet.has_packet :
                                 #self.samples_payloads_bytes.append ( packet.payload_bytes )
                                 self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+        print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
     # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
     #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
     #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
@@ -572,7 +573,7 @@ class RxSamples_v0_1_9 :
     frames : RxFrames_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-            samples = np.array ( [] , dtype = np.complex128 )
+            self.samples = np.array ( [] , dtype = np.complex128 )
 
     def rx ( self ) -> None :
         if self.pluto_rx_ctx is not None :

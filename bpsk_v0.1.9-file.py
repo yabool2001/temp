@@ -23,7 +23,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 #filename_samples = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
-samples_filename = "np.samples/rx_samples_0.1.8_01_32768.npy"
+#samples_filename = "np.samples/rx_samples_0.1.8_01_32768.npy"
+samples_filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 
 real = False
 
@@ -32,7 +33,7 @@ if real :
 else :
     rx_pluto = packet.RxPluto_v0_1_9 ( samples_filename = samples_filename )
 
-print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples= }" )
+print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 rx_pluto.samples.rx ()
 rx_pluto.samples.detect_frames ()
 print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
