@@ -454,9 +454,9 @@ class RxFrames_v0_1_9 :
         self.has_leftovers = True
 
     def process_frame ( self , idx : np.uint32 ) -> None :
+        # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         has_frame = has_sync_sequence = False
         sync_sequence_start_idx = idx + filters.SPAN * self.sps // 2
-        # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
         packet_len_start_idx = sync_sequence_end_idx
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * self.sps )
@@ -478,8 +478,46 @@ class RxFrames_v0_1_9 :
                 has_frame = True
                 packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                 if packet.has_packet :
-                    #self.samples_payloads_bytes.append ( packet.payload_bytes )
                     self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+            else:
+                crc32_bytes_read = self.samples2bytes ( self.samples_filtered.imag [ crc32_start_idx : crc32_end_idx ] )
+                crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( self.samples_filtered.imag [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
+                if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                    print ( " frame imag")
+                    packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
+                    if packet_end_idx > self.samples_filtered_len :
+                        self.complete_process_frame ( idx )
+                        return
+                    has_frame = True
+                    packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
+                    if packet.has_packet :
+                        self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+                else :
+                    crc32_bytes_read = self.samples2bytes ( -self.samples_filtered.real [ crc32_start_idx : crc32_end_idx ] )
+                    crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( -self.samples_filtered.real [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
+                    if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                        print ( " frame -real")
+                        packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
+                        if packet_end_idx > self.samples_filtered_len :
+                            self.complete_process_frame ( idx )
+                            return
+                        has_frame = True
+                        packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
+                        if packet.has_packet :
+                            self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+                    else :
+                        crc32_bytes_read = self.samples2bytes ( -self.samples_filtered.imag [ crc32_start_idx : crc32_end_idx ] )
+                        crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( -self.samples_filtered.imag [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
+                        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                            print ( " frame -imag")
+                            packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
+                            if packet_end_idx > self.samples_filtered_len :
+                                self.complete_process_frame ( idx )
+                                return
+                            has_frame = True
+                            packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
+                            if packet.has_packet :
+                                self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
         else :
             sync_sequence_bits = self.samples2bits ( self.samples_filtered.imag [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
