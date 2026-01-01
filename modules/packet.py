@@ -447,6 +447,11 @@ class RxFrames_v0_1_9 :
     def samples2bytes ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
         bits = self.samples2bits ( samples )
         return pad_bits2bytes ( bits )
+    
+    def complete_process_frame ( self , idx : np.uint32 ) -> None :
+        print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+        self.samples_leftovers_start_idx = idx
+        self.has_leftovers = True
 
     def process_frame ( self , idx : np.uint32 ) -> None :
         has_frame = has_sync_sequence = False
@@ -467,9 +472,7 @@ class RxFrames_v0_1_9 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * sps )
                 if packet_end_idx > self.samples_filtered_len :
-                    print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-                    self.samples_leftovers_start_idx = idx
-                    self.has_leftovers = True
+                    self.complete_process_frame ( idx )
                     return
                 has_frame = True
                 packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -490,9 +493,7 @@ class RxFrames_v0_1_9 :
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                     packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                     if packet_end_idx > self.samples_filtered_len :
-                        print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-                        self.samples_leftovers_start_idx = idx
-                        self.has_leftovers = True
+                        self.complete_process_frame ( idx )
                         return
                     has_frame = True
                     packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -513,9 +514,7 @@ class RxFrames_v0_1_9 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                         if packet_end_idx > self.samples_filtered_len :
-                            print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-                            self.samples_leftovers_start_idx = idx
-                            self.has_leftovers = True
+                            self.complete_process_frame ( idx )
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -536,9 +535,7 @@ class RxFrames_v0_1_9 :
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                             packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
                             if packet_end_idx > self.samples_filtered_len :
-                                print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-                                self.samples_leftovers_start_idx = idx
-                                self.has_leftovers = True
+                                self.complete_process_frame ( idx )
                                 return
                             has_frame = True
                             packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
