@@ -426,6 +426,7 @@ class RxFrames_v0_1_9 :
     samples_filtered_len : np.uint32 = field ( init = False )
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
     #samples_payloads_bytes : list[ RxPacket_v0_1_8 ] = field ( default_factory = list )
+    sps = modulation.SPS
     samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
     has_leftovers : bool = False
     
@@ -435,6 +436,18 @@ class RxFrames_v0_1_9 :
         for idx in self.sync_seguence_peaks :
             self.process_frame ( idx = idx )
     
+    def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
+        sync_sequence_symbols = samples [ : : self.sps ]
+        return modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
+
+    def samples2uint16 ( self , samples : NDArray[ np.complex128 ] ) -> np.uint16 :
+        bits = self.samples2bits ( samples )
+        return np.uint16 ( bits_2_int ( bits ) )
+
+    def samples2bytes ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
+        bits = self.samples2bits ( samples )
+        return pad_bits2bytes ( bits )
+
     def process_frame ( self , idx : np.uint32 ) -> None :
         has_frame = has_sync_sequence = False
         sps = modulation.SPS
@@ -445,19 +458,14 @@ class RxFrames_v0_1_9 :
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * sps )
         crc32_start_idx = packet_len_end_idx
         crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * sps )
-        sync_sequence_symbols = self.samples_filtered [ sync_sequence_start_idx : sync_sequence_end_idx : sps ]
-        sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.real )
+        sync_sequence_bits = self.samples2bits ( self.samples_filtered.real [ sync_sequence_start_idx : sync_sequence_end_idx ] )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
             has_sync_sequence = True
-            packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
-            packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.real )
-            packet_len_dec = bits_2_int ( packet_len_bits )
-            crc32_symbols = self.samples_filtered [ crc32_start_idx : crc32_end_idx : sps ]
-            crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
-            crc32_bytes_read = pad_bits2bytes ( crc32_bits )
-            crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
+            packet_len_uint16 = self.samples2uint16 ( self.samples_filtered.real [ packet_len_start_idx : packet_len_end_idx ] )
+            crc32_bytes_read = self.samples2bytes ( self.samples_filtered.real [ crc32_start_idx : crc32_end_idx ] )
+            crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( self.samples_filtered.real [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
+                packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * sps )
                 if packet_end_idx > self.samples_filtered_len :
                     print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
                     self.samples_leftovers_start_idx = idx
@@ -469,7 +477,7 @@ class RxFrames_v0_1_9 :
                     #self.samples_payloads_bytes.append ( packet.payload_bytes )
                     self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
         else :
-            sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols.imag )
+            sync_sequence_bits = self.samples2bits ( self.samples_filtered.imag [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                 has_sync_sequence = True
                 packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
@@ -492,7 +500,7 @@ class RxFrames_v0_1_9 :
                         #self.samples_payloads_bytes.append ( packet.payload_bytes )
                         self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
             else :
-                sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.real )
+                self.samples2bits ( -self.samples_filtered.real [ sync_sequence_start_idx : sync_sequence_end_idx ] )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                     has_sync_sequence = True
                     packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
@@ -515,7 +523,7 @@ class RxFrames_v0_1_9 :
                             #self.samples_payloads_bytes.append ( packet.payload_bytes )
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
                 else :
-                    sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -sync_sequence_symbols.imag )
+                    sync_sequence_bits = self.samples2bits ( -self.samples_filtered.imag [ sync_sequence_start_idx : sync_sequence_end_idx ] )
                     if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                         has_sync_sequence = True
                         packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : sps ]
