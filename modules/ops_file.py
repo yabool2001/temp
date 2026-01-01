@@ -65,6 +65,7 @@ def open_samples_from_npf ( filename : str ) -> NDArray[ np.complex128 ] :
         print ( f"Nie załadować sampli z pliku {filename}: {exc}" )
         raise
     return samples
+
 def open_real_float64_samples_from_npf ( filename : str ) -> NDArray[ np.float64 ] :
     try :
         samples = np.load ( filename ).astype ( np.float64 , copy = False )

@@ -596,7 +596,7 @@ class RxSamples_v0_1_9 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.samples.size= }, dtype = { self.samples.dtype= }"
+            f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
         )
 
     def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
@@ -610,26 +610,17 @@ class RxSamples_v0_1_9 :
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_9 :
 
-    samples_filename : str | None = None
-
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto = field ( init = False )
     samples : RxSamples_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.pluto_rx_ctx = None
-        if self.samples_filename is not None :
-            self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = None , samples_filename = self.samples_filename )
-        else :
-            self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
-            self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
-
-    #def rx ( self ) -> RxSamples_v0_1_8 :
-    #    self.samples = RxSamples_v0_1_8 ( self.pluto_rx_ctx )
+        self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
+        self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
+            f"{ self.pluto_rx_ctx= }"
         )
 
 @dataclass ( slots = True , eq = False )

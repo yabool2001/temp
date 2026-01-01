@@ -12,6 +12,8 @@ import os
 import time as t
 import tomllib
 
+from numpy import real
+
 #from pathlib import Path
 from modules import ops_file , packet
 
@@ -21,11 +23,21 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 #filename_samples = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
-filename_samples = "np.samples/rx_samples_0.1.8_01_32768.npy"
+samples_filename = "np.samples/rx_samples_0.1.8_01_32768.npy"
 
-rx_pluto = packet.RxPluto_v0_1_9 ( samples_filename = filename_samples )
-print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples= }" )
-print ( f"\n{ script_filename= } { rx_pluto.samples= } { rx_pluto.samples.samples_filtered.size= } , dtype = { rx_pluto.samples.samples_filtered.dtype= }" )
-if rx_pluto.samples.frames.has_leftovers :
-    print ( f"{ rx_pluto.samples.frames.samples_leftovers_start_idx= }" )
-print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )
+real =False
+if real :
+    rx_pluto = packet.RxPluto_v0_1_9 ()
+    print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples= }" )
+    rx_pluto.samples.rx ()
+    rx_pluto.samples.detect_frames ()
+    print ( f"\n{ script_filename= } { rx_pluto.samples.size= } { rx_pluto.samples.samples_filtered.size= } , dtype = { rx_pluto.samples.samples_filtered.dtype= }" )
+    if rx_pluto.samples.frames.has_leftovers :
+        print ( f"{ rx_pluto.samples.frames.samples_leftovers_start_idx= }" )
+    print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )
+else :
+    rx_samples = packet.RxSamples_v0_1_9 ( samples_filename = samples_filename )
+    print ( f"\n{ script_filename= } { rx_samples.samples.size= } { rx_samples.samples_filtered.size= } , dtype = { rx_samples.samples_filtered.dtype= }" )
+    if rx_samples.frames.has_leftovers :
+        print ( f"{ rx_samples.frames.samples_leftovers_start_idx= }" )
+    print ( f" {rx_samples.frames.samples_payloads_bytes=}" )
