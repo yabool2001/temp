@@ -464,11 +464,13 @@ class RxFrames_v0_1_9 :
         crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * self.sps )
         sync_sequence_bits = self.samples2bits ( self.samples_filtered.real [ sync_sequence_start_idx : sync_sequence_end_idx ] )
         if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+            print ( "sync_sequence real")
             has_sync_sequence = True
             packet_len_uint16 = self.samples2uint16 ( self.samples_filtered.real [ packet_len_start_idx : packet_len_end_idx ] )
             crc32_bytes_read = self.samples2bytes ( self.samples_filtered.real [ crc32_start_idx : crc32_end_idx ] )
             crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( self.samples_filtered.real [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                print ( " frame real")
                 packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                 if packet_end_idx > self.samples_filtered_len :
                     self.complete_process_frame ( idx )
@@ -481,6 +483,7 @@ class RxFrames_v0_1_9 :
         else :
             sync_sequence_bits = self.samples2bits ( self.samples_filtered.imag [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                print ( "sync_sequence imag")
                 has_sync_sequence = True
                 packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : self.sps ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols.imag )
@@ -490,7 +493,8 @@ class RxFrames_v0_1_9 :
                 crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                    packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * sps )
+                    print ( " frame imag")
+                    packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * self.sps )
                     if packet_end_idx > self.samples_filtered_len :
                         self.complete_process_frame ( idx )
                         return
@@ -502,6 +506,7 @@ class RxFrames_v0_1_9 :
             else :
                 self.samples2bits ( -self.samples_filtered.real [ sync_sequence_start_idx : sync_sequence_end_idx ] )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                    print ( "sync_sequence -real")
                     has_sync_sequence = True
                     packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : self.sps ]
                     packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -packet_len_symbols.real ) # czy tu ma być na pewno imag i czy znak jest ok ? przeanalizować
@@ -511,6 +516,7 @@ class RxFrames_v0_1_9 :
                     crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                     crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                        print ( "frame -real")
                         packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * self.sps )
                         if packet_end_idx > self.samples_filtered_len :
                             self.complete_process_frame ( idx )
@@ -523,6 +529,7 @@ class RxFrames_v0_1_9 :
                 else :
                     sync_sequence_bits = self.samples2bits ( -self.samples_filtered.imag [ sync_sequence_start_idx : sync_sequence_end_idx ] )
                     if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                        print ( "sync_sequence -imag")
                         has_sync_sequence = True
                         packet_len_symbols = self.samples_filtered [ packet_len_start_idx : packet_len_end_idx : self.sps ]
                         packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( -packet_len_symbols.imag )
@@ -532,6 +539,7 @@ class RxFrames_v0_1_9 :
                         crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                         crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) ) )
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                            print ( " frame -imag")
                             packet_end_idx = crc32_end_idx + ( packet_len_dec * PACKET_BYTE_LEN_BITS * self.sps )
                             if packet_end_idx > self.samples_filtered_len :
                                 self.complete_process_frame ( idx )

@@ -23,8 +23,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
 #filename_samples = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
-#samples_filename = "np.samples/rx_samples_0.1.8_01_32768.npy"
-samples_filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
+samples_filename = "np.samples/rx_samples_0.1.8_01_32768.npy"
+#samples_filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 
 real = False
 
