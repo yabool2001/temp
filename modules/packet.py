@@ -143,8 +143,6 @@ def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , syn
         plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
         plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )'''
         plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
-        plot.complex_waveform_v0_1_6 ( -samples , f"V7 samples all {samples.size=}" , False , peaks )
-        plot.real_waveform_v0_1_6 ( -samples.real , f"V7 samples all {samples.size=}" , False , peaks )
 
     if wrt and sync:
         filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
@@ -467,7 +465,6 @@ class RxFrames_v0_1_9 :
                     return
                 has_frame = True
                 packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
-                print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                 if packet.has_packet :
                     #self.samples_payloads_bytes.append ( packet.payload_bytes )
                     self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
@@ -491,7 +488,6 @@ class RxFrames_v0_1_9 :
                         return
                     has_frame = True
                     packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
-                    print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                     if packet.has_packet :
                         #self.samples_payloads_bytes.append ( packet.payload_bytes )
                         self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
@@ -515,7 +511,6 @@ class RxFrames_v0_1_9 :
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
-                        print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                         if packet.has_packet :
                             #self.samples_payloads_bytes.append ( packet.payload_bytes )
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
@@ -539,7 +534,6 @@ class RxFrames_v0_1_9 :
                                 return
                             has_frame = True
                             packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
-                            print ( f"Detected valid frame at index { sync_sequence_start_idx }, length { packet_len_dec } bytes" )
                             if packet.has_packet :
                                 #self.samples_payloads_bytes.append ( packet.payload_bytes )
                                 self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
