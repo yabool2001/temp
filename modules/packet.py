@@ -389,21 +389,24 @@ class RxPacket_v0_1_8 :
         self.process_packet ( self.samples_filtered )
     
     def process_packet ( self , samples_filtered : NDArray[ np.complex128 ] ) -> None :
-        has_packet = False
         sps = modulation.SPS
+
+        samples_components = [ self.samples_filtered.real , self.samples_filtered.imag , -self.samples_filtered.real , -self.samples_filtered.imag ]
+        for samples_component in samples_components :
         
-        payload_end_idx = len ( samples_filtered ) - ( CRC32_LEN_BITS * sps )
-        payload_symbols = self.samples_filtered [ : payload_end_idx : sps ]
-        crc32_symbols = self.samples_filtered [ payload_end_idx : : sps ]
-        payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols.real )
-        payload_bytes = pad_bits2bytes ( payload_bits )
-        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols.real )
-        crc32_bytes_read = pad_bits2bytes ( crc32_bits )
-        crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
-        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-            self.has_packet = True
-            self.payload_bytes = payload_bytes
-            print ( f"Detected valid packet!" )
+            payload_end_idx = len ( samples_filtered ) - ( CRC32_LEN_BITS * sps )
+            payload_symbols = samples_component [ : payload_end_idx : sps ]
+            crc32_symbols = samples_component [ payload_end_idx : : sps ]
+            payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
+            payload_bytes = pad_bits2bytes ( payload_bits )
+            crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
+            crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+            crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
+            if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                self.has_packet = True
+                self.payload_bytes = payload_bytes
+                print ( f"Detected valid packet!" )
+                break
 
     def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
         if peaks and self.sync_seguence_peak_idxs is not None :
