@@ -457,6 +457,8 @@ class RxFrames_v0_1_9 :
         self.has_leftovers = True
 
     def process_frame ( self , idx : np.uint32 ) -> None :
+        if idx == 2265 :
+            pass
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         has_frame = has_sync_sequence = False
         sync_sequence_start_idx = idx + filters.SPAN * self.sps // 2
@@ -477,6 +479,7 @@ class RxFrames_v0_1_9 :
                 ( -self.samples_filtered.imag , " frame -imag" )
             ]
             for samples_comp , frame_name in check_components :
+                # sprawdz bo zle jest odczytywany crc32 jako 15 15 15 15
                 crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
                 crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
                 if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
