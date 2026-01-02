@@ -26,7 +26,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 samples_filename = "np.samples/rx_samples_0.1.8_01_32768.npy"
 #samples_filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 
-real = True
+real = False
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_9 ()
