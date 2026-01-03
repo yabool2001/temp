@@ -510,6 +510,7 @@ class RxSamples_v0_1_9 :
     
     pluto_rx_ctx : Pluto | None = None
     samples_filename : str | None = None
+    previous_samples_leftovers : NDArray[ np.complex128 ] | None = None
 
     # Pola uzupełnianie w __post_init__
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -520,13 +521,17 @@ class RxSamples_v0_1_9 :
     ths : float = 1000.0
     sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
     frames : RxFrames_v0_1_9 = field ( init = False )
+    current_samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
 
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
 
     def rx ( self ) -> None :
         if self.pluto_rx_ctx is not None :
-            self.samples = self.pluto_rx_ctx.rx ()
+            if self.samples_leftovers is None :
+                self.samples = self.pluto_rx_ctx.rx ()
+            else :
+                self.samples = np.concatenate ( [ self.samples_leftovers , self.pluto_rx_ctx.rx () ] )
         elif self.samples_filename is not None :
             self.samples = ops_file.open_samples_from_npf ( self.samples_filename )
         else :

@@ -43,7 +43,7 @@ else :
 
 print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while True :
-    rx_pluto.samples.rx ()
+    rx_pluto.samples.rx ( previous_samples_leftovers = samples_leftover )
     rx_pluto.samples.detect_frames ()
     #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     if rx_pluto.samples.frames.has_leftovers :
