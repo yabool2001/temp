@@ -452,17 +452,17 @@ class RxFrames_v0_1_9 :
         self.samples_leftovers_start_idx = idx
         self.has_leftovers = True
 
-    def frame_len_validation ( self, idx : np.uint32 ) -> None :
+    def frame_len_validation ( self, idx : np.uint32 ) -> bool :
         remainings_len = self.samples_filtered_len - idx
         if remainings_len <= FRAME_LEN_SAMPLES :
             self.complete_process_frame ( idx )
-            return
+            return False
+        return True
 
     def process_frame ( self , idx : np.uint32 ) -> None :
-        if idx == 2265 :
-            pass
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
-        self.frame_len_validation ( idx )
+        if not self.frame_len_validation ( idx ) :
+            return
         has_frame = has_sync_sequence = False
         sync_sequence_start_idx = idx + filters.SPAN * self.sps // 2
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
