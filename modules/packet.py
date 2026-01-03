@@ -459,6 +459,12 @@ class RxFrames_v0_1_9 :
             return False
         return True
 
+    def packet_len_validation ( self , idx : np.uint32 , packet_end_idx : np.uint32 ) -> bool :
+        if packet_end_idx > self.samples_filtered_len :
+            self.complete_process_frame ( idx )
+            return False
+        return True
+
     def process_frame ( self , idx : np.uint32 ) -> None :
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         if not self.frame_len_validation ( idx ) :
@@ -486,8 +492,7 @@ class RxFrames_v0_1_9 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         print ( frame_name )
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
-                        if packet_end_idx > self.samples_filtered_len :
-                            self.complete_process_frame ( idx )
+                        if not self.packet_len_validation ( idx , packet_end_idx ) :
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
