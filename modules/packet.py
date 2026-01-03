@@ -91,11 +91,12 @@ PAYLOAD_LENGTH_BITS_LEN = 8
 CRC32_BITS_LEN = 32
 
 SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
-PACKET_LEN_BITS = 11
+PACKET_LEN_LEN_BITS = 11
 CRC32_LEN_BITS = 32
-MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 2 ** PACKET_LEN_BITS - 1 )
+MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 2 ** PACKET_LEN_LEN_BITS - 1 )
 MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 # MTU dla IP over ETHERNET
 PACKET_BYTE_LEN_BITS = 8
+FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
@@ -460,11 +461,15 @@ class RxFrames_v0_1_9 :
         if idx == 2265 :
             pass
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
+        remainings_len = self.samples_filtered_len - idx
+        if remainings_len < FRAME_LEN_BITS * self.sps :
+            self.complete_process_frame ( idx )
+            return
         has_frame = has_sync_sequence = False
         sync_sequence_start_idx = idx + filters.SPAN * self.sps // 2
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
         packet_len_start_idx = sync_sequence_end_idx
-        packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_BITS * self.sps )
+        packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.sps )
         crc32_start_idx = packet_len_end_idx
         crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * self.sps )
         sync_sequence_bits = self.samples2bits ( self.samples_filtered.real [ sync_sequence_start_idx : sync_sequence_end_idx ] )
@@ -739,7 +744,7 @@ class TxFrame_v0_1_8 :
         self.sync_sequence_bits = BARKER13_BITS
 
     def create_packet_len_bits ( self ) -> None :
-        self.packet_len_bits = dec2bits ( self.packet_len , PACKET_LEN_BITS )
+        self.packet_len_bits = dec2bits ( self.packet_len , PACKET_LEN_LEN_BITS )
 
     def create_frame_bits ( self ) -> None :
         self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
