@@ -393,8 +393,8 @@ class RxPacket_v0_1_8 :
     def process_packet ( self , samples_filtered : NDArray[ np.complex128 ] ) -> None :
         sps = modulation.SPS
 
-        samples_components = [ self.samples_filtered.real , self.samples_filtered.imag , -self.samples_filtered.real , -self.samples_filtered.imag ]
-        for samples_component in samples_components :
+        samples_components = [ ( self.samples_filtered.real , "packet real" ) , ( self.samples_filtered.imag , "packet imag" ) , ( -self.samples_filtered.real , "packet -real" ) , ( -self.samples_filtered.imag , "packet -imag" ) ]
+        for samples_component , samples_name in samples_components :
         
             payload_end_idx = len ( samples_filtered ) - ( CRC32_LEN_BITS * sps )
             payload_symbols = samples_component [ : payload_end_idx : sps ]
@@ -407,7 +407,7 @@ class RxPacket_v0_1_8 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
                 self.payload_bytes = payload_bytes
-                print ( f"Detected valid packet!" )
+                print ( samples_name )
                 break
 
     def __repr__ ( self ) -> str :
@@ -471,11 +471,11 @@ class RxFrames_v0_1_9 :
         crc32_start_idx = packet_len_end_idx
         crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * self.sps )
 
-        samples_components = [ self.samples_filtered.real , self.samples_filtered.imag , -self.samples_filtered.real , -self.samples_filtered.imag ]
-        for samples_component in samples_components :
+        samples_components = [ ( self.samples_filtered.real , "sync sequence real" ) , ( self.samples_filtered.imag , "sync sequence imag" ) , ( -self.samples_filtered.real , "sync sequence -real" ) , ( -self.samples_filtered.imag , "sync sequence -imag" ) ]
+        for samples_component , samples_name in samples_components :
             sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                print ( "sync_sequence real")
+                print ( samples_name )
                 has_sync_sequence = True
                 packet_len_uint16 = self.samples2uint16 ( self.samples_filtered.real [ packet_len_start_idx : packet_len_end_idx ] )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
