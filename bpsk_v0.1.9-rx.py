@@ -34,7 +34,7 @@ filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
-leftovers_test = True
+leftovers_test = 0
 
 real = False
 
@@ -44,14 +44,14 @@ else :
     rx_pluto = packet.RxPluto_v0_1_9 ( samples_filename = filename )
 
 print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-while leftovers_test :
+while leftovers_test < 2:
     rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     rx_pluto.samples.detect_frames ()
     print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     
     if rx_pluto.samples.frames.has_leftovers :
-        previous_samples_leftover = rx_pluto.samples.samples_leftovers # dopiero muszę zrobić
+        previous_samples_leftovers = rx_pluto.samples.samples_leftovers # dopiero muszę zrobić
         print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
     print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )
-    leftovers_test = False
+    leftovers_test += 1

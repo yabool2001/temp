@@ -533,6 +533,8 @@ class RxSamples_v0_1_9 :
                 self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
         elif self.samples_filename is not None :
             self.samples = ops_file.open_samples_from_npf ( self.samples_filename )
+            if previous_samples_leftovers is not None :
+                self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
         else :
             raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided." )
 
