@@ -7,7 +7,8 @@ python bpsk_v0.1.8-tx.py
 
 Po zakończeniu tej wersji wrócić do rozwoju wersji bpsk_v0.1.6-rx
 '''
-
+import numpy as np
+from numpy.typing import NDArray
 import os
 import time as t
 import tomllib
@@ -30,6 +31,9 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 #filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
 filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
 
+received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
+samples_leftover : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
+
 real = False
 
 if real :
@@ -38,9 +42,11 @@ else :
     rx_pluto = packet.RxPluto_v0_1_9 ( samples_filename = filename )
 
 print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-rx_pluto.samples.rx ()
-rx_pluto.samples.detect_frames ()
-print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
-if rx_pluto.samples.frames.has_leftovers :
-    print ( f"{ rx_pluto.samples.frames.samples_leftovers_start_idx= }" )
-print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )
+while True :
+    rx_pluto.samples.rx ()
+    rx_pluto.samples.detect_frames ()
+    #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
+    if rx_pluto.samples.frames.has_leftovers :
+        samples_leftover = rx_pluto.samples.frames.samples_leftovers # dopiero muszę zrobić
+
+    #print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )

@@ -486,7 +486,6 @@ class RxFrames_v0_1_9 :
                 packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
                 for samples_comp , frame_name in check_components :
-                    # W tym miejscu skończyłem w nocy 2.01.2026 sprawdz bo zle jest odczytywany crc32 jako 15 15 15 15,bo to jest chyba stara wersja samples zapisane bez crc32 frame
                     crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
                     crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
