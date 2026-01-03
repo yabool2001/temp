@@ -27,7 +27,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 #filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 filename = "np.samples/rx_samples_0.1.8_11_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
-#filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
+filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
 
 real = False
 

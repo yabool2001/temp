@@ -97,6 +97,7 @@ MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 2 ** PACKET_LEN_LEN_BITS - 1 )
 MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 # MTU dla IP over ETHERNET
 PACKET_BYTE_LEN_BITS = 8
 FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
+FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
@@ -409,12 +410,6 @@ class RxPacket_v0_1_8 :
                 print ( f"Detected valid packet!" )
                 break
 
-    def plot_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peak_idxs is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker , marker_peaks = self.sync_seguence_peak_idxs )
-        else :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
-
     def __repr__ ( self ) -> str :
         return (
             f"{ self.samples_filtered.size= }, { self.has_packet= }, { self.payload_bytes.size if self.has_packet else None= }"
@@ -457,14 +452,17 @@ class RxFrames_v0_1_9 :
         self.samples_leftovers_start_idx = idx
         self.has_leftovers = True
 
+    def frame_len_validation ( self, idx : np.uint32 ) -> None :
+        remainings_len = self.samples_filtered_len - idx
+        if remainings_len <= FRAME_LEN_SAMPLES :
+            self.complete_process_frame ( idx )
+            return
+
     def process_frame ( self , idx : np.uint32 ) -> None :
         if idx == 2265 :
             pass
         # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
-        remainings_len = self.samples_filtered_len - idx
-        if remainings_len < FRAME_LEN_BITS * self.sps :
-            self.complete_process_frame ( idx )
-            return
+        self.frame_len_validation ( idx )
         has_frame = has_sync_sequence = False
         sync_sequence_start_idx = idx + filters.SPAN * self.sps // 2
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
@@ -480,16 +478,11 @@ class RxFrames_v0_1_9 :
                 print ( "sync_sequence real")
                 has_sync_sequence = True
                 packet_len_uint16 = self.samples2uint16 ( self.samples_filtered.real [ packet_len_start_idx : packet_len_end_idx ] )
-                check_components = [
-                    ( self.samples_filtered.real , " frame real" ) ,
-                    ( self.samples_filtered.imag , " frame imag" ) ,
-                    ( -self.samples_filtered.real , " frame -real" ) ,
-                    ( -self.samples_filtered.imag , " frame -imag" )
-                ]
+                check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
                 for samples_comp , frame_name in check_components :
                     # W tym miejscu skończyłem w nocy 2.01.2026 sprawdz bo zle jest odczytywany crc32 jako 15 15 15 15,bo to jest chyba stara wersja samples zapisane bez crc32 frame
                     crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
-                    crc32_bytes_calculated = self.create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
+                    crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         print ( frame_name )
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
@@ -503,16 +496,6 @@ class RxFrames_v0_1_9 :
                         break
             
         print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
-    # Wyrzucić albo naprawić funkcję bo bez sensu ze zmienna payload_bit korzystać z funkcji dającej bytes 
-    #def get_bits_at_peak ( self , peak_idx : int ) -> NDArray[ np.uint8 ] | None :
-    #    payload_bits = get_payload_bytes_v0_1_3 ( self.samples_filtered[ peak_idx : ] )
-    #    return payload_bits
-
-    def create_crc32_bytes ( self , frame_main_bytes ) -> NDArray[ np.uint8 ] :
-        return create_crc32_bytes ( frame_main_bytes )
-
-    def plot_waveform ( self , title = "" , marker : bool = False ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title}" , marker_squares = marker )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
