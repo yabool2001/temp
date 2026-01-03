@@ -408,7 +408,7 @@ class RxPacket_v0_1_8 :
                 self.has_packet = True
                 self.payload_bytes = payload_bytes
                 print ( samples_name )
-                break
+                return
 
     def __repr__ ( self ) -> str :
         return (
@@ -477,7 +477,7 @@ class RxFrames_v0_1_9 :
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                 print ( samples_name )
                 has_sync_sequence = True
-                packet_len_uint16 = self.samples2uint16 ( self.samples_filtered.real [ packet_len_start_idx : packet_len_end_idx ] )
+                packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
                 for samples_comp , frame_name in check_components :
                     # W tym miejscu skończyłem w nocy 2.01.2026 sprawdz bo zle jest odczytywany crc32 jako 15 15 15 15,bo to jest chyba stara wersja samples zapisane bez crc32 frame
@@ -493,7 +493,8 @@ class RxFrames_v0_1_9 :
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                        break
+                            return
+                        #break # UWAGA! To chyba jest bez sensu
             
         print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
 

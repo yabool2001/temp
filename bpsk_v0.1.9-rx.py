@@ -22,10 +22,10 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
-#filename = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.7_02_32768.npy"
+filename = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.8_11_1s_sat.npy"
-filename = "np.samples/rx_samples_0.1.8_13_1s_sat.npy"
+#filename = "np.samples/rx_samples_0.1.8_13_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 #filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
 #filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
