@@ -13,7 +13,7 @@ import time as t
 import tomllib
 
 #from pathlib import Path
-from modules import packet , modulation , plot , sdr
+from modules import packet , payload_test_data as ptd
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 
@@ -60,9 +60,9 @@ try :
             print ( "[s] Tc cyclic stopped" )
         elif key == 't' :
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.tx ( mode = "cyclic" , payload = payload256bytes )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_1500BYTES_DEC )
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( f"\n{tx_pluto.tx_samples.samples_bytes=}" )
+            print ( f"\n{tx_pluto.tx_samples.samples_bytes.size=}" )
             print ( "[t] Tester mode send bytes." )
         elif key == '\x1b':  # ESCAPE
             break
