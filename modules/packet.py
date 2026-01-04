@@ -591,7 +591,7 @@ class RxPluto_v0_1_9 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.samples_filename= }" if self.samples_filename is not None else f"{ self.pluto_rx_ctx= }"
+            f"{self.samples.samples.size=}, { self.pluto_rx_ctx= }" if self.sn is not None else f" no ADALM-Pluto connected,"
         )
 
 @dataclass ( slots = True , eq = False )
