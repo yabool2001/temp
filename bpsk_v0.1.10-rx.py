@@ -56,9 +56,11 @@ while len (received_bytes) < 20:
         previous_samples_leftovers = rx_pluto.samples.samples_leftovers
         print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
+    if rx_pluto.samples.has_sync_sequence :
+        rx_pluto.samples.plot_complex_waveform ( f"{script_filename}" )
+
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
-        rx_pluto.samples.plot_complex_waveform ( f"{script_filename}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         #print ( f" {received_bytes=}, {received_bytes.size=}" )
 
