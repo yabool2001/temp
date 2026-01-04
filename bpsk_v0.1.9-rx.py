@@ -41,11 +41,11 @@ real = False
 if real :
     rx_pluto = packet.RxPluto_v0_1_9 ( sn = sdr.PLUTO_RX_SN )
 else :
-    rx_pluto = packet.RxPluto_v0_1_9 ( samples_filename = filename )
+    rx_pluto = packet.RxPluto_v0_1_9 ()
 
 print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while leftovers_test < 2:
-    rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
+    rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers , samples_filename = filename )
     rx_pluto.samples.detect_frames ()
     print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     
