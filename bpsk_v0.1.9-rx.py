@@ -28,15 +28,15 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 #filename = "np.samples/rx_samples_0.1.8_11_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.8_13_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
-#filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
-filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
+filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
+#filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
 
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
 leftovers_test = 0
 
-real = False
+real = True
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_9 ( sn = sdr.PLUTO_RX_SN )
@@ -45,12 +45,15 @@ else :
 
 print ( f"\n{ script_filename= } {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while leftovers_test < 2:
-    rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers , samples_filename = filename )
+    if real :
+        rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
+    else :
+        rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers , samples_filename = filename )
     rx_pluto.samples.detect_frames ()
     print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     
     if rx_pluto.samples.frames.has_leftovers :
-        previous_samples_leftovers = rx_pluto.samples.samples_leftovers # dopiero muszę zrobić
+        previous_samples_leftovers = rx_pluto.samples.samples_leftovers
         print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
     print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )

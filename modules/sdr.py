@@ -60,6 +60,27 @@ class TxSamples :
     def __repr__( self ) -> str:
         return f"TxSamples ( samples.shape = { self.samples.shape }, dtype={ self.samples.dtype } )"
 
+def init_pluto_v0_1_9 ( sn : str) :
+    uri = get_uri ( sn )
+    if uri is None:
+        raise ValueError ( f"ADALM-Pluto SN: {sn} is not connected. Check USB connection or IP settings.")
+    sdr = adi.Pluto ( uri )
+    sdr.tx_lo = F_C
+    sdr.rx_lo = F_C
+    sdr.sample_rate = F_S
+    sdr.rx_rf_bandwidth = BW
+    sdr.rx_buffer_size = SAMPLES_BUFFER_SIZE
+    sdr.tx_hardwaregain_chan0 = TX_GAIN
+    sdr.gain_control_mode_chan0 = GAIN_CONTROL
+    sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
+    sdr.rx_output_type = "SI"
+    sdr.tx_destroy_buffer ()
+    sdr.tx_cyclic_buffer = False
+    time.sleep ( 0.2 ) #delay after setting device parameters
+    if settings["log"]["verbose_0"] : print ( f"{sn=} {F_C=} {BW=} {F_S=}" )
+    if settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+    return sdr
+
 def init_pluto_v3 ( sn : str) :
     uri = get_uri ( sn )
     sdr = adi.Pluto ( uri )

@@ -585,7 +585,7 @@ class RxPluto_v0_1_9 :
 
     def __post_init__ ( self ) -> None :
         if self.sn is not None :
-            self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = self.sn )
+            self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
             self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
         else :
             self.samples = RxSamples_v0_1_9 ()
