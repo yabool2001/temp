@@ -101,7 +101,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
-    plt = True
+    plt = False
     wrt = False
     sync = False
     base_path = Path ( "logs/correlation_results.csv" )

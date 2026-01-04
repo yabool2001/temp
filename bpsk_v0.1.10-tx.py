@@ -60,7 +60,7 @@ try :
             print ( "[s] Tc cyclic stopped" )
         elif key == 't' :
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_1500BYTES_DEC )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_10BYTES_DEC )
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"\n{tx_pluto.tx_samples.samples_bytes.size=}" )
             print ( "[t] Tester mode send bytes." )
