@@ -9,6 +9,8 @@
 To support CUDA with newest version of Python, you may need to run newest beta numba, e.g. 0.63.0b1 : `python -m pip install numba==0.63.0c1`
 Check for a newest version at: https://pypi.org/project/numba/#history
 
+pyadi-iio documentation is available at: https://analogdevicesinc.github.io/pyadi-iio/
+
 # Hardware description
 ## AD9361 transceiver block diagram
 ![image](https://github.com/user-attachments/assets/aa3e2089-f667-406d-b144-5c89a048f7e0)
