@@ -31,6 +31,9 @@ PACKET comprise:
 ## Functions
 
 ### tx ()
+The tx buffer size is implicitly managed by the length of the IQ sample array passed to the tx() function, allowing for sending variable-length packets without the need to set a separate buffer size. The rx_buffer_size attribute exists for RX (it specifies the number of samples received per rx() call), but there is no equivalent for tx.
+
+The tx () function is flexible and efficient for variable-length packets as long as you use non-cyclic mode (tx_cyclic_buffer = False), which prevents buffer repetition and allows for sequential sending of new data blocks. For very large packets, libiio manages the hardware buffer underneath (e.g., Pluto has a ~4MB limit), but in practice, chunking (e.g., 1024-8192 samples) helps avoid delays or overflow errors.
 
 ### rx ()
 
