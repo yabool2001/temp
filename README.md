@@ -2,7 +2,9 @@
 `python v3.14.0`
 `pyadi-iio=0.0.20`
 `numba==0.63.0rc1`
-`pylibiio` `pyadi-iio` `scipy` `plotly.express`
+`pylibiio`
+`scipy`
+`plotly.express`
 
 To support CUDA with newest version of Python, you may need to run newest beta numba, e.g. 0.63.0b1 : `python -m pip install numba==0.63.0c1`
 Check for a newest version at: https://pypi.org/project/numba/#history
@@ -13,16 +15,28 @@ Check for a newest version at: https://pypi.org/project/numba/#history
 
 # Software description
 
-## Information
+## Data structure
 All user data is encapsulated in a FRAME that comprise:
 - 13 bits of SYNC_SEQUENCE ( e.g. BARKER13)
 - 11 bits of PACKET_LEN
-- 32 bits CRC32
+- 32 bits FRAME_CRC32
 - PACKET (max. of 1504 bytes: max. 1500 payload bytes and 4 CRC32 bytes)
 
 PACKET comprise:
 - PAYLOAD whose maximum length is 2047 bytes (recommended maximum is 1500 bytes according with IP max. lenght over ETH)
-- 4 bytes of CRC32
+- 4 bytes of PACKET_CRC32
+
+## Functions
+
+### tx ()
+
+### rx ()
+
+rx () function implemented in RxSamples class can gather the samples in the real or simulation mode:
+1. real mode: - initialise the SDR and gather the data from the transceivers in the the ADALM-Pluto;
+2. simulation mode: - the data saved in .npy format gathered from the ADALM-Pluto SDR
+In each mode the leftovers from the previous samples can be insert before new samples.
+
 
 ## Samples corrections in corrections module
 ### CFO estimation

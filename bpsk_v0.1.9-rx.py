@@ -16,7 +16,7 @@ import tomllib
 from numpy import real
 
 #from pathlib import Path
-from modules import ops_file , packet
+from modules import packet , sdr
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
@@ -39,7 +39,7 @@ leftovers_test = 0
 real = False
 
 if real :
-    rx_pluto = packet.RxPluto_v0_1_9 ()
+    rx_pluto = packet.RxPluto_v0_1_9 ( sn = sdr.PLUTO_RX_SN )
 else :
     rx_pluto = packet.RxPluto_v0_1_9 ( samples_filename = filename )
 

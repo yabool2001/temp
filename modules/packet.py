@@ -509,7 +509,7 @@ class RxFrames_v0_1_9 :
 class RxSamples_v0_1_9 :
     
     pluto_rx_ctx : Pluto | None = None
-    samples_filename : str | None = None
+    #samples_filename : str | None = None
 
     # Pola uzupełnianie w __post_init__
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -525,14 +525,14 @@ class RxSamples_v0_1_9 :
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
 
-    def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] ) -> None :
+    def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] , samples_filename : str | None = None ) -> None :
         if self.pluto_rx_ctx is not None :
             if previous_samples_leftovers is None :
                 self.samples = self.pluto_rx_ctx.rx ()
             else :
                 self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
-        elif self.samples_filename is not None :
-            self.samples = ops_file.open_samples_from_npf ( self.samples_filename )
+        elif samples_filename is not None :
+            self.samples = ops_file.open_samples_from_npf ( samples_filename )
             if previous_samples_leftovers is not None :
                 self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
         else :
@@ -576,17 +576,18 @@ class RxSamples_v0_1_9 :
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_9 :
 
+    sn : str | None = None
+    
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto | None = None
-    samples_filename : str | None = None
     samples : RxSamples_v0_1_9 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        if self.samples_filename is None :
-            self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_RX_SN )
+        if self.sn is not None :
+            self.pluto_rx_ctx = sdr.init_pluto_v3 ( sn = self.sn )
             self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
         else :
-            self.samples = RxSamples_v0_1_9 ( samples_filename = self.samples_filename )
+            self.samples = RxSamples_v0_1_9 ()
 
     def __repr__ ( self ) -> str :
         return (
