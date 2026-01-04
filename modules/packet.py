@@ -388,15 +388,15 @@ class RxPacket_v0_1_8 :
     # Pola uzupełnianie w __post_init__
 
     def __post_init__ ( self ) -> None :
-        self.process_packet ( self.samples_filtered )
+        self.process_packet ()
     
-    def process_packet ( self , samples_filtered : NDArray[ np.complex128 ] ) -> None :
+    def process_packet ( self ) -> None :
         sps = modulation.SPS
 
         samples_components = [ ( self.samples_filtered.real , "packet real" ) , ( self.samples_filtered.imag , "packet imag" ) , ( -self.samples_filtered.real , "packet -real" ) , ( -self.samples_filtered.imag , "packet -imag" ) ]
         for samples_component , samples_name in samples_components :
         
-            payload_end_idx = len ( samples_filtered ) - ( CRC32_LEN_BITS * sps )
+            payload_end_idx = len ( self.samples_filtered ) - ( CRC32_LEN_BITS * sps )
             payload_symbols = samples_component [ : payload_end_idx : sps ]
             crc32_symbols = samples_component [ payload_end_idx : : sps ]
             payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
@@ -449,7 +449,7 @@ class RxFrames_v0_1_9 :
     
     def complete_process_frame ( self , idx : np.uint32 ) -> None :
         print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-        self.samples_leftovers_start_idx = idx
+        self.samples_leftovers_start_idx = idx - filters.SPAN * self.sps // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 
     def frame_len_validation ( self, idx : np.uint32 ) -> bool :
@@ -498,7 +498,7 @@ class RxFrames_v0_1_9 :
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
+                            print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return
                         #break # UWAGA! To chyba jest bez sensu
             

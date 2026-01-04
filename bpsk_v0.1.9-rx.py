@@ -56,5 +56,5 @@ while leftovers_test < 2:
         previous_samples_leftovers = rx_pluto.samples.samples_leftovers
         print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
-    print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}" )
+    print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
     leftovers_test += 1
