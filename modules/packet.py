@@ -758,7 +758,7 @@ class TxPluto_v0_1_8 :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
     
     def init_pluto_tx ( self ) -> None :
-        self.pluto_tx_ctx = sdr.init_pluto_v3 ( sn = sdr.PLUTO_TX_SN )
+        self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = sdr.PLUTO_TX_SN )
 
     # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
     def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False) :
