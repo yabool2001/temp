@@ -33,8 +33,8 @@ PACKET comprise:
 ### rx ()
 
 rx () function implemented in `RxSamples` class can gather the samples in the real or simulation mode:
-1. real mode: - initialise the SDR and gather the data from the transceivers in the the ADALM-Pluto;
-2. simulation mode: - the data saved in .npy format gathered from the ADALM-Pluto SDR
+1. real mode: initialise the SDR and gather the data from the transceivers in the the ADALM-Pluto;
+1. simulation mode: the data saved in .npy format gathered from the ADALM-Pluto SDR
 
 In each mode the leftovers from the previous samples can be insert before new samples.
 
