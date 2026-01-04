@@ -481,7 +481,7 @@ class RxFrames_v0_1_9 :
         for samples_component , samples_name in samples_components :
             sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                print ( samples_name )
+                #print ( samples_name )
                 has_sync_sequence = True
                 packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
@@ -489,14 +489,16 @@ class RxFrames_v0_1_9 :
                     crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
                     crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                        print ( frame_name )
+                        #print ( frame_name )
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
+                            print ( f"{ idx= } {samples_name} {frame_name=} { has_sync_sequence= }, { has_frame= }" )
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+                            print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
                             return
                         #break # UWAGA! To chyba jest bez sensu
             
