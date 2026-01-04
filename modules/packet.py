@@ -544,7 +544,8 @@ class RxSamples_v0_1_9 :
     def detect_frames ( self ) -> None :
         self.filter_samples ()
         self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
-        self.clip_samples_leftovers ()
+        if self.frames.has_leftovers :
+            self.clip_samples_leftovers ()
 
     def sample_initial_assesment (self) -> None :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
