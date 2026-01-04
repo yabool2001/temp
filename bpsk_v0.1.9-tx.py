@@ -28,8 +28,6 @@ print ( f"\n{ script_filename= } { tx_pluto= }" )
 
 payload256bytes = list ( range ( 256 ) )
 
-adv = False
-
 stdscr = curses.initscr ()
 curses.noecho ()
 stdscr.keypad ( True )
@@ -66,14 +64,8 @@ try :
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"\n{tx_pluto.tx_samples.samples_bytes.size=}" )
             print ( "[t] Tester mode send bytes." )
-        elif key == 'a' :
-            t.sleep ( 1 )  # anty-dubler
-            adv = not adv
-            print ( "[a] Advanced test mode " + ("enabled" if adv else "disabled") )
         elif key == '\x1b':  # ESCAPE
             break
-        if adv :
-            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_10BYTES_DEC )
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     curses.echo ()
