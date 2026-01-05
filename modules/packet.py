@@ -421,7 +421,7 @@ class RxFrames_v0_1_9 :
     samples_filtered : NDArray[ np.complex128 ]
 
     # Pola uzupełnianie w __post_init__
-    sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
     samples_filtered_len : np.uint32 = field ( init = False )
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
     #samples_payloads_bytes : list[ RxPacket_v0_1_8 ] = field ( default_factory = list )
@@ -431,8 +431,8 @@ class RxFrames_v0_1_9 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_seguence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
-        for idx in self.sync_seguence_peaks :
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        for idx in self.sync_sequence_peaks :
             self.process_frame ( idx = idx )
     
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
@@ -492,7 +492,7 @@ class RxFrames_v0_1_9 :
                         #print ( frame_name )
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
-                            print ( f"{ idx= } {samples_name} {frame_name=} { has_sync_sequence= }, { has_frame= }" )
+                            print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -517,10 +517,9 @@ class RxSamples_v0_1_9 :
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    has_sync_sequence : bool = False
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
-    sync_seguence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
     frames : RxFrames_v0_1_9 = field ( init = False )
     samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
 
@@ -552,13 +551,11 @@ class RxSamples_v0_1_9 :
     def sample_initial_assesment (self) -> None :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
-    def plot_complex_waveform ( self , title = "" , marker : bool = False , peaks : bool = False ) -> None :
-        if peaks and self.sync_seguence_peaks is not None :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
-            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = self.sync_seguence_peaks )
-        else :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
-            plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker )
+    def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def __repr__ ( self ) -> str :
         return (
@@ -774,6 +771,11 @@ class TxPluto_v0_1_8 :
             self.pluto_tx_ctx.tx_cyclic_buffer = True
         else :
             raise ValueError ( "Error: tx mode can be once or cyclic!" )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
         self.pluto_tx_ctx.tx ( self.samples4pluto )
 
     def stop_tx_cyclic ( self ) :

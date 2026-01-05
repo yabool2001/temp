@@ -1,3 +1,5 @@
+PAYLOAD_4BYTES_DEC = [ i % 256 for i in range ( 4 ) ]
+print ( f"Payload test data initialized: { len ( PAYLOAD_4BYTES_DEC ) } bytes." )
 PAYLOAD_10BYTES_DEC = [ i % 256 for i in range ( 10 ) ]
 print ( f"{ len ( PAYLOAD_10BYTES_DEC )= } { PAYLOAD_10BYTES_DEC }" )
 PAYLOAD_1500BYTES_DEC = [ i % 256 for i in range ( 1500 ) ]

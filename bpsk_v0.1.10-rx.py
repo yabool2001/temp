@@ -44,7 +44,7 @@ else :
     rx_pluto = packet.RxPluto_v0_1_9 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-while len (received_bytes) < 20:
+while len (received_bytes) < 1000 :
     if real :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
@@ -56,11 +56,11 @@ while len (received_bytes) < 20:
         previous_samples_leftovers = rx_pluto.samples.samples_leftovers
         print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
-    if rx_pluto.samples.has_sync_sequence :
-        rx_pluto.samples.plot_complex_waveform ( f"{script_filename}" )
+    if rx_pluto.samples.frames.sync_sequence_peaks.size > 0 :
+        rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
-        #print ( f" {received_bytes=}, {received_bytes.size=}" )
+        print ( f"{received_bytes.size=}" )
 

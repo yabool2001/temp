@@ -62,18 +62,23 @@ try :
             print ( "[s] Tc cyclic stopped" )
         elif key == 't' :
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_10BYTES_DEC )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"\n{tx_pluto.tx_samples.samples_bytes.size=}" )
             print ( "[t] Tester mode send bytes." )
         elif key == 'a' :
             t.sleep ( 1 )  # anty-dubler
-            adv = not adv
-            print ( "[a] Advanced test mode " + ("enabled" if adv else "disabled") )
+            #adv = not adv
+            #print ( "[a] Advanced test mode " + ("enabled" if adv else "disabled") )
+            adv = True
+            print ( "Advanced test mode enabled" )
         elif key == '\x1b':  # ESCAPE
             break
         if adv :
-            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_10BYTES_DEC )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            adv = not adv
+            print ( "Advanced test mode disabled" )
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     curses.echo ()
