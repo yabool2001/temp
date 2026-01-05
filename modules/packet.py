@@ -777,6 +777,10 @@ class TxPluto_v0_1_8 :
         self.pluto_tx_ctx.tx ( self.samples4pluto )
         self.pluto_tx_ctx.tx ( self.samples4pluto )
         self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        self.pluto_tx_ctx.tx ( self.samples4pluto )
 
     def stop_tx_cyclic ( self ) :
         self.pluto_tx_ctx.tx_destroy_buffer ()
