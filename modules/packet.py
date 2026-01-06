@@ -99,6 +99,289 @@ PACKET_BYTE_LEN_BITS = 8
 FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
+def detect_sync_sequence_peaks_v0_1_10(samples: np.ndarray[np.complex128], sync_sequence: np.ndarray[np.complex128]) -> np.ndarray[np.uint32]:
+    plt = False
+    wrt = False
+    sync = False
+    base_path = Path("logs/correlation_results.csv")
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array([]).astype(np.uint32)
+    max_amplitude = np.max(np.abs(samples))
+
+    corr_bpsk = np.correlate(samples, sync_sequence, mode="valid")
+    corr_real = np.abs(corr_bpsk.real)
+    corr_imag = np.abs(corr_bpsk.imag)
+    corr_abs = np.abs(corr_bpsk)
+
+    max_peak_real_val = np.max(corr_real)
+    max_peak_imag_val = np.max(corr_imag)
+    max_peak_abs_val = np.max(corr_abs)
+
+    # Debug prints for max values and array lengths
+    print(f"Correlation lengths: real={len(corr_real)}, imag={len(corr_imag)}, abs={len(corr_abs)}")
+    print(f"Max peak real: {max_peak_real_val}")
+    print(f"Max peak imag: {max_peak_imag_val}")
+    print(f"Max peak abs: {max_peak_abs_val}")
+
+    corr_2_amp = np.max([max_peak_real_val, max_peak_imag_val, max_peak_abs_val]) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio:
+        sync = True
+        # Improved noise std: exclude top 5% (peaks) for better estimation
+        percentile_95_real = np.percentile(corr_real, 95)
+        noise_std_real = np.std(corr_real[corr_real < percentile_95_real])
+        prominence_real = 3 * noise_std_real  # Tune 3x based on Pluto SNR; lower to 2x if missing peaks
+
+        percentile_95_imag = np.percentile(corr_imag, 95)
+        noise_std_imag = np.std(corr_imag[corr_imag < percentile_95_imag])
+        prominence_imag = 3 * noise_std_imag
+
+        percentile_95_abs = np.percentile(corr_abs, 95)
+        noise_std_abs = np.std(corr_abs[corr_abs < percentile_95_abs])
+        prominence_abs = 3 * noise_std_abs
+
+        # Lowered height threshold to 0.8 * max for varying peak amplitudes
+        height_real = 0.8 * max_peak_real_val
+        peaks_real, _ = find_peaks(corr_real, height=height_real, distance=13 * modulation.SPS, prominence=prominence_real)
+        
+        height_imag = 0.8 * max_peak_imag_val
+        peaks_imag, _ = find_peaks(corr_imag, height=height_imag, distance=13 * modulation.SPS, prominence=prominence_imag)
+        
+        height_abs = 0.8 * max_peak_abs_val
+        peaks_abs, _ = find_peaks(corr_abs, height=height_abs, distance=13 * modulation.SPS, prominence=prominence_abs)
+
+        # Enhanced debug prints
+        print(f"Real: percentile_95={percentile_95_real}, noise_std={noise_std_real}, prominence={prominence_real}, height={height_real}, found peaks={peaks_real}")
+        print(f"Imag: percentile_95={percentile_95_imag}, noise_std={noise_std_imag}, prominence={prominence_imag}, height={height_imag}, found peaks={peaks_imag}")
+        print(f"Abs: percentile_95={percentile_95_abs}, noise_std={noise_std_abs}, prominence={prominence_abs}, height={height_abs}, found peaks={peaks_abs}")
+
+        peaks = np.unique(np.concatenate((peaks_real, peaks_imag, peaks_abs))).astype(np.uint32)
+
+    return peaks
+
+def detect_sync_sequence_peaks_v0_1_10_old1  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = False
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    sync = False
+    max_amplitude = np.max ( np.abs ( samples ) )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio :
+        sync = True
+        
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_imag, _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_imag_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_abs, _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_abs_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
+
+    
+    if plt and sync :
+        '''
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples abs {samples.size=}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"V7 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )'''
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+    return peaks
+
+def detect_sync_sequence_peaks_v0_1_7_u2  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = True
+    wrt = False
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    max_amplitude_real = np.max ( np.abs ( samples.real ) )
+    max_amplitude_imag = np.max ( np.abs ( samples.imag ) )
+    max_amplitude_abs = np.max ( np.abs ( samples ) )
+    max_amplitude_real_idx = np.argmax ( np.abs ( samples.real ) )
+    max_amplitude_imag_idx = np.argmax ( np.abs ( samples.imag ) )
+    max_amplitude_abs_idx = np.argmax ( np.abs ( samples ) )
+    
+    print ( f"{max_amplitude_real=} at {max_amplitude_real_idx=}, {max_amplitude_imag=} at {max_amplitude_imag_idx=}, {max_amplitude_abs=} at {max_amplitude_abs_idx=}" )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_real = np.abs ( np.correlate ( samples.real , sync_sequence.real , mode = "valid" ) )
+    corr_imag = np.abs ( np.correlate ( samples.imag , sync_sequence.real , mode = "valid" ) )
+    corr_abs = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
+    '''
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+    '''
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp_real = max_peak_real_val / max_amplitude_real
+    corr_2_amp_imag = max_peak_imag_val / max_amplitude_imag
+    corr_2_amp_abs = max_peak_abs_val / max_amplitude_abs
+
+    if corr_2_amp_real > corr_2_amp_min_ratio :
+        sync = True
+        peaks_real , _ = find_peaks ( corr_real , prominence = 0.9 )
+        peaks = np.concatenate ( ( peaks , peaks_real ) ).astype ( np.uint32 )    
+    if corr_2_amp_imag > corr_2_amp_min_ratio :
+        sync = True
+        peaks_imag , _ = find_peaks ( corr_imag , prominence = 0.5 )
+        peaks = np.unique ( np.concatenate ( ( peaks , peaks_imag ) ) ).astype ( np.uint32 )
+    if corr_2_amp_abs > corr_2_amp_min_ratio :
+        sync = True
+        peaks_abs , _ = find_peaks ( corr_abs , prominence = 0.1 )
+        peaks = np.unique ( np.concatenate ( ( peaks , peaks_abs ) ) ).astype ( np.uint32 )
+
+#    if corr_2_amp_real > corr_2_amp_min_ratio :
+#        sync = True
+#        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = len ( sync_sequence ) * modulation.SPS , prominence = 0.1 )
+#        peaks = np.concatenate ( ( peaks , peaks_real ) ).astype ( np.uint32 )    
+#    if corr_2_amp_imag > corr_2_amp_min_ratio :
+#        sync = True
+#        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_imag_val * 0.1 , distance = len ( sync_sequence ) * modulation.SPS , prominence = 0.1 )
+#        peaks = np.unique ( np.concatenate ( ( peaks , peaks_imag ) ) ).astype ( np.uint32 )
+#    if corr_2_amp_abs > corr_2_amp_min_ratio :
+#        sync = True
+#        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_abs_val * 0.1 , distance = len ( sync_sequence ) * modulation.SPS , prominence = 0.1 )
+#        peaks = np.unique ( np.concatenate ( ( peaks , peaks_abs ) ) ).astype ( np.uint32 )
+
+    if plt and sync :
+        
+        plot.real_waveform_v0_1_6 ( corr_real , f"v0_1_7_u2 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"v0_1_7_u2 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"v0_1_7_u2 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"v0_1_7_u2 samples imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( corr_abs , f"v0_1_7_u2 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"v0_1_7_u2 samples abs {samples.size=}" , False , peaks_abs )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+    return peaks
+
+def detect_sync_sequence_peaks_v0_1_7_u1  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = False
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    sync = False
+    max_amplitude = np.max ( np.abs ( samples ) )
+    max_amplitude_idx = np.argmax ( np.abs ( samples ) )
+    print ( f"Max amplitude: {max_amplitude} at index: {max_amplitude_idx}" )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio :
+        sync = True
+        
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_imag_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_abs_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
+
+    
+    if plt and sync :
+        '''
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples abs {samples.size=}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"V7 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )'''
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+    return peaks
+
 def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
     plt = False
@@ -127,6 +410,7 @@ def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , syn
 
     if corr_2_amp > corr_2_amp_min_ratio :
         sync = True
+        
         # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
         #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
         peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
@@ -431,7 +715,8 @@ class RxFrames_v0_1_9 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_7 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_7_u2 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        if self.sync_sequence_peaks.size > 0 and settings["log"]["debugging"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         for idx in self.sync_sequence_peaks :
             self.process_frame ( idx = idx )
     
@@ -466,7 +751,6 @@ class RxFrames_v0_1_9 :
         return True
 
     def process_frame ( self , idx : np.uint32 ) -> None :
-        # znajdz na drive plik Zrzut ekranu z 2025-12-30 09-28-42.png i obacz, który if by zadziałał. Roważ sprawdzenie -real - imag?!
         if not self.frame_len_validation ( idx ) :
             return
         has_frame = has_sync_sequence = False
@@ -492,20 +776,93 @@ class RxFrames_v0_1_9 :
                         #print ( frame_name )
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
-                            print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
+                            if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return
                         has_frame = True
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
+                            if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return
                         #break # UWAGA! To chyba jest bez sensu
             
-        print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
+        if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
+
+    def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
+
+@dataclass ( slots = True , eq = False )
+class RxSamples_v0_1_10 :
+    
+    pluto_rx_ctx : Pluto | None = None
+    #samples_filename : str | None = None
+
+    # Pola uzupełnianie w __post_init__
+    #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples : NDArray[ np.complex128 ] = field ( init = False )
+    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    has_amp_greater_than_ths : bool = False
+    ths : float = 1000.0
+    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    frames : RxFrames_v0_1_9 = field ( init = False )
+    samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
+
+    def __post_init__ ( self ) -> None :
+            self.samples = np.array ( [] , dtype = np.complex128 )
+
+    def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None ) -> None :
+        if self.pluto_rx_ctx is not None :
+            if previous_samples_leftovers is None :
+                self.samples = self.pluto_rx_ctx.rx ()
+            else :
+                self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
+            self.sample_initial_assesment ()
+        elif samples_filename is not None :
+            self.samples = ops_file.open_samples_from_npf ( samples_filename )
+            if previous_samples_leftovers is not None :
+                self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
+        else :
+            raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided." )
+
+    def filter_samples ( self ) -> None :
+        self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+
+    def detect_frames ( self ) -> None :
+        self.filter_samples ()
+        self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
+        if self.frames.has_leftovers :
+            self.clip_samples_leftovers ()
+
+    def sample_initial_assesment (self) -> None :
+        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
+
+    def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def save_complex_samples_2_npf ( self , filename : str ) -> None :
+        ops_file.save_complex_samples_2_npf ( filename , self.samples )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
+        )
+
+    def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
+        if start < 0 or end > ( self.samples_filtered.size - 1 ) :
+            raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
+        if start >= end :
+            raise ValueError ( "Start must be < end" )
+        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
+        self.samples_filtered = self.samples_filtered [ start : end ]
+
+    def clip_samples_leftovers ( self ) -> None :
+        self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
 
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_9 :
@@ -532,6 +889,7 @@ class RxSamples_v0_1_9 :
                 self.samples = self.pluto_rx_ctx.rx ()
             else :
                 self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
+            self.sample_initial_assesment ()
         elif samples_filename is not None :
             self.samples = ops_file.open_samples_from_npf ( samples_filename )
             if previous_samples_leftovers is not None :
@@ -557,6 +915,9 @@ class RxSamples_v0_1_9 :
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
+    def save_complex_samples_2_npf ( self , filename : str ) -> None :
+        ops_file.save_complex_samples_2_npf ( filename , self.samples )
+
     def __repr__ ( self ) -> str :
         return (
             f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
@@ -572,6 +933,27 @@ class RxSamples_v0_1_9 :
 
     def clip_samples_leftovers ( self ) -> None :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
+
+@dataclass ( slots = True , eq = False )
+class RxPluto_v0_1_10 :
+
+    sn : str | None = None
+    
+    # Pola uzupełnianie w __post_init__
+    pluto_rx_ctx : Pluto | None = None
+    samples : RxSamples_v0_1_9 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        if self.sn is not None :
+            self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
+            self.samples = RxSamples_v0_1_10 ( pluto_rx_ctx = self.pluto_rx_ctx )
+        else :
+            self.samples = RxSamples_v0_1_10 ()
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{self.samples.samples.size=}, { self.pluto_rx_ctx= }" if self.sn is not None else f" no ADALM-Pluto connected,"
+        )
 
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_9 :

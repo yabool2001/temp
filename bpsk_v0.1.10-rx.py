@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 import os
 import time as t
 import tomllib
-
+from pathlib import Path
 from numpy import real
 
 #from pathlib import Path
@@ -23,6 +23,8 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
+Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
+
 #filename = "np.samples/rx_samples_0.1.7_02_32768.npy"
 #filename = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
 #filename = "np.samples/rx_samples_0.1.8_11_1s_sat.npy"
@@ -30,6 +32,10 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 #filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
 #filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
+
+        
+wrt_filename = "np.samples/rx_samples_log.npy"
+
 
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
@@ -49,6 +55,7 @@ while len (received_bytes) < 1000 :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers , samples_filename = filename )
+    if rx_pluto.samples.has_amp_greater_than_ths : rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" )
     rx_pluto.samples.detect_frames ()
     #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     
@@ -57,9 +64,10 @@ while len (received_bytes) < 1000 :
         print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
     if rx_pluto.samples.frames.sync_sequence_peaks.size > 0 :
-        rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
+        rx_pluto.samples.plot_complex_samples_filtered ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
+        if len ( received_bytes ) == 0 : rx_pluto.samples.save_complex_samples_2_npf ( filename = wrt_filename )
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
