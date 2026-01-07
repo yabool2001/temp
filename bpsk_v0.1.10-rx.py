@@ -45,9 +45,9 @@ received_payloads = 0
 real = True
 
 if real :
-    rx_pluto = packet.RxPluto_v0_1_9 ( sn = sdr.PLUTO_RX_SN )
+    rx_pluto = packet.RxPluto_v0_1_10 ( sn = sdr.PLUTO_RX_SN )
 else :
-    rx_pluto = packet.RxPluto_v0_1_9 ()
+    rx_pluto = packet.RxPluto_v0_1_10 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while len (received_bytes) < 1000 :
@@ -61,7 +61,7 @@ while len (received_bytes) < 1000 :
     
     if rx_pluto.samples.frames.has_leftovers :
         previous_samples_leftovers = rx_pluto.samples.samples_leftovers
-        print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
+        #print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
     if rx_pluto.samples.frames.sync_sequence_peaks.size > 0 :
         rx_pluto.samples.plot_complex_samples_filtered ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )

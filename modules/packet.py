@@ -103,7 +103,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_10  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
-    plt = True
+    plt = False
     wrt = False
     sync = False
     base_path = Path ( "logs/correlation_results.csv" )
@@ -118,7 +118,7 @@ def detect_sync_sequence_peaks_v0_1_10  ( samples: NDArray[ np.complex128 ] , sy
     max_amplitude_imag_idx = np.argmax ( np.abs ( samples.imag ) )
     max_amplitude_abs_idx = np.argmax ( np.abs ( samples ) )
     
-    print ( f"{max_amplitude_real=} at {max_amplitude_real_idx=}, {max_amplitude_imag=} at {max_amplitude_imag_idx=}, {max_amplitude_abs=} at {max_amplitude_abs_idx=}" )
+    #print ( f"{max_amplitude_real=} at {max_amplitude_real_idx=}, {max_amplitude_imag=} at {max_amplitude_imag_idx=}, {max_amplitude_abs=} at {max_amplitude_abs_idx=}" )
     #avg_amplitude = np.mean(np.abs(scenario['sample']))
     #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
     #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
