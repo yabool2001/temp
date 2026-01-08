@@ -66,7 +66,7 @@ try :
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"\n{tx_pluto.tx_samples.samples_bytes.size=}" )
             print ( "[t] Tester mode send bytes." )
-        elif key == 'a' :
+        elif key == 'a' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             #adv = not adv
             #print ( "[a] Advanced test mode " + ("enabled" if adv else "disabled") )
@@ -76,7 +76,15 @@ try :
             break
         if adv :
             tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            print ( "[a] Advanced test mode send bytes." )
             tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            print ( "[a] Advanced test mode send bytes." )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            print ( "[a] Advanced test mode send bytes." )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            print ( "[a] Advanced test mode send bytes." )
+            tx_pluto.tx ( mode = "once" , payload = ptd.PAYLOAD_4BYTES_DEC )
+            print ( "[a] Advanced test mode send bytes." )
             adv = not adv
             print ( "Advanced test mode disabled" )
         t.sleep ( 0.05 )  # odciążenie CPU

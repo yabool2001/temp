@@ -1006,7 +1006,7 @@ class TxPluto_v0_1_8 :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = sdr.PLUTO_TX_SN )
 
     # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
-    def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False) :
+    def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False ) :
         self.payload = payload
         self.has_bits = has_bits
         self.create_samples_4pluto ()
@@ -1017,15 +1017,6 @@ class TxPluto_v0_1_8 :
             self.pluto_tx_ctx.tx_cyclic_buffer = True
         else :
             raise ValueError ( "Error: tx mode can be once or cyclic!" )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
         self.pluto_tx_ctx.tx ( self.samples4pluto )
 
     def stop_tx_cyclic ( self ) :
