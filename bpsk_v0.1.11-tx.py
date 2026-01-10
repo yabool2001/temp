@@ -45,12 +45,12 @@ try :
         key = stdscr.getkey ()
         if key ==  'o' :
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.samples.tx ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] )
+            tx_pluto.samples.tx ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"[o] Sample sent!" )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
-            tx_pluto.samples.tx_cyclic ( payload = settings[ "PAYLOAD_4BYTES_DEC" ] )
+            tx_pluto.samples.tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( f"[c] Tx cyclic started..." )
         elif key == 's' :
@@ -58,16 +58,10 @@ try :
             tx_pluto.samples.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( "[s] Tc cyclic stopped" )
-        elif key == 't' :
+        elif key > '0' and key < '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.samples.tx ( payload = ptd.PAYLOAD_4BYTES_DEC )
-            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( f"\n{tx_pluto.tx_samples.samples_bytes.size=}" )
-            print ( "[t] Tester mode send bytes." )
-        elif key >1 and key < 9 : # advanced test mode
-            t.sleep ( 1 )  # anty-dubler
-            tx_pluto.samples.tx ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] , repeat = np.uint32 ( key ) )
-            print ( f"Samples repeated {key} times." )
+            tx_pluto.samples.tx ( repeat = np.uint32 ( key ) )
+            print ( f"Samples sent {key} time(s)." )
         elif key == '\x1b':  # ESCAPE
             break
         t.sleep ( 0.05 )  # odciążenie CPU
