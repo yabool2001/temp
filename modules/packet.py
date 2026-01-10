@@ -781,7 +781,12 @@ class RxSamples_v0_1_10 :
                 self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
             self.sample_initial_assesment ()
         elif samples_filename is not None :
-            self.samples = ops_file.open_samples_from_npf ( samples_filename )
+            if samples_filename.endswith('.npy'):
+                self.samples = ops_file.open_samples_from_npf ( samples_filename )
+            elif samples_filename.endswith('.csv'):
+                self.samples = ops_file.open_csv_and_load_np_complex128 ( samples_filename )
+            else:
+                raise ValueError(f"Error: unsupported file format for {samples_filename}! Supported formats: .npy, .csv")
             if previous_samples_leftovers is not None :
                 self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
         else :
@@ -808,14 +813,25 @@ class RxSamples_v0_1_10 :
     def save_complex_samples_2_npf ( self , filename : str ) -> None :
         ops_file.save_complex_samples_2_npf ( filename , self.samples )
 
+    def save_complex_samples_2_csv ( self , filename : str ) -> None :
+        ops_file.write_samples_2_csv ( filename , self.samples )
+
     def __repr__ ( self ) -> str :
         return (
             f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
         )
 
+    def clip_samples ( self , start : np.uint32 , end : np.uint32 ) -> None :
+        if start < 0 or end > ( self.samples.size - 1 ) :
+            raise ValueError ( "Start must be >= 0 & end <= samples length" )
+        if start >= end :
+            raise ValueError ( "Start must be < end" )
+        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
+        self.samples = self.samples [ start : end ]
+
     def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
         if start < 0 or end > ( self.samples_filtered.size - 1 ) :
-            raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
+            raise ValueError ( "Start must be >= 0 & end <= samples_filtered length" )
         if start >= end :
             raise ValueError ( "Start must be < end" )
         #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
