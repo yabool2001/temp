@@ -265,6 +265,12 @@ def validate_samples ( samples: np.ndarray , buffer_size ) :
 
     return validation
 
+def scale_to_pluto_dac_v0_1_11 ( samples : NDArray[ np.complex128 ] , scale : float = 1.0 ) -> NDArray[ np.complex128 ] : # None, because In-place modification
+        # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
+        samples_scaled = samples * PLUTO_DAC_SCALE * scale
+        #return np.clip ( samples_scaled, -PLUTO_DAC_SCALE, PLUTO_DAC_SCALE, out = samples_scaled )
+        return samples_scaled
+
 def scale_to_pluto_dac ( samples : NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] : # None, because In-place modification
         # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
         samples *= PLUTO_DAC_SCALE

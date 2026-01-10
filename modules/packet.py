@@ -1,4 +1,5 @@
 import csv
+import time as t
 import zlib
 import numpy as np
 import os
@@ -94,8 +95,7 @@ SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
 SYNC_SEQUENCE_LEN_SAMPLES = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
 PACKET_LEN_LEN_BITS = 11
 CRC32_LEN_BITS = 32
-MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 2 ** PACKET_LEN_LEN_BITS - 1 )
-MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN = 1500 # MTU dla IP over ETHERNET
+MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 1500 ) # MTU dla IP over ETHERNET
 PACKET_BYTE_LEN_BITS = 8
 FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
@@ -618,6 +618,11 @@ def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
     crc32 = zlib.crc32 ( bytes )
     return np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
 
+def add_timestamp_2_filename ( filename : str ) -> str :
+    timestamp = int ( t.time () * 1000 )
+    name, ext = os.path.splitext ( filename )
+    return f"{name}_{timestamp}{ext}"
+
 @dataclass ( slots = True , eq = False )
 class RxPacket_v0_1_8 :
     
@@ -811,10 +816,12 @@ class RxSamples_v0_1_10 :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def save_complex_samples_2_npf ( self , filename : str ) -> None :
-        ops_file.save_complex_samples_2_npf ( filename , self.samples )
+        filename_with_timestamp = add_timestamp_2_filename ( filename )
+        ops_file.save_complex_samples_2_npf ( filename_with_timestamp , self.samples )
 
     def save_complex_samples_2_csv ( self , filename : str ) -> None :
-        ops_file.write_samples_2_csv ( filename , self.samples )
+        filename_with_timestamp = add_timestamp_2_filename ( filename )
+        ops_file.save_complex_samples_2_csv ( filename_with_timestamp , self.samples )
 
     def __repr__ ( self ) -> str :
         return (
@@ -841,85 +848,18 @@ class RxSamples_v0_1_10 :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_9 :
-    
-    pluto_rx_ctx : Pluto | None = None
-    #samples_filename : str | None = None
-
-    # Pola uzupełnianie w __post_init__
-    #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    samples : NDArray[ np.complex128 ] = field ( init = False )
-    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
-    has_amp_greater_than_ths : bool = False
-    ths : float = 1000.0
-    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    frames : RxFrames_v0_1_9 = field ( init = False )
-    samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
-
-    def __post_init__ ( self ) -> None :
-            self.samples = np.array ( [] , dtype = np.complex128 )
-
-    def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] , samples_filename : str | None = None ) -> None :
-        if self.pluto_rx_ctx is not None :
-            if previous_samples_leftovers is None :
-                self.samples = self.pluto_rx_ctx.rx ()
-            else :
-                self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
-            self.sample_initial_assesment ()
-        elif samples_filename is not None :
-            self.samples = ops_file.open_samples_from_npf ( samples_filename )
-            if previous_samples_leftovers is not None :
-                self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
-        else :
-            raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided." )
-
-    def filter_samples ( self ) -> None :
-        self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
-
-    def detect_frames ( self ) -> None :
-        self.filter_samples ()
-        self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
-        if self.frames.has_leftovers :
-            self.clip_samples_leftovers ()
-
-    def sample_initial_assesment (self) -> None :
-        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
-
-    def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
-
-    def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
-
-    def save_complex_samples_2_npf ( self , filename : str ) -> None :
-        ops_file.save_complex_samples_2_npf ( filename , self.samples )
-
-    def __repr__ ( self ) -> str :
-        return (
-            f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
-        )
-
-    def clip_samples_filtered ( self , start : np.uint32 , end : np.uint32 ) -> None :
-        if start < 0 or end > ( self.samples_filtered.size - 1 ) :
-            raise ValueError ( "Start must be >= 0 & end cannot exceed samples length" )
-        if start >= end :
-            raise ValueError ( "Start must be < end" )
-        #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
-        self.samples_filtered = self.samples_filtered [ start : end ]
-
-    def clip_samples_leftovers ( self ) -> None :
-        self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
-
-@dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_10 :
+class RxPluto_v0_1_11 :
 
     sn : str | None = None
     
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto | None = None
-    samples : RxSamples_v0_1_9 = field ( init = False )
+    samples : RxSamples_v0_1_10 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
+        self.init_pluot_rx ()
+
+    def init_pluot_rx ( self ) -> None :
         if self.sn is not None :
             self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
             self.samples = RxSamples_v0_1_10 ( pluto_rx_ctx = self.pluto_rx_ctx )
@@ -931,26 +871,30 @@ class RxPluto_v0_1_10 :
             f"{self.samples.samples.size=}, { self.pluto_rx_ctx= }" if self.sn is not None else f" no ADALM-Pluto connected,"
         )
 
-@dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_9 :
 
-    sn : str | None = None
+@dataclass ( slots = True , eq = False )
+class TxPacket_v0_1_11 :
+    
+    payload_bytes : NDArray[ np.uint8 ]
     
     # Pola uzupełnianie w __post_init__
-    pluto_rx_ctx : Pluto | None = None
-    samples : RxSamples_v0_1_9 = field ( init = False )
+    crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_len : np.uint16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        if self.sn is not None :
-            self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-            self.samples = RxSamples_v0_1_9 ( pluto_rx_ctx = self.pluto_rx_ctx )
-        else :
-            self.samples = RxSamples_v0_1_9 ()
+        self.create_crc32_bytes ()
+        self.create_packet_bytes ()
+        self.packet_len = np.uint16 ( len ( self.payload_bytes ) + len ( self.crc32_bytes ) )  # payload + crc32
+
+    def create_crc32_bytes ( self ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
+
+    def create_packet_bytes ( self ) -> None:
+        self.packet_bytes = np.concatenate ( [ self.payload_bytes , self.crc32_bytes ] )
 
     def __repr__ ( self ) -> str :
-        return (
-            f"{self.samples.samples.size=}, { self.pluto_rx_ctx= }" if self.sn is not None else f" no ADALM-Pluto connected,"
-        )
+        return ( f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_8 :
@@ -980,8 +924,6 @@ class TxPacket_v0_1_8 :
                 raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
             if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * 8 :
                 raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-            if len ( payload_arr ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN * 8 :
-                raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
             self.payload_bytes = pad_bits2bytes ( payload_arr )
         else :
             # ------------------ payload podany jako bajty -----------------
@@ -989,8 +931,6 @@ class TxPacket_v0_1_8 :
                 raise ValueError ( "Error: Payload has not all values in 0 - 255!")
             if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
                 raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-            if len ( payload_arr ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN :
-                raise ValueError ( "Error: Payload exceeds maximum recommended length!" )
             self.payload_bytes = payload_arr
 
     def create_crc32_bytes ( self ) -> None :
@@ -1004,9 +944,42 @@ class TxPacket_v0_1_8 :
             f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
+class TxFrame_v0_1_11 :
+
+    tx_packet : TxPacket_v0_1_11
+        
+    # Pola uzupełnianie w __post_init__
+    frame_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    frame_bits : NDArray[ np.uint8 ] = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        sync_sequence_bits : NDArray[ np.uint8 ] = self.create_sync_sequence_bits ()
+        packet_len_bits : NDArray[ np.uint8 ] = self.create_packet_len_bits ()
+        frame_main_bytes = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
+        crc32_bytes = self.create_crc32_bytes ( frame_main_bytes )
+        self.frame_bytes = np.concatenate ( [ frame_main_bytes , crc32_bytes , self.tx_packet.packet_bytes ] )
+        self.create_frame_bits ()
+
+    def create_sync_sequence_bits ( self ) -> NDArray[ np.uint8 ] :
+        return BARKER13_BITS
+
+    def create_packet_len_bits ( self ) -> NDArray[ np.uint8 ] :
+        return dec2bits ( self.tx_packet.packet_len , PACKET_LEN_LEN_BITS )
+
+    def create_crc32_bytes ( self , frame_main_bytes ) -> NDArray[ np.uint8 ] :
+        return create_crc32_bytes ( frame_main_bytes )
+    
+    def create_frame_bits ( self ) -> None :
+        self.frame_bits = bytes2bits ( self.frame_bytes )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.frame_bytes= }, { self.frame_bytes.size= }" )
+
+@dataclass ( slots = True , eq = False )
 class TxFrame_v0_1_8 :
 
-    packet_len : np.uint16
+    packet : TxPacket_v0_1_11
         
     # Pola uzupełnianie w __post_init__
     sync_sequence_bits : NDArray[ np.uint8 ] = field ( init = False )
@@ -1040,105 +1013,109 @@ class TxFrame_v0_1_8 :
             f"{ self.frame_bytes= }, { self.frame_bits.size= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_8 :
-    
-    payload: list | tuple | np.ndarray = field ( default_factory = list )
-    has_bits : bool = False
-    
+class TxSamples_v0_1_11 :
+
+    pluto_tx_ctx : Pluto | None = None
+
     # Pola uzupełnianie w __post_init__
-    samples_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    samples_bits : NDArray[ np.uint8 ] = field ( init = False )
+    payload_bytes : list | tuple | np.ndarray = field ( init = False )
     samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
-    samples : NDArray[ np.complex128 ] = field ( init = False )
+    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
+    tx_frame : TxFrame_v0_1_11 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.create_samples_bytes ()
-        self.create_samples_bits ()
+        self.create_empty_complex_samples ()
+
+    def create_empty_complex_samples ( self ) -> None :
+        self.samples_filtered = np.array ( [] , dtype = np.complex128 )
+        self.samples4pluto = np.array ( [] , dtype = np.complex128 )
+
+    def create_samples4pluto ( self , payload_bytes : list | tuple | NDArray[ np.uint8 ] = None , payload_bits : list | tuple | NDArray[ np.uint8 ] = None ) -> None :
+        if payload_bytes is not None and len ( payload_bytes ) > 0 :
+            payload_arr = np.asarray ( payload_bytes , dtype = np.uint8 ).ravel ()
+            if payload_arr.max () > 255 :
+                raise ValueError ( "Error: Payload has not all values in 0 - 255!")
+            if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
+                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
+            self.payload_bytes = payload_arr
+        elif payload_bits is not None and len ( payload_bits ) > 0 :
+            payload_arr = np.asarray ( self.payload_bits , dtype = np.uint8 ).ravel ()
+            if payload_arr.max () > 1 :
+                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
+            if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * 8 :
+                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
+            self.payload_bytes = pad_bits2bytes ( payload_arr )
+        else :
+            raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
+        self.create_tx_frame ()
         self.create_samples_bpsk_symbols ()
+        self.create_samples_filtered ()
         self.create_samples_4pluto ()
 
-    def create_samples_bytes ( self ) -> None :
-        tx_packet = TxPacket_v0_1_8 ( payload = self.payload , has_bits = self.has_bits )
-        tx_frame = TxFrame_v0_1_8 ( packet_len = tx_packet.packet_len )
-        self.samples_bytes = np.concatenate ( ( tx_frame.frame_bytes , tx_packet.packet_bytes ) )
-
-    def create_samples_bits ( self ) -> None:
-        self.samples_bits = bytes2bits ( self.samples_bytes )
+    def create_tx_frame ( self ) -> None :
+        tx_packet = TxPacket_v0_1_11 ( payload_bytes = self.payload_bytes )
+        self.tx_frame = TxFrame_v0_1_11 ( tx_packet = tx_packet )
 
     def create_samples_bpsk_symbols ( self ) -> None :
-        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.samples_bits )
+        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.tx_frame.frame_bits )
+
+    def create_samples_filtered ( self ) -> None :
+        self.samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
 
     def create_samples_4pluto ( self ) -> None :
-        self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+        self.samples4pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples_filtered , scale = 1.0 )
 
-    def plot_symbols ( self , title = "" ) -> None :
-        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
-        #plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
-
-    def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples , f"{title}" , marker_squares = marker )
-
-    def plot_samples_spectrum ( self , title = "" ) -> None :
-        plot.spectrum_occupancy ( self.samples , 1024 , title )
-
-    def __repr__ ( self ) -> str :
-        return ( f"{ self.samples_bytes= }, { self.samples.size= }" )
-
-@dataclass ( slots = True , eq = False )
-class TxPluto_v0_1_8 :
-    
-    # Pola uzupełnianie w __post_init__
-    tx_samples : TxSamples_v0_1_8 = field ( init = False )
-
-    samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
-
-    payload : list | tuple | np.ndarray = field ( default_factory = list )
-    has_bits : bool = False
-    pluto_tx_ctx : Pluto = field ( init = False )
-
-    def __post_init__ ( self ) -> None :
-        self.init_pluto_tx ()
-
-    def create_samples_4pluto ( self ) -> None :
-        if count_bytes ( self.payload , self.has_bits ) > MAX_RECOMMENDED_PAYLOAD_LEN_BYTES_LEN :
-            raise ValueError ( "Payload size cannot exceed 1500 bytes (IP over ETHERNET MTU)" )
-        self.tx_samples = TxSamples_v0_1_8 ( payload = self.payload , has_bits = self.has_bits )
-        self.samples4pluto = sdr.scale_to_pluto_dac ( self.tx_samples.samples )
-
-    def plot_symbols ( self , title = "" ) -> None :
-        self.tx_samples.plot_symbols ( title )
-
-    def plot_samples_waveform ( self , title = "" , marker : bool = False ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title}" , marker_squares = marker )
-
-    def plot_samples_spectrum ( self , title = "" ) -> None :
-        plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
-    
-    def init_pluto_tx ( self ) -> None :
-        self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = sdr.PLUTO_TX_SN )
-
-    # Docelowo powina być tylko funkcja tx() bo jest bezpieczna. Po testach usunąc tx_once () i tx_cyclic ()
-    def tx ( self , mode : str , payload : list | tuple | np.ndarray , has_bits : bool = False ) :
-        self.payload = payload
-        self.has_bits = has_bits
-        self.create_samples_4pluto ()
+    def tx ( self , repeat : np.uint32 = 1 ) -> None :
         self.pluto_tx_ctx.tx_destroy_buffer ()
-        if mode == "once" :
-            self.pluto_tx_ctx.tx_cyclic_buffer = False
-        elif mode == "cyclic" :
-            self.pluto_tx_ctx.tx_cyclic_buffer = True
-        else :
-            raise ValueError ( "Error: tx mode can be once or cyclic!" )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
+        if repeat < 1 or repeat > 4294967295 :
+            raise ValueError ( "Error: reapt value is out of the range! Allowed range is 1 to 4294967295." )
+        self.pluto_tx_ctx.tx_cyclic_buffer = False
+        while repeat :
+            self.pluto_tx_ctx.tx ( self.samples4pluto )
+            repeat -= 1
+
+    def tx_cyclic ( self ) -> None :
+        self.pluto_tx_ctx.tx_destroy_buffer ()
+        self.pluto_tx_ctx.tx_cyclic_buffer = True
         self.pluto_tx_ctx.tx ( self.samples4pluto )
 
     def stop_tx_cyclic ( self ) :
         self.pluto_tx_ctx.tx_destroy_buffer ()
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
+    def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
+        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
+        if constellation :
+            plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
+
+    def plot_complex_samples_filtered ( self , title = "" ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = False )
+
+    def plot_complex_samples4pluto ( self , title = "" ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title} {self.samples4pluto.size=}" , marker_squares = False )
+
+    def plot_samples_spectrum ( self , title = "" ) -> None :
+        plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
+
     def __repr__ ( self ) -> str :
-        return ( f"{self.pluto_tx_ctx=}" )
+        return ( f"{ self.tx_frame.frame_bytes= }, { self.samples.size= }" )
+
+@dataclass ( slots = True , eq = False )
+class TxPluto_v0_1_11 :
+    
+    sn : str
+    
+    # Pola uzupełnianie w __post_init__
+    pluto_tx_ctx : Pluto  = field ( init = False )
+    tx_samples : TxSamples_v0_1_11 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.init_pluto_tx ()
+
+    def init_pluto_tx ( self ) -> None :
+        self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
+        self.tx_samples = TxSamples_v0_1_11 ( pluto_tx_ctx = self.pluto_tx_ctx )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.pluto_tx_ctx= }, { self.tx_samples.samples4pluto.size= }" )

@@ -30,6 +30,12 @@ def open_and_write_samples_2_csv ( name , samples ) :
         csv_writer.writerow ( [ sample.real , sample.imag ] )
     return csv_file , csv_writer
 
+def save_complex_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
+    with open ( filename , mode = 'w' , newline = '') as file :
+        writer = csv.writer ( file )
+        writer.writerow ( [ 'real' , 'imag' ] )  # nagłówki kolumn
+        for sample in samples :
+            writer.writerow ( [ sample.real , sample.imag ] )
 def write_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
     with open ( filename , mode = 'w' , newline = '') as file :
         writer = csv.writer ( file )

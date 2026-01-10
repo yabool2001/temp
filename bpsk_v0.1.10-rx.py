@@ -34,7 +34,8 @@ filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
 #filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
 
         
-wrt_filename = "np.samples/rx_samples_log.npy"
+wrt_filename_npy = "np.samples/rx_samples_log.npy"
+wrt_filename_csv = "samples.csv/rx_samples_log.csv"
 
 
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
@@ -45,9 +46,9 @@ received_payloads = 0
 real = True
 
 if real :
-    rx_pluto = packet.RxPluto_v0_1_10 ( sn = sdr.PLUTO_RX_SN )
+    rx_pluto = packet.RxPluto_v0_1_11 ( sn = sdr.PLUTO_RX_SN )
 else :
-    rx_pluto = packet.RxPluto_v0_1_10 ()
+    rx_pluto = packet.RxPluto_v0_1_11 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while len (received_bytes) < 1000 :
@@ -67,8 +68,8 @@ while len (received_bytes) < 1000 :
         rx_pluto.samples.plot_complex_samples_filtered ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
-        if len ( received_bytes ) == 0 : rx_pluto.samples.save_complex_samples_2_npf ( filename = wrt_filename )
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
+
 
