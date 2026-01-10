@@ -26,12 +26,12 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 plt = False
 tx_pluto = packet.TxPluto_v0_1_11 ( sn = sdr.PLUTO_TX_SN)
 print ( f"\n{ script_filename= } { tx_pluto= }" )
-tx_pluto.tx_samples.create_samples4pluto ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] )
+tx_pluto.samples.create_samples4pluto ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] )
 if plt :
-    tx_pluto.tx_samples.plot_symbols ( f"{script_filename} " )
-    tx_pluto.tx_samples.plot_complex_samples_filtered ( f"{script_filename} filtered samples" )
-    tx_pluto.tx_samples.plot_complex_samples4pluto ( f"{script_filename} samples4pluto" )
-    tx_pluto.tx_samples.plot_samples_spectrum ( f"{script_filename} samples4pluto" )
+    tx_pluto.samples.plot_symbols ( f"{script_filename} " )
+    tx_pluto.samples.plot_complex_samples_filtered ( f"{script_filename} filtered samples" )
+    tx_pluto.samples.plot_complex_samples4pluto ( f"{script_filename} samples4pluto" )
+    tx_pluto.samples.plot_samples_spectrum ( f"{script_filename} samples4pluto" )
 
 stdscr = curses.initscr ()
 curses.noecho ()
