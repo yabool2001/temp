@@ -1022,7 +1022,7 @@ class TxSamples_v0_1_11 :
     samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
-    tx_frame : TxFrame_v0_1_11 = field ( init = False )
+    frame : TxFrame_v0_1_11 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.create_empty_complex_samples ()
@@ -1055,10 +1055,10 @@ class TxSamples_v0_1_11 :
 
     def create_tx_frame ( self ) -> None :
         tx_packet = TxPacket_v0_1_11 ( payload_bytes = self.payload_bytes )
-        self.tx_frame = TxFrame_v0_1_11 ( tx_packet = tx_packet )
+        self.frame = TxFrame_v0_1_11 ( tx_packet = tx_packet )
 
     def create_samples_bpsk_symbols ( self ) -> None :
-        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.tx_frame.frame_bits )
+        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.frame.frame_bits )
 
     def create_samples_filtered ( self ) -> None :
         self.samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
@@ -1099,7 +1099,7 @@ class TxSamples_v0_1_11 :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.tx_frame.frame_bytes= }, { self.samples.size= }" )
+        return ( f"{ self.frame.frame_bytes= }, { self.samples.size= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxPluto_v0_1_11 :
@@ -1108,14 +1108,14 @@ class TxPluto_v0_1_11 :
     
     # Pola uzupełnianie w __post_init__
     pluto_tx_ctx : Pluto  = field ( init = False )
-    tx_samples : TxSamples_v0_1_11 = field ( init = False )
+    samples : TxSamples_v0_1_11 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
 
     def init_pluto_tx ( self ) -> None :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-        self.tx_samples = TxSamples_v0_1_11 ( pluto_tx_ctx = self.pluto_tx_ctx )
+        self.samples = TxSamples_v0_1_11 ( pluto_tx_ctx = self.pluto_tx_ctx )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.pluto_tx_ctx= }, { self.tx_samples.samples4pluto.size= }" )
+        return ( f"{ self.pluto_tx_ctx= }, { self.samples.samples4pluto.size= }" )
