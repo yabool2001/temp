@@ -1093,7 +1093,7 @@ class TxSamples_v0_1_12 :
             self.pluto_tx_ctx.tx_destroy_buffer ()
             self.pluto_tx_ctx.tx ( self.samples4pluto)
             for i in range ( nob ) :
-                bytes [ i ] = ( bytes [ i ] + 1 ) % 256
+                bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
                 if bytes [ i ] != 0 :
                     break
             repeat -= 1
