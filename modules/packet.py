@@ -1,9 +1,10 @@
 import csv
-import time as t
-import zlib
+import logging
 import numpy as np
 import os
+import time as t
 import tomllib
+import zlib
 
 from adi import Pluto
 from dataclasses import dataclass , field
@@ -1094,7 +1095,7 @@ class TxSamples_v0_1_12 :
             self.create_samples4pluto ( payload_bytes = bytes )
             self.pluto_tx_ctx.tx ( self.samples4pluto)
             print ( f"\n\r{repeat}: Transmitted payload bytes: { bytes }" )
-            for i in range ( nob ) :
+            for i in range ( nob - 1 , -1 , -1 ) :
                 bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
                 if bytes [ i ] != 0 :
                     break
