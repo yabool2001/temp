@@ -52,7 +52,7 @@ else :
     rx_pluto = packet.RxPluto_v0_1_11 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-while len (received_bytes) < 1000 :
+while len (received_bytes) < 10000 :
     if real :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
@@ -74,6 +74,3 @@ while len (received_bytes) < 1000 :
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
-    
-    if samples_w_packet > 2 :
-        break

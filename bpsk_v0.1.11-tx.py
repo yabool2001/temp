@@ -58,10 +58,14 @@ try :
             tx_pluto.samples.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
             print ( "[s] Tc cyclic stopped" )
-        elif key > '0' and key < '9' : # advanced test mode
+        elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.samples.tx ( repeat = np.uint32 ( key ) )
-            print ( f"Samples sent {key} time(s)." )
+            i = np.uint32 ( key )
+            if i % 2 == 0 :
+                i = i * 5
+                print ( f"Notice: Odd number multiplied by 5." )
+            tx_pluto.samples.tx ( repeat = i )
+            print ( f"Samples sent {i} time(s)." )
         elif key == '\x1b':  # ESCAPE
             break
         t.sleep ( 0.05 )  # odciążenie CPU
