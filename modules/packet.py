@@ -1087,10 +1087,11 @@ class TxSamples_v0_1_12 :
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
     def tx_incremeant_payload_and_repeat ( self , nob : np.uint16 = 1 , repeat : np.uint32 = 1 ) -> None :
+        self.pluto_tx_ctx.tx_destroy_buffer ()
+        self.pluto_tx_ctx.tx_cyclic_buffer = False
         bytes = np.zeros ( nob , dtype = np.uint8 )
         while repeat :
             self.create_samples4pluto ( payload_bytes = bytes )
-            self.pluto_tx_ctx.tx_destroy_buffer ()
             self.pluto_tx_ctx.tx ( self.samples4pluto)
             print ( f"\n\r{repeat}: Transmitted payload bytes: { bytes }" )
             for i in range ( nob ) :
