@@ -61,8 +61,10 @@ try :
         elif key == 't' :
             t.sleep ( 1 ) # anty-dubler
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( "[t] Tx 4 bytes with zeros payload created, incremented & repeated 20 times." )
-            tx_pluto.samples.tx_incremeant_payload_and_repeat ( nob = np.uint16 ( 4 ) , repeat = np.uint32 ( 2 ) )
+            t_nob = np.uint16 ( 4 )
+            t_repeat = np.uint32 ( 20 )
+            tx_pluto.samples.tx_incremeant_payload_and_repeat ( nob = t_nob , repeat = t_repeat )
+            print ( f"[t] Tx.size = {t_nob} bytes with zeros payload created, incremented & repeated {t_repeat} times." )
         elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             i = np.uint32 ( key )
