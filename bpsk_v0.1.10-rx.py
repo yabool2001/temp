@@ -57,7 +57,7 @@ while len (received_bytes) < 1000 :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers , samples_filename = filename )
-    if rx_pluto.samples.has_amp_greater_than_ths : rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" )
+    if rx_pluto.samples.has_amp_greater_than_ths and settings["log"]["debugging"] : rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" )
     rx_pluto.samples.detect_frames ()
     #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     
@@ -70,8 +70,7 @@ while len (received_bytes) < 1000 :
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
         samples_w_packet += 1
+        print ( f"{samples_w_packet=}")
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
-
-    print ( f"{samples_w_packet=}")    
