@@ -42,6 +42,7 @@ received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
 received_payloads = 0
+samples_w_packet : np.uint32 = 0 
 
 real = True
 
@@ -68,8 +69,9 @@ while len (received_bytes) < 1000 :
         rx_pluto.samples.plot_complex_samples_filtered ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
+        samples_w_packet += 1
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
 
-
+    print ( f"{samples_w_packet=}")    
