@@ -1015,7 +1015,7 @@ class TxFrame_v0_1_8 :
             f"{ self.frame_bytes= }, { self.frame_bits.size= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_11 :
+class TxSamples_v0_1_12 :
 
     pluto_tx_ctx : Pluto | None = None
 
@@ -1087,9 +1087,17 @@ class TxSamples_v0_1_11 :
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
     def tx_incremeant_payload_and_repeat ( self , nob : np.uint16 = 1 , repeat : np.uint32 = 1 ) -> None :
+        bytes = np.zeros ( nob , dtype = np.uint8 )
+        while repeat :
+            self.create_samples4pluto ( payload_bytes = bytes )
+            self.pluto_tx_ctx.tx_destroy_buffer ()
+            self.pluto_tx_ctx.tx ( self.samples4pluto)
+            for i in range ( nob ) :
+                bytes [ i ] = ( bytes [ i ] + 1 ) % 256
+                if bytes [ i ] != 0 :
+                    break
+            repeat -= 1
         
-        self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_special_test ()
 
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
         plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
@@ -1109,20 +1117,20 @@ class TxSamples_v0_1_11 :
         return ( f"{ self.frame.frame_bytes= }, { self.samples.size= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxPluto_v0_1_11 :
+class TxPluto_v0_1_12 :
     
     sn : str
     
     # Pola uzupełnianie w __post_init__
     pluto_tx_ctx : Pluto  = field ( init = False )
-    samples : TxSamples_v0_1_11 = field ( init = False )
+    samples : TxSamples_v0_1_12 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
 
     def init_pluto_tx ( self ) -> None :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-        self.samples = TxSamples_v0_1_11 ( pluto_tx_ctx = self.pluto_tx_ctx )
+        self.samples = TxSamples_v0_1_12 ( pluto_tx_ctx = self.pluto_tx_ctx )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.pluto_tx_ctx= }, { self.samples.samples4pluto.size= }" )

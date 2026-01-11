@@ -24,7 +24,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 
 plt = False
-tx_pluto = packet.TxPluto_v0_1_11 ( sn = sdr.PLUTO_TX_SN)
+tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_pluto.samples.create_samples4pluto ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] )
 if plt :
@@ -57,7 +57,12 @@ try :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.samples.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( "[s] Tc cyclic stopped" )
+            print ( "[s] Tx cyclic stopped" )
+        elif key == 't' :
+            t.sleep ( 1 ) # anty-dubler
+            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            print ( "[t] Tx 4 bytes with zeros payload, incremented i repeat 20 times." )
+            tx_pluto.samples.tx_incremeant_payload_and_repeat ( nob = np.uint16 ( 4 ) , repeat = np.uint32 ( 20 ) )
         elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             i = np.uint32 ( key )
