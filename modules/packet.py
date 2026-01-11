@@ -108,9 +108,9 @@ def detect_sync_sequence_peaks_v0_1_11  ( samples: NDArray[ np.complex128 ] , sy
     base_path = Path ( "logs/correlation_results.csv" )
     corr_2_amp_min_ratio = 12.0
     #min_peak_height_ratio = 0.6  # Required minimal height of peaks in find_peaks
-    min_peak_height_ratio = 0.4  # Ten cudowanie opkazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
     #min_peak_height_ratio = 0.5  # Działa ale za dużo plot wyświetla ale niby print liczy dobrze liczbę bajtów payload
-
+    min_peak_height_ratio = 0.4  # Ten cudowanie opkazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
+    
     peaks = np.array ( [] ).astype ( np.uint32 )
     peaks_real = np.array ( [] ).astype ( np.uint32 )
     peaks_neg_real = np.array ( [] ).astype ( np.uint32 )
@@ -1085,6 +1085,11 @@ class TxSamples_v0_1_11 :
     def stop_tx_cyclic ( self ) :
         self.pluto_tx_ctx.tx_destroy_buffer ()
         self.pluto_tx_ctx.tx_cyclic_buffer = False
+
+    def tx_incremeant_payload_and_repeat ( self , nob : np.uint16 = 1 , repeat : np.uint32 = 1 ) -> None :
+        
+        self.pluto_tx_ctx.tx_destroy_buffer ()
+        self.pluto_tx_ctx.tx_special_test ()
 
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
         plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
