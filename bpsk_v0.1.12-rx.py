@@ -66,8 +66,6 @@ while ( len (received_bytes) < 1000 and real ) or ( not real and received_bytes.
         rx_pluto.samples.plot_complex_samples_filtered ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
-        samples_w_packet += 1
-        print ( f"{samples_w_packet=}")
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
