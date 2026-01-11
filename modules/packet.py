@@ -1092,6 +1092,7 @@ class TxSamples_v0_1_12 :
             self.create_samples4pluto ( payload_bytes = bytes )
             self.pluto_tx_ctx.tx_destroy_buffer ()
             self.pluto_tx_ctx.tx ( self.samples4pluto)
+            print ( f"\n\r{repeat}: Transmitted payload bytes: { bytes }" )
             for i in range ( nob ) :
                 bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
                 if bytes [ i ] != 0 :
