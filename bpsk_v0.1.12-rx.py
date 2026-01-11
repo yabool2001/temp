@@ -41,10 +41,7 @@ wrt_filename_csv = "samples.csv/rx_samples_log.csv"
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
-received_payloads = 0
-samples_w_packet : np.uint32 = 0 
-
-real = True
+real = False
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_11 ( sn = sdr.PLUTO_RX_SN )
@@ -52,12 +49,12 @@ else :
     rx_pluto = packet.RxPluto_v0_1_11 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-while len (received_bytes) < 10000 :
+while ( len (received_bytes) < 1000 and real ) or ( not real and received_bytes.size == 0 ) :
     if real :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
-        rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers , samples_filename = filename )
-    if rx_pluto.samples.has_amp_greater_than_ths and settings["log"]["debugging"] : rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" )
+        rx_pluto.samples.rx ( samples_filename = filename )
+    if rx_pluto.samples.has_amp_greater_than_ths : rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" )
     rx_pluto.samples.detect_frames ()
     #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
     
