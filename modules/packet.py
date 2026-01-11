@@ -783,10 +783,7 @@ class RxSamples_v0_1_10 :
             if previous_samples_leftovers is None :
                 self.samples = self.pluto_rx_ctx.rx ()
             else :
-                self.samples = self.pluto_rx_ctx.rx ()
-                self.plot_complex_samples ( title="before concat" )
-                self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
-                self.plot_complex_samples ( title="after concat" )
+                self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
             self.sample_initial_assesment ()
         elif samples_filename is not None :
             if samples_filename.endswith('.npy'):
