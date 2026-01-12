@@ -249,7 +249,7 @@ def create_packet_bits ( payload ) :
     length_byte = [ len ( payload ) - 1 ]
     crc32 = zlib.crc32 ( bytes ( payload ) )
     crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
-    print ( f"{BARKER13_W_PADDING_BITS=}, {length_byte=}, {payload=}, {crc32_bytes=}")
+    if settings["log"]["debugging"] : print ( f"{BARKER13_W_PADDING_BITS=}, {length_byte=}, {payload=}, {crc32_bytes=}")
     preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
     header_bits = gen_bits ( length_byte )
     payload_bits = gen_bits ( payload )
@@ -257,7 +257,7 @@ def create_packet_bits ( payload ) :
     return np.concatenate ( [ preamble_bits , header_bits , payload_bits , crc32_bits ] )
 
 def create_doubled_payload_packet_bits ( payload ) :
-    print ( f"{payload=}")
+    if settings["log"]["debugging"] : print ( f"{payload=}")
     payload_bits = gen_bits ( payload )
     return np.concatenate ( [ payload_bits , payload_bits ] )
 
@@ -326,7 +326,7 @@ def is_sync_seq ( samples , sync_seq ) :
     mean_power_db = 10 * np.log10(mean_power + 1e-12)
 
     # Diagnostic print (keeps previous behaviour of printing a diagnostic)
-    print(f"is_sync_seq: peak_corr={peak_val:.4f}, mean_power_db={mean_power_db:.2f} dB")
+    if settings["log"]["debugging"] : print(f"is_sync_seq: peak_corr={peak_val:.4f}, mean_power_db={mean_power_db:.2f} dB")
 
     # Decision thresholds (tunable): require reasonably high normalized correlation
     # and a minimum power level. These defaults are conservative; adjust to taste.
@@ -341,7 +341,7 @@ def fast_energy_gate ( samples , power_threshold_dB = -30 ) :
     # Jeśli energia przekracza ustalony próg → prawdopodobnie transmisja.
     avg_power = np.mean ( np.abs ( samples ) **2 )
     power_db = 10 * np.log10 ( avg_power + 1e-12 )
-    print ( f"{power_db=}")
+    if settings["log"]["debugging"] : print ( f"{power_db=}")
     return power_db > power_threshold_dB
 
 def get_payload_bytes_v0_1_3 ( samples : np.ndarray ) :
@@ -448,7 +448,7 @@ class RxPacket_v0_1_8 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
                 self.payload_bytes = payload_bytes
-                print ( samples_name )
+                if settings["log"]["debugging"] : print ( samples_name )
                 return
 
     def __repr__ ( self ) -> str :
@@ -497,7 +497,7 @@ class RxFrames_v0_1_9 :
         return pad_bits2bytes ( bits )
     
     def complete_process_frame ( self , idx : np.uint32 ) -> None :
-        print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+        if settings["log"]["debugging"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
         self.samples_leftovers_start_idx = idx - filters.SPAN * self.sps // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 
