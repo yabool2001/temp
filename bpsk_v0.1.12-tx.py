@@ -12,7 +12,6 @@ import os
 import time as t
 import tomllib
 
-#from pathlib import Path
 from modules import packet , payload_test_data as ptd , sdr
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
@@ -21,7 +20,6 @@ script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
-
 
 plt = False
 tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
