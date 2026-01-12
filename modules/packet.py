@@ -291,6 +291,7 @@ class RxFrames_v0_1_9 :
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
     has_leftovers : bool = False
     samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
+    log : list = field ( default_factory = list )
     
     
     def __post_init__ ( self ) -> None :
@@ -366,6 +367,7 @@ class RxFrames_v0_1_9 :
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+                            self.log.append ( f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}" )
                             if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
             
