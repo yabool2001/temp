@@ -24,6 +24,10 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 log_packet : str = ""
 
+def add2log_packet ( entry : str ) -> None :
+    global log_packet
+    log_packet += entry + "\n"
+
 def bits_2_byte_list ( bits : np.ndarray ) :
     """
     na bazie def bits_2_byte_list stwórz nową funkcję def bits_2_byte_list_v0_1_7 w której ostatnie brakujące do 8, bity będą uzupełniane zerami. Dzięki temu 
@@ -362,16 +366,16 @@ class RxFrames_v0_1_9 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         has_frame = True
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
-                            log_packet += f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}\n\r"
+                            add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            log_packet += f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}\n\r"
+                            add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
-        log_packet += f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}\n\r"
+        add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
         if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
         return idx
 

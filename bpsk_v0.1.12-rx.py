@@ -38,6 +38,9 @@ wrt_filename_npy = "np.samples/rx_samples_log.npy"
 wrt_filename_csv = "samples.csv/rx_samples_log.csv"
 wrt_filename_log = "logs/rx_samples_log.csv"
 
+with open ( wrt_filename_log , "w" ) as wrt_file :
+    wrt_file.write ( "time,idx,has_sync_sequence,has_frame,has_packet\n" )
+    wrt_file.write ( packet.log_packet )
 
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
@@ -72,8 +75,7 @@ while ( len (received_bytes) < 1000 and real ) or ( not real and received_bytes.
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
 
-    #if packet.log_packet != "":
-    #    with open ( wrt_filename_log , "w" ) as wrt_file :
-    #        wrt_file.write ( "time,idx,has_sync_sequence,has_frame,has_packet\n" )
-    #        wrt_file.write ( packet.log_packet )
-    #    packet.log_packet = ""
+    if packet.log_packet != "":
+        with open ( wrt_filename_log , "a" ) as wrt_file :
+            wrt_file.write ( packet.log_packet )
+        packet.log_packet = ""
