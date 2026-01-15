@@ -22,6 +22,8 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
+log_packet : str = ""
+
 def bits_2_byte_list ( bits : np.ndarray ) :
     """
     na bazie def bits_2_byte_list stwórz nową funkcję def bits_2_byte_list_v0_1_7 w której ostatnie brakujące do 8, bity będą uzupełniane zerami. Dzięki temu 
@@ -290,9 +292,7 @@ class RxFrames_v0_1_9 :
     last_processed_idx : np.uint32 = 0
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
     has_leftovers : bool = False
-    samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
-    log : list = field ( default_factory = list )
-    
+    samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )    
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
@@ -362,15 +362,16 @@ class RxFrames_v0_1_9 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         has_frame = True
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
+                            log_packet += f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}\n\r"
                             if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
                         packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            self.log.append ( f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}" )
+                            log_packet += f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}\n\r"
                             if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
-            
+        log_packet += f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}\n\r"
         if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
         return idx
 
