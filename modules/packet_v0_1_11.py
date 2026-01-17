@@ -1,14 +1,13 @@
 import csv
-import logging
+import time as t
+import zlib
 import numpy as np
 import os
-import time as t
 import tomllib
-import zlib
 
 from adi import Pluto
 from dataclasses import dataclass , field
-from modules import corrections , filters , modulation, ops_file, plot , sdr
+from modules import filters , modulation, ops_file, plot , sdr
 from numpy.typing import NDArray
 
 from pathlib import Path
@@ -21,12 +20,6 @@ script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
-
-log_packet : str = ""
-
-def add2log_packet ( entry : str ) -> None :
-    global log_packet
-    log_packet += entry + "\n"
 
 def bits_2_byte_list ( bits : np.ndarray ) :
     """
@@ -86,6 +79,18 @@ def bits_2_int ( bits : np.ndarray ) -> int:
     return result
 
 BARKER13_BITS = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
+PADDING_BITS = np.array ( settings[ "PADDING_BITS" ] , dtype = np.uint8 )
+#BARKER13_W_PADDING_BITS = np.array ( BARKER13_BITS + PADDING_BITS , dtype = np.uint8 )
+BARKER13_W_PADDING_BITS = np.concatenate ( ( BARKER13_BITS , PADDING_BITS ) ).astype ( np.uint8 )
+BARKER13_W_PADDING_BYTES = bits_2_byte_list ( BARKER13_W_PADDING_BITS )
+BARKER13_W_PADDING_INT = bits_2_int ( BARKER13_W_PADDING_BITS )
+#BARKER13_W_PADDING = [ 6 , 80 ] # Jak będzie błąd to zamienić na BARKER13_W_PADDING_BYTES
+#BARKER13_W_PADDING_INT = 1616 # Jak będzie błąd to zamienić na BARKER13_W_PADDING_BYTES
+#PREAMBLE_BITS_LEN = 16
+PREAMBLE_BITS_LEN = len ( BARKER13_W_PADDING_BITS )
+PAYLOAD_LENGTH_BITS_LEN = 8
+CRC32_BITS_LEN = 32
+
 SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
 SYNC_SEQUENCE_LEN_SAMPLES = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
 PACKET_LEN_LEN_BITS = 11
@@ -103,9 +108,9 @@ def detect_sync_sequence_peaks_v0_1_11  ( samples: NDArray[ np.complex128 ] , sy
     base_path = Path ( "logs/correlation_results.csv" )
     corr_2_amp_min_ratio = 12.0
     #min_peak_height_ratio = 0.6  # Required minimal height of peaks in find_peaks
-    #min_peak_height_ratio = 0.5  # Działa ale za dużo plot wyświetla ale niby print liczy dobrze liczbę bajtów payload
     min_peak_height_ratio = 0.4  # Ten cudowanie opkazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
-    
+    #min_peak_height_ratio = 0.5  # Działa ale za dużo plot wyświetla ale niby print liczy dobrze liczbę bajtów payload
+
     peaks = np.array ( [] ).astype ( np.uint32 )
     peaks_real = np.array ( [] ).astype ( np.uint32 )
     peaks_neg_real = np.array ( [] ).astype ( np.uint32 )
@@ -194,6 +199,212 @@ def detect_sync_sequence_peaks_v0_1_11  ( samples: NDArray[ np.complex128 ] , sy
 
     return peaks
 
+def detect_sync_sequence_peaks_v0_1_10  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = False
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+    min_peak_height_ratio = 0.6  # Required minimal height of peaks in find_peaks 
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    max_amplitude_real = np.max ( np.abs ( samples.real ) )
+    max_amplitude_imag = np.max ( np.abs ( samples.imag ) )
+    max_amplitude_abs = np.max ( np.abs ( samples ) )
+    max_amplitude_real_idx = np.argmax ( np.abs ( samples.real ) )
+    max_amplitude_imag_idx = np.argmax ( np.abs ( samples.imag ) )
+    max_amplitude_abs_idx = np.argmax ( np.abs ( samples ) )
+    
+    #print ( f"{max_amplitude_real=} at {max_amplitude_real_idx=}, {max_amplitude_imag=} at {max_amplitude_imag_idx=}, {max_amplitude_abs=} at {max_amplitude_abs_idx=}" )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_real = np.abs ( np.correlate ( samples.real , sync_sequence.real , mode = "valid" ) )
+    corr_imag = np.abs ( np.correlate ( samples.imag , sync_sequence.real , mode = "valid" ) )
+    corr_abs = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp_real = max_peak_real_val / max_amplitude_real
+    corr_2_amp_imag = max_peak_imag_val / max_amplitude_imag
+    corr_2_amp_abs = max_peak_abs_val / max_amplitude_abs
+
+    if corr_2_amp_real > corr_2_amp_min_ratio :
+        sync = True
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS , prominence = 0.1 )
+        peaks = np.concatenate ( ( peaks , peaks_real ) ).astype ( np.uint32 )    
+    if corr_2_amp_imag > corr_2_amp_min_ratio :
+        sync = True
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS , prominence = 0.1 )
+        peaks = np.unique ( np.concatenate ( ( peaks , peaks_imag ) ) ).astype ( np.uint32 )
+    if corr_2_amp_abs > corr_2_amp_min_ratio :
+        sync = True
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS , prominence = 0.1 )
+        peaks = np.unique ( np.concatenate ( ( peaks , peaks_abs ) ) ).astype ( np.uint32 )
+
+    if plt and sync :
+        
+        plot.real_waveform_v0_1_6 ( corr_real , f"v0_1_7_u2 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"v0_1_7_u2 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"v0_1_7_u2 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"v0_1_7_u2 samples imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( corr_abs , f"v0_1_7_u2 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"v0_1_7_u2 samples abs {samples.size=}" , False , peaks_abs )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+    return peaks
+
+def detect_sync_sequence_peaks_v0_1_7_u1  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = False
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    sync = False
+    max_amplitude = np.max ( np.abs ( samples ) )
+    max_amplitude_idx = np.argmax ( np.abs ( samples ) )
+    print ( f"Max amplitude: {max_amplitude} at index: {max_amplitude_idx}" )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio :
+        sync = True
+        
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_imag_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_abs_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
+
+    
+    if plt and sync :
+        '''
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples abs {samples.size=}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"V7 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )'''
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+    return peaks
+
+def detect_sync_sequence_peaks_v0_1_7  ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    wrt = False
+    sync = False
+    base_path = Path ( "logs/correlation_results.csv" )
+    corr_2_amp_min_ratio = 12.0
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+    sync = False
+    max_amplitude = np.max ( np.abs ( samples ) )
+    #avg_amplitude = np.mean(np.abs(scenario['sample']))
+    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
+    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+
+    corr_bpsk = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_real = np.abs ( corr_bpsk.real )
+    corr_imag = np.abs ( corr_bpsk.imag )
+    corr_abs = np.abs ( corr_bpsk )
+
+    max_peak_real_val = np.max ( corr_real )
+    max_peak_imag_val = np.max ( corr_imag )
+    max_peak_abs_val = np.max ( corr_abs )
+
+    corr_2_amp = np.max ( [ max_peak_real_val , max_peak_imag_val , max_peak_abs_val ] ) / max_amplitude
+
+    if corr_2_amp > corr_2_amp_min_ratio :
+        sync = True
+        
+        # Znajdź peaks powyżej threshold i z prominence dla real, imag, abs
+        #peaks_real, _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS , prominence = 0.5 )
+        peaks_real , _ = find_peaks ( corr_real , height = max_peak_real_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag , height = max_peak_imag_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks_abs , _ = find_peaks ( corr_abs , height = max_peak_abs_val - max_peak_real_val * 0.1 , distance = 13 * modulation.SPS )
+        peaks = np.unique ( np.concatenate ( ( peaks_real , peaks_imag , peaks_abs ) ) ).astype ( np.uint32 )
+
+    
+    if plt and sync :
+        '''
+        plot.real_waveform_v0_1_6 ( corr_abs , f"V7 corr abs {samples.size=}" , False , peaks_abs )
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples abs {samples.size=}" , False , peaks_abs )
+        plot.real_waveform_v0_1_6 ( corr_real , f"V7 corr real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( samples.real , f"V7 samples real {samples.size=}" , False , peaks_real )
+        plot.real_waveform_v0_1_6 ( corr_imag , f"V7 corr imag {samples.size=}" , False , peaks_imag )
+        plot.real_waveform_v0_1_6 ( samples.imag , f"V7 samples imag {samples.size=}" , False , peaks_imag )
+        plot.complex_waveform_v0_1_6 ( corr_bpsk , f"V7 corr all {samples.size=}" , False , peaks )'''
+        plot.complex_waveform_v0_1_6 ( samples , f"V7 samples all {samples.size=}" , False , peaks )
+
+    if wrt and sync:
+        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
+        with open ( filename , 'w' , newline='' ) as csvfile :
+            fieldnames = ['corr', 'peak_idx', 'peak_val']
+            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
+            writer.writeheader ()
+            for idx in peaks_abs :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks_real :
+                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
+            for idx in peaks_imag :
+                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+
+    return peaks
+
+
 def gen_bits ( bytes ) :
     return np.unpackbits ( np.array ( bytes , dtype = np.uint8 ) )
 
@@ -239,6 +450,172 @@ def pad_bits2bytes ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
         bits = np.concatenate ( [ bits , np.zeros ( pad , dtype = np.uint8 ) ] )
     return np.packbits ( bits )
 
+def create_packet_bits ( payload ) :
+    length_byte = [ len ( payload ) - 1 ]
+    crc32 = zlib.crc32 ( bytes ( payload ) )
+    crc32_bytes = list ( crc32.to_bytes ( 4 , 'big' ) )
+    print ( f"{BARKER13_W_PADDING_BITS=}, {length_byte=}, {payload=}, {crc32_bytes=}")
+    preamble_bits = gen_bits ( BARKER13_W_PADDING_BYTES )
+    header_bits = gen_bits ( length_byte )
+    payload_bits = gen_bits ( payload )
+    crc32_bits = gen_bits ( crc32_bytes )
+    return np.concatenate ( [ preamble_bits , header_bits , payload_bits , crc32_bits ] )
+
+def create_doubled_payload_packet_bits ( payload ) :
+    print ( f"{payload=}")
+    payload_bits = gen_bits ( payload )
+    return np.concatenate ( [ payload_bits , payload_bits ] )
+
+def is_preamble_v0_1_3 ( samples : np.ndarray ) -> bool :
+    preamble_start = filters.SPAN * modulation.SPS // 2
+    preamble_end = preamble_start + ( PREAMBLE_BITS_LEN * modulation.SPS )
+    symbols = samples [ preamble_start : preamble_end : modulation.SPS ]
+    bits = ( symbols.real > 0 ).astype ( int )
+    preamble_int = bits_2_int ( bits )
+    if preamble_int == BARKER13_W_PADDING_INT :
+        return True
+    return False
+
+def is_preamble ( samples , rrc_span , sps ) :
+    preamble_start = rrc_span * sps // 2
+    preamble_end = preamble_start + ( PREAMBLE_BITS_LEN * sps )
+    symbols = samples [ preamble_start : preamble_end : sps ]
+    bits = ( symbols.real > 0 ).astype ( int )
+    preamble_int = bits_2_int ( bits )
+    if preamble_int == BARKER13_W_PADDING_INT :
+        return True
+    return False
+
+def is_sync_seq ( samples , sync_seq ) :
+    """
+    Detect presence of sync sequence using normalized cross-correlation and a power gate.
+
+    This replaces the previous fragile amplitude-only test which used a hard-coded
+    threshold (mean_amplitude > 100) and produced false positives when the
+    received samples had different scaling. The new method computes a normalized
+    correlation (0..1) and also checks the mean power (dB) in the best-matching
+    window to avoid detecting low-energy noise.
+
+    Returns:
+        bool
+    """
+    x = np.asarray(samples)
+    tpl = np.asarray(sync_seq)
+    n = len(tpl)
+    m = len(x)
+    if m < n or n == 0:
+        return False
+
+    # valid cross-correlation (tpl reversed) -> length m-n+1
+    # use complex conjugate on template for proper correlation with complex samples
+    corr = np.abs(np.correlate(x, tpl.conj()[::-1], mode='valid'))
+    if corr.size == 0:
+        return False
+
+    # template energy
+    tpl_energy = np.sum(np.abs(tpl) ** 2)
+
+    # rolling window energy for received samples (efficient via cumsum)
+    x_sq = np.abs(x) ** 2
+    cumsum = np.concatenate(([0.0], np.cumsum(x_sq)))
+    window_energy = cumsum[n:] - cumsum[:-n]
+
+    # normalized correlation: corr / (sqrt(E_window * E_template))
+    norm_corr = corr / (np.sqrt(window_energy * tpl_energy) + 1e-12)
+
+    peak_idx = int(np.argmax(norm_corr))
+    peak_val = float(norm_corr[peak_idx])
+
+    # compute mean power in dB for the best window (helps to reject tiny noise peaks)
+    mean_power = window_energy[peak_idx] / float(n)
+    mean_power_db = 10 * np.log10(mean_power + 1e-12)
+
+    # Diagnostic print (keeps previous behaviour of printing a diagnostic)
+    print(f"is_sync_seq: peak_corr={peak_val:.4f}, mean_power_db={mean_power_db:.2f} dB")
+
+    # Decision thresholds (tunable): require reasonably high normalized correlation
+    # and a minimum power level. These defaults are conservative; adjust to taste.
+    MIN_CORR = 0.55      # normalized correlation (0..1)
+    MIN_POWER_DB = -40.0 # minimum mean power (dB) to accept as signal
+
+    return (peak_val >= MIN_CORR) and (mean_power_db >= MIN_POWER_DB)
+
+def fast_energy_gate ( samples , power_threshold_dB = -30 ) :
+    # użyj tylko energii w pasmach, bez korelacji:
+    # Zlicz średnią moc w całym buforze,
+    # Jeśli energia przekracza ustalony próg → prawdopodobnie transmisja.
+    avg_power = np.mean ( np.abs ( samples ) **2 )
+    power_db = 10 * np.log10 ( avg_power + 1e-12 )
+    print ( f"{power_db=}")
+    return power_db > power_threshold_dB
+
+def get_payload_bytes_v0_1_3 ( samples : np.ndarray ) :
+    sps = modulation.SPS
+    payload_length_start_index = ( filters.SPAN * modulation.SPS // 2 ) + ( PREAMBLE_BITS_LEN * sps )
+    payload_length_end_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
+    symbols = samples [ payload_length_start_index : payload_length_end_index : modulation.SPS ]
+    bits = ( symbols.real > 0 ).astype ( int )
+    payload_length = bits_2_int ( bits ) + 1
+    payload_start_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
+    payload_end_index = payload_start_index + ( payload_length * 8 * sps )
+    # Zauważyłem, że oblicza bity i próbuje liczyć dla niej crc32 nawet jak ramka jest ucięta i brakuje ostatniego bajtu i nie ma 4 bajtów, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Oblicza bity payload, rzeczywista długość payload 3 bajty nie zgadza sie z wartością długości payload 3+1=4 w nagłówku.
+    symbols = samples [ payload_start_index : payload_end_index : sps ]
+    payload_bits = ( symbols.real > 0 ).astype ( int )
+    try :
+        crc32_calculated = zlib.crc32 ( bytes ( bits_2_byte_list ( payload_bits ) ) )
+    except :
+        print ( f"Brak całej ramki." )
+        return None
+    # Tu możesz też zapisać błąd do loga lub podjąć inne działanie
+    crc32_start_index = payload_start_index + ( payload_length * 8 * sps )
+    crc32_end_index = crc32_start_index + ( CRC32_BITS_LEN * sps )
+    # Zauważyłem, że oblicza jakieś crc nawet jak ramka jest delikatnie ucięta i brakuje ostatniego symbolu, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Nie widać tego problemu, bo oblicza crc32, które nie zgadza sie z prawidłowym crc32 dla całego payload.
+    symbols = samples [ crc32_start_index : crc32_end_index : sps ]
+    bits = ( symbols.real > 0 ).astype ( int )
+    crc32_received = bits_2_int ( bits )
+    if crc32_calculated == crc32_received :
+        return payload_bits
+    else :
+        print ( f"Brak całej ramki." )
+        return None
+
+def get_payload_bytes ( samples , rrc_span , sps ) :
+    payload_length_start_index = ( rrc_span * sps // 2 ) + ( PREAMBLE_BITS_LEN * sps )
+    payload_length_end_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
+    symbols = samples [ payload_length_start_index : payload_length_end_index : sps ]
+    bits = ( symbols.real > 0 ).astype ( int )
+    payload_length = bits_2_int ( bits ) + 1
+    payload_start_index = payload_length_start_index + ( PAYLOAD_LENGTH_BITS_LEN * sps )
+    payload_end_index = payload_start_index + ( payload_length * 8 * sps )
+    # Zauważyłem, że oblicza bity i próbuje liczyć dla niej crc32 nawet jak ramka jest ucięta i brakuje ostatniego bajtu i nie ma 4 bajtów, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Oblicza bity payload, rzeczywista długość payload 3 bajty nie zgadza sie z wartością długości payload 3+1=4 w nagłówku.
+    symbols = samples [ payload_start_index : payload_end_index : sps ]
+    payload_bits = ( symbols.real > 0 ).astype ( int )
+    try :
+        crc32_calculated = zlib.crc32 ( bytes ( bits_2_byte_list ( payload_bits ) ) )
+    except :
+        print ( f"Brak całej ramki." )
+        return None
+    # Tu możesz też zapisać błąd do loga lub podjąć inne działanie
+    crc32_start_index = payload_start_index + ( payload_length * 8 * sps )
+    crc32_end_index = crc32_start_index + ( CRC32_BITS_LEN * sps )
+    # Zauważyłem, że oblicza jakieś crc nawet jak ramka jest delikatnie ucięta i brakuje ostatniego symbolu, np. dla symulacji w pliku "logs/rx_samples_987-no_crc32.csv". Nie widać tego problemu, bo oblicza crc32, które nie zgadza sie z prawidłowym crc32 dla całego payload.
+    symbols = samples [ crc32_start_index : crc32_end_index : sps ]
+    bits = ( symbols.real > 0 ).astype ( int )
+    crc32_received = bits_2_int ( bits )
+    if crc32_calculated == crc32_received :
+        return payload_bits
+    else :
+        print ( f"Brak całej ramki." )
+        return None
+
+def count_bytes ( payload , has_bits : bool = False ) -> np.uint64 :
+    payload_arr = np.asarray ( payload , dtype = np.uint8 ).ravel ()
+    if has_bits :
+        payload_bytes_len = len ( payload_arr ) // 8
+    else :
+        payload_bytes_len = len ( payload_arr )
+    return np.uint64 ( payload_bytes_len )
+
 def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
     crc32 = zlib.crc32 ( bytes )
     return np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
@@ -249,23 +626,22 @@ def add_timestamp_2_filename ( filename : str ) -> str :
     return f"{name}_{timestamp}{ext}"
 
 @dataclass ( slots = True , eq = False )
-class RxPacket_v0_1_12 :
-
+class RxPacket_v0_1_8 :
+    
     samples_filtered : NDArray[ np.complex128 ]
     has_packet : bool = False
-    samples_corrected : NDArray[ np.complex128 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    
     # Pola uzupełnianie w __post_init__
 
     def __post_init__ ( self ) -> None :
-        self.samples_corrected = self.correct_cfo ()
         self.process_packet ()
     
     def process_packet ( self ) -> None :
         sps = modulation.SPS
+
         samples_components = [ ( self.samples_filtered.real , "packet real" ) , ( self.samples_filtered.imag , "packet imag" ) , ( -self.samples_filtered.real , "packet -real" ) , ( -self.samples_filtered.imag , "packet -imag" ) ]
         for samples_component , samples_name in samples_components :
+        
             payload_end_idx = len ( self.samples_filtered ) - ( CRC32_LEN_BITS * sps )
             payload_symbols = samples_component [ : payload_end_idx : sps ]
             crc32_symbols = samples_component [ payload_end_idx : : sps ]
@@ -277,11 +653,8 @@ class RxPacket_v0_1_12 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
                 self.payload_bytes = payload_bytes
-                if settings["log"]["debugging"] : print ( samples_name )
+                print ( samples_name )
                 return
-
-    def correct_cfo ( self ) -> None :
-        self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
     def __repr__ ( self ) -> str :
         return (
@@ -301,6 +674,7 @@ class RxFrames_v0_1_9 :
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
     has_leftovers : bool = False
     samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
+    
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
@@ -328,7 +702,7 @@ class RxFrames_v0_1_9 :
         return pad_bits2bytes ( bits )
     
     def complete_process_frame ( self , idx : np.uint32 ) -> None :
-        if settings["log"]["debugging"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+        print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
         self.samples_leftovers_start_idx = idx - filters.SPAN * self.sps // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 
@@ -370,16 +744,14 @@ class RxFrames_v0_1_9 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         has_frame = True
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
-                        packet = RxPacket_v0_1_12 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
+                        packet = RxPacket_v0_1_8 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
-        add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
+            
         if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
         return idx
 
@@ -407,7 +779,6 @@ class RxSamples_v0_1_10 :
 
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
-            self.samples_filtered = np.array ( [] , dtype = np.complex128 )
 
     def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None ) -> None :
         if self.pluto_rx_ctx is not None :
@@ -441,13 +812,10 @@ class RxSamples_v0_1_10 :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
     def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples , f"RxSamples {title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
+        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"RxSamples filtered {title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
-
-    def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def save_complex_samples_2_npf ( self , filename : str ) -> None :
         filename_with_timestamp = add_timestamp_2_filename ( filename )
@@ -505,6 +873,7 @@ class RxPluto_v0_1_11 :
             f"{self.samples.samples.size=}, { self.pluto_rx_ctx= }" if self.sn is not None else f" no ADALM-Pluto connected,"
         )
 
+
 @dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_11 :
     
@@ -528,6 +897,53 @@ class TxPacket_v0_1_11 :
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
+
+@dataclass ( slots = True , eq = False )
+class TxPacket_v0_1_8 :
+    
+    payload : list | tuple | np.ndarray = field ( default_factory = list )
+    has_bits : bool = False
+    
+    # Pola uzupełnianie w __post_init__
+    payload_bits : NDArray[ np.uint8 ] = field ( init = False )
+    payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_len : np.uint16 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.create_payload_bits_and_bytes ()
+        self.create_crc32_bytes ()
+        self.create_packet_bytes ()
+        self.packet_len = np.uint16 ( len ( self.payload_bytes ) + len ( self.crc32_bytes ) )  # payload + crc32
+
+    def create_payload_bits_and_bytes ( self ) -> None :
+        if not self.payload or len ( self.payload ) == 0 or self.payload is None :
+            raise ValueError ( "Error: Payload is empty!" )
+        payload_arr = np.asarray ( self.payload , dtype = np.uint8 ).ravel ()
+        if self.has_bits :         
+            if payload_arr.max () > 1 :
+                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
+            if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * 8 :
+                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
+            self.payload_bytes = pad_bits2bytes ( payload_arr )
+        else :
+            # ------------------ payload podany jako bajty -----------------
+            if payload_arr.max () > 255 :
+                raise ValueError ( "Error: Payload has not all values in 0 - 255!")
+            if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
+                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
+            self.payload_bytes = payload_arr
+
+    def create_crc32_bytes ( self ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
+
+    def create_packet_bytes ( self ) -> None:
+        self.packet_bytes = np.concatenate ( [ self.payload_bytes , self.crc32_bytes ] )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxFrame_v0_1_11 :
@@ -563,7 +979,43 @@ class TxFrame_v0_1_11 :
             f"{ self.frame_bytes= }, { self.frame_bytes.size= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_12 :
+class TxFrame_v0_1_8 :
+
+    packet : TxPacket_v0_1_11
+        
+    # Pola uzupełnianie w __post_init__
+    sync_sequence_bits : NDArray[ np.uint8 ] = field ( init = False )
+    packet_len_bits : NDArray[ np.uint8 ] = field ( init = False )
+    frame_bits : NDArray[ np.uint8 ] = field ( init = False )
+    frame_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    tx_packet : TxPacket_v0_1_8 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        self.create_sync_sequence_bits ()
+        self.create_packet_len_bits ()
+        frame_main_bytes = pad_bits2bytes ( np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] ) )
+        self.create_crc32_bytes ( frame_main_bytes )
+        self.frame_bytes = np.concatenate ( [ frame_main_bytes , self.crc32_bytes ] )
+
+    def create_sync_sequence_bits ( self ) -> None :
+        self.sync_sequence_bits = BARKER13_BITS
+
+    def create_packet_len_bits ( self ) -> None :
+        self.packet_len_bits = dec2bits ( self.packet_len , PACKET_LEN_LEN_BITS )
+
+    def create_frame_bits ( self ) -> None :
+        self.frame_bits = np.concatenate ( [ self.sync_sequence_bits , self.packet_len_bits ] )
+
+    def create_crc32_bytes ( self , frame_main_bytes ) -> None :
+        self.crc32_bytes = create_crc32_bytes ( frame_main_bytes )
+
+    def __repr__ ( self ) -> str :
+        return (
+            f"{ self.frame_bytes= }, { self.frame_bits.size= }, { self.packet_len= }" )
+
+@dataclass ( slots = True , eq = False )
+class TxSamples_v0_1_11 :
 
     pluto_tx_ctx : Pluto | None = None
 
@@ -634,21 +1086,6 @@ class TxSamples_v0_1_12 :
         self.pluto_tx_ctx.tx_destroy_buffer ()
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
-    def tx_incremeant_payload_and_repeat ( self , nob : np.uint16 = 1 , repeat : np.uint32 = 1 ) -> None :
-        self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_cyclic_buffer = False
-        bytes = np.zeros ( nob , dtype = np.uint8 )
-        while repeat :
-            self.create_samples4pluto ( payload_bytes = bytes )
-            self.pluto_tx_ctx.tx ( self.samples4pluto)
-            print ( f"\n\r{repeat}: Transmitted payload bytes: { bytes }" )
-            for i in range ( nob - 1 , -1 , -1 ) :
-                bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
-                if bytes [ i ] != 0 :
-                    break
-            repeat -= 1
-        
-
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
         plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
         if constellation :
@@ -667,20 +1104,20 @@ class TxSamples_v0_1_12 :
         return ( f"{ self.frame.frame_bytes= }, { self.samples.size= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxPluto_v0_1_12 :
+class TxPluto_v0_1_11 :
     
     sn : str
     
     # Pola uzupełnianie w __post_init__
     pluto_tx_ctx : Pluto  = field ( init = False )
-    samples : TxSamples_v0_1_12 = field ( init = False )
+    samples : TxSamples_v0_1_11 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
 
     def init_pluto_tx ( self ) -> None :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-        self.samples = TxSamples_v0_1_12 ( pluto_tx_ctx = self.pluto_tx_ctx )
+        self.samples = TxSamples_v0_1_11 ( pluto_tx_ctx = self.pluto_tx_ctx )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.pluto_tx_ctx= }, { self.samples.samples4pluto.size= }" )
