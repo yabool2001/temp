@@ -63,6 +63,9 @@ while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes
         if rx_pluto.samples.has_amp_greater_than_ths : rx_pluto.samples.plot_complex_samples ( title = f"{script_filename}" )
     rx_pluto.samples.detect_frames ()
     #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
+
+    if rx_pluto.samples.has_amp_greater_than_ths :
+        print ( f"{script_filename} {rx_pluto.samples.has_amp_greater_than_ths=}" )
     
     if rx_pluto.samples.frames.has_leftovers :
         previous_samples_leftovers = rx_pluto.samples.samples_leftovers
