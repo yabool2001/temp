@@ -128,7 +128,7 @@ def get_barker13_bpsk_samples ( sps , rrc_beta , rrc_span , clipped = False ) :
     #plot.plot_complex_waveform ( samples , "  barker13 samples")
     return samples
 
-def zero_quadrature ( samples ) :
+def zero_quadrature ( samples : NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] :
     """
     Zeruje składową Q (urojoną) sygnału zespolonego, pozostawiając tylko składową I (rzeczywistą).
     """

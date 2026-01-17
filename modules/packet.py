@@ -8,7 +8,7 @@ import zlib
 
 from adi import Pluto
 from dataclasses import dataclass , field
-from modules import filters , modulation, ops_file, plot , sdr
+from modules import corrections , filters , modulation, ops_file, plot , sdr
 from numpy.typing import NDArray
 
 from pathlib import Path
@@ -395,6 +395,7 @@ class RxSamples_v0_1_10 :
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    samples_corrected : NDArray[ np.complex128 ] = field ( init = False )
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
@@ -403,6 +404,8 @@ class RxSamples_v0_1_10 :
 
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
+            self.samples_filtered = np.array ( [] , dtype = np.complex128 )
+            self.samples_corrected = np.array ( [] , dtype = np.complex128 )
 
     def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None ) -> None :
         if self.pluto_rx_ctx is not None :
@@ -426,8 +429,12 @@ class RxSamples_v0_1_10 :
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
+    def correct_cfo ( self ) -> None :
+        self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+
     def detect_frames ( self ) -> None :
         self.filter_samples ()
+        self.correct_cfo ()
         self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
         if self.frames.has_leftovers :
             self.clip_samples_leftovers ()
@@ -436,10 +443,13 @@ class RxSamples_v0_1_10 :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
     def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
+        plot.complex_waveform_v0_1_6 ( self.samples , f"RxSamples {title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"RxSamples filtered {title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def save_complex_samples_2_npf ( self , filename : str ) -> None :
         filename_with_timestamp = add_timestamp_2_filename ( filename )

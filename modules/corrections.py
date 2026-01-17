@@ -64,10 +64,10 @@ def pll_v0_1_3 ( rx_samples , freq_offset_initial ) :
 
     for n, sample in enumerate ( rx_samples ) :
         # Korekcja aktualną estymacją
-        corrected_samples[n] = sample * np.exp ( -1j * phase_estimate )
+        corrected_samples[ n ] = sample * np.exp ( -1j * phase_estimate )
 
         # Błąd fazy z demodulowanego symbolu BPSK
-        error = np.sign ( np.real ( corrected_samples[n] ) ) * np.imag ( corrected_samples[n] )
+        error = np.sign ( np.real ( corrected_samples[ n ] ) ) * np.imag ( corrected_samples[ n ] )
 
         # Aktualizacja estymacji częstotliwości i fazy
         freq_estimate += beta * error
@@ -136,47 +136,47 @@ def full_compensation_v0_1_3 ( samples , preamble_samples ) :
 # Początek nowej wersji v0_1_5 full compensation z estymacją CFO z preambuły
 # Funkcja powstała na bazie rozzdziału 10.5 CFO Estimation książki SDR4Engineers
 
-def estimate_cfo_from_preamble_v0_1_5(rx, preamble, fs, sps):
+def estimate_cfo_from_preamble_v0_1_5 ( rx , preamble , fs , sps ) :
     """
     Simple coarse CFO estimator using a known preamble.
     Uses products of samples separated by `sps` (M) and returns frequency offset in Hz.
     """
     if rx is None or preamble is None:
         return 0.0
-    corr = np.correlate(rx, preamble, mode='valid')
+    corr = np.correlate ( rx , preamble , mode = 'valid' )
     if corr.size == 0:
         return 0.0
-    peak = np.argmax(np.abs(corr))
-    seg_len = len(preamble)
+    peak = np.argmax ( np.abs ( corr ) )
+    seg_len = len ( preamble )
     # take segment aligned to preamble (clip if necessary)
-    if peak + seg_len <= len(rx):
-        seg = rx[peak:peak + seg_len]
+    if peak + seg_len <= len ( rx ):
+        seg = rx[ peak : peak + seg_len ]
     else:
-        seg = rx[peak:]
-    if len(seg) <= sps:
+        seg = rx[ peak : ]
+    if len ( seg ) <= sps :
         return 0.0
-    prods = seg[sps:] * np.conj(seg[:-sps])
+    prods = seg[ sps : ] * np.conj ( seg[ : -sps ] )
     # average product to reduce noise
-    avg = np.mean(prods)
-    delta = np.angle(avg)
+    avg = np.mean ( prods )
+    delta = np.angle ( avg )
     f_offset = delta * fs / (2.0 * np.pi * sps)
-    return float(f_offset)
+    return float ( f_offset )
 
-def estimate_cfo_from_preamble_early (rx, preamble, fs, sps):
+def estimate_cfo_from_preamble_early ( rx , preamble , fs , sps ):
     # korelacja do zlokalizowania preambuły
-    corr = np.correlate(rx, preamble, mode='valid')
+    corr = np.correlate ( rx , preamble , mode = 'valid' )
     if corr.size == 0:
         return 0.0
-    peak = np.argmax(np.abs(corr))
+    peak = np.argmax ( np.abs ( corr ) )
     # wyciągnij segment sygnału odpowiadający preambule (upewnij się, że jest wystarczająco długi)
-    seg_len = len(preamble)
-    seg = rx[peak:peak + seg_len]
-    if len(seg) <= sps:
+    seg_len = len ( preamble )
+    seg = rx[ peak : peak + seg_len ]
+    if len ( seg ) <= sps :
         return 0.0
     # produkty próbek oddalonych o sps
-    prods = seg[sps:] * np.conj(seg[:-sps])
+    prods = seg[ sps : ] * np.conj ( seg[ : -sps ] )
     # średnia faza (bardziej odporna na szum niż pojedynczy pomiar)
-    delta = np.angle(np.mean(prods))
+    delta = np.angle ( np.mean ( prods ) )
     # przelicz na Hz: delta to faza na M próbek (M = sps)
     f_offset = delta * fs / (2.0 * np.pi * sps)
     return f_offset
@@ -195,21 +195,21 @@ def full_compensation_v0_1_5 ( samples , preamble_samples ) :
     sps = modulation.SPS
 
     # 1) Coarse CFO estimate and correction
-    coarse_f = estimate_cfo_from_preamble_v0_1_5(samples, preamble_samples, fs, sps)
+    coarse_f = estimate_cfo_from_preamble_v0_1_5 ( samples , preamble_samples , fs, sps )
     # Apply coarse correction
-    if coarse_f != 0.0:
+    if coarse_f != 0.0 :
     # Alternative apply coarse correction: if abs(coarse_f) > 1e-12:
-        n = np.arange(len(samples))
-        samples = samples * np.exp(-1j * 2.0 * np.pi * coarse_f * n / fs)
+        n = np.arange ( len ( samples ) )
+        samples = samples * np.exp ( -1j * 2.0 * np.pi * coarse_f * n / fs )
 
     # 2) PLL-based fine tracking
-    pl_corrected = pll_v0_1_3(samples, freq_offset_initial=0.0)
+    pl_corrected = pll_v0_1_3 ( samples , freq_offset_initial = 0.0 )
 
     # 3) Phase offset correction using preamble
-    rx_phase_corrected = correct_phase_offset_v3(pl_corrected, preamble_samples)
+    rx_phase_corrected = correct_phase_offset_v3 ( pl_corrected , preamble_samples )
 
     # 4) IQ imbalance compensation
-    rx_final_corrected = iq_balance(rx_phase_corrected)
+    rx_final_corrected = iq_balance ( rx_phase_corrected )
 
     return rx_final_corrected
 # Koniec nowej wersji v0_1_5 full compensation z estymacją CFO z preambuły

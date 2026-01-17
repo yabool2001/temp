@@ -70,18 +70,18 @@ while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes
 
     if rx_pluto.samples.frames.sync_sequence_peaks.size > 0 :
         rx_pluto.samples.plot_complex_samples_filtered ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
+        rx_pluto.samples.plot_complex_samples_corrected ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
-
-    if wrt :
-        rx_pluto.samples.save_complex_samples_2_npf ( wrt_filename_npy )
+        if wrt :
+            rx_pluto.samples.save_complex_samples_2_npf ( wrt_filename_npy )
 
     if packet.log_packet != "" :
         with open ( wrt_filename_log , "a" ) as wrt_file :
             wrt_file.write ( packet.log_packet )
         packet.log_packet = ""
     
-    t.sleep ( 5 )
+    #t.sleep ( 5 )
