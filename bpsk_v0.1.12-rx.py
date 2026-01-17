@@ -45,7 +45,7 @@ wrt_filename_log = "logs/rx_samples_last_log.csv"
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
-real = True
+real = False
 wrt = False
 
 if real :
@@ -79,7 +79,7 @@ while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes
         print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
-        if wrt :
+        if wrt and real:
             rx_pluto.samples.save_complex_samples_2_npf ( wrt_filename_npy )
         #if packet.log_packet != "" :
         #    with open ( wrt_filename_log , "a" ) as wrt_file :
