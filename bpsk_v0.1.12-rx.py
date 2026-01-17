@@ -78,10 +78,9 @@ while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes
         print ( f"{received_bytes.size=}" )
         if wrt :
             rx_pluto.samples.save_complex_samples_2_npf ( wrt_filename_npy )
-
-    if packet.log_packet != "" :
-        with open ( wrt_filename_log , "a" ) as wrt_file :
-            wrt_file.write ( packet.log_packet )
-        packet.log_packet = ""
+        if packet.log_packet != "" :
+            with open ( wrt_filename_log , "a" ) as wrt_file :
+                wrt_file.write ( packet.log_packet )
+            packet.log_packet = ""
     
     #t.sleep ( 5 )
