@@ -12,7 +12,8 @@ import os
 import time as t
 import tomllib
 
-from modules import packet_main as packet , payload_test_data as ptd , sdr
+#from pathlib import Path
+from modules import packet , payload_test_data as ptd , sdr
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 
@@ -21,8 +22,9 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
+
 plt = False
-tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
+tx_pluto = packet.TxPluto_v0_1_11 ( sn = sdr.PLUTO_TX_SN)
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_pluto.samples.create_samples4pluto ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] )
 if plt :
@@ -55,14 +57,7 @@ try :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.samples.stop_tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( "[s] Tx cyclic stopped" )
-        elif key == 't' :
-            t.sleep ( 1 ) # anty-dubler
-            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            t_nob = np.uint16 ( 20 )
-            t_repeat = np.uint32 ( 4 )
-            tx_pluto.samples.tx_incremeant_payload_and_repeat ( nob = t_nob , repeat = t_repeat )
-            print ( f"[t] Tx.size = {t_nob} bytes with zeros payload created, incremented & repeated {t_repeat} times." )
+            print ( "[s] Tc cyclic stopped" )
         elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             i = np.uint32 ( key )
@@ -72,7 +67,6 @@ try :
             tx_pluto.samples.tx ( repeat = i )
             print ( f"Samples sent {i} time(s)." )
         elif key == '\x1b':  # ESCAPE
-            tx_pluto.samples.stop_tx_cyclic ()
             break
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
