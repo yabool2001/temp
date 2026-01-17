@@ -46,7 +46,7 @@ received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
 real = True
-wrt = True
+wrt = False
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_11 ( sn = sdr.PLUTO_RX_SN )
