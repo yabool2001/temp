@@ -49,9 +49,9 @@ real = True
 wrt = False
 
 if real :
-    rx_pluto = packet.RxPluto_v0_1_12 ( sn = sdr.PLUTO_RX_SN )
+    rx_pluto = packet.RxPluto_v0_1_13 ( sn = sdr.PLUTO_RX_SN )
 else :
-    rx_pluto = packet.RxPluto_v0_1_12 ()
+    rx_pluto = packet.RxPluto_v0_1_13 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes.size == 0 ) :

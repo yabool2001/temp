@@ -249,7 +249,7 @@ def add_timestamp_2_filename ( filename : str ) -> str :
     return f"{name}_{timestamp}{ext}"
 
 @dataclass ( slots = True , eq = False )
-class RxPacket_v0_1_12 :
+class RxPacket_v0_1_13 :
 
     samples_filtered : NDArray[ np.complex128 ]
     has_packet : bool = False
@@ -278,7 +278,9 @@ class RxPacket_v0_1_12 :
                 self.payload_bytes = payload_bytes
                 if settings["log"]["debugging"] : print ( samples_name )
                 return
+        # To poniższe cfo nie może zadziałać dobrze bo w samplach nie przekazuję barker13 do korekcji cfo, przecież przekazuję tylko wyciątą część sampli pakietu bez sync sequence, rozważyć przekazywanie całej ramki.
         self.correct_cfo ()
+        if settings["log"]["debugging"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
         payload_symbols = self.samples_corrected [ : payload_end_idx : sps ]
         crc32_symbols = self.samples_corrected [ payload_end_idx : : sps ]
         payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
@@ -295,13 +297,17 @@ class RxPacket_v0_1_12 :
     def correct_cfo ( self ) -> None :
         self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
+    def plot_complex_samples_filtered_and_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
+        plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"{title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
+
     def __repr__ ( self ) -> str :
         return (
             f"{ self.samples_filtered.size= }, { self.has_packet= }, { self.payload_bytes.size if self.has_packet else None= }"
         )
 
 @dataclass ( slots = True , eq = False )
-class RxFrames_v0_1_12 :
+class RxFrames_v0_1_13 :
     
     samples_filtered : NDArray[ np.complex128 ]
 
@@ -385,7 +391,7 @@ class RxFrames_v0_1_12 :
                             add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
-                        packet = RxPacket_v0_1_12 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
+                        packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
@@ -402,7 +408,7 @@ class RxFrames_v0_1_12 :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_12 :
+class RxSamples_v0_1_13 :
     
     pluto_rx_ctx : Pluto | None = None
     #samples_filename : str | None = None
@@ -414,7 +420,7 @@ class RxSamples_v0_1_12 :
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    frames : RxFrames_v0_1_12 = field ( init = False )
+    frames : RxFrames_v0_1_13 = field ( init = False )
     samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
 
     def __post_init__ ( self ) -> None :
@@ -445,7 +451,7 @@ class RxSamples_v0_1_12 :
 
     def detect_frames ( self ) -> None :
         self.filter_samples ()
-        self.frames = RxFrames_v0_1_12 ( samples_filtered = self.samples_filtered )
+        self.frames = RxFrames_v0_1_13 ( samples_filtered = self.samples_filtered )
         if self.frames.has_leftovers :
             self.clip_samples_leftovers ()
 
@@ -494,13 +500,13 @@ class RxSamples_v0_1_12 :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
 
 @dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_12 :
+class RxPluto_v0_1_13 :
 
     sn : str | None = None
     
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto | None = None
-    samples : RxSamples_v0_1_12 = field ( init = False )
+    samples : RxSamples_v0_1_13 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluot_rx ()
@@ -508,9 +514,9 @@ class RxPluto_v0_1_12 :
     def init_pluot_rx ( self ) -> None :
         if self.sn is not None :
             self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-            self.samples = RxSamples_v0_1_12 ( pluto_rx_ctx = self.pluto_rx_ctx )
+            self.samples = RxSamples_v0_1_13 ( pluto_rx_ctx = self.pluto_rx_ctx )
         else :
-            self.samples = RxSamples_v0_1_12 ()
+            self.samples = RxSamples_v0_1_13 ()
 
     def __repr__ ( self ) -> str :
         return (
