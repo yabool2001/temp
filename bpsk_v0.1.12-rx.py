@@ -78,7 +78,7 @@ while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes
             rx_pluto.samples.save_complex_samples_2_npf ( wrt_filename_npy )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
-        print ( f" {rx_pluto.samples.frames.samples_payloads_bytes=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
+        print ( f" {rx_pluto.samples.frames.samples_payloads_bytes[0]=}, {rx_pluto.samples.frames.samples_payloads_bytes.size=}" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{received_bytes.size=}" )
         if packet.log_packet != "" :

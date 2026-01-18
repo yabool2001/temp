@@ -259,14 +259,13 @@ class RxPacket_v0_1_12 :
     # Pola uzupełnianie w __post_init__
 
     def __post_init__ ( self ) -> None :
-        self.samples_corrected = self.correct_cfo ()
         self.process_packet ()
     
     def process_packet ( self ) -> None :
         sps = modulation.SPS
+        payload_end_idx = len ( self.samples_filtered ) - ( CRC32_LEN_BITS * sps )
         samples_components = [ ( self.samples_filtered.real , "packet real" ) , ( self.samples_filtered.imag , "packet imag" ) , ( -self.samples_filtered.real , "packet -real" ) , ( -self.samples_filtered.imag , "packet -imag" ) ]
         for samples_component , samples_name in samples_components :
-            payload_end_idx = len ( self.samples_filtered ) - ( CRC32_LEN_BITS * sps )
             payload_symbols = samples_component [ : payload_end_idx : sps ]
             crc32_symbols = samples_component [ payload_end_idx : : sps ]
             payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
@@ -279,6 +278,19 @@ class RxPacket_v0_1_12 :
                 self.payload_bytes = payload_bytes
                 if settings["log"]["debugging"] : print ( samples_name )
                 return
+        self.correct_cfo ()
+        payload_symbols = self.samples_corrected [ : payload_end_idx : sps ]
+        crc32_symbols = self.samples_corrected [ payload_end_idx : : sps ]
+        payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
+        payload_bytes = pad_bits2bytes ( payload_bits )
+        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
+        crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+        crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
+        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+            self.has_packet = True
+            self.payload_bytes = payload_bytes
+            if settings["log"]["debugging"] : print ( "cfo" )
+            return
 
     def correct_cfo ( self ) -> None :
         self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
