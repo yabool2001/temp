@@ -289,7 +289,7 @@ class RxPacket_v0_1_12 :
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
             self.payload_bytes = payload_bytes
-            if settings["log"]["debugging"] : print ( "cfo" )
+            print ( "cfo" )
             return
 
     def correct_cfo ( self ) -> None :
