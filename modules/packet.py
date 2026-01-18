@@ -289,7 +289,7 @@ class RxPacket_v0_1_12 :
         )
 
 @dataclass ( slots = True , eq = False )
-class RxFrames_v0_1_9 :
+class RxFrames_v0_1_12 :
     
     samples_filtered : NDArray[ np.complex128 ]
 
@@ -390,7 +390,7 @@ class RxFrames_v0_1_9 :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_10 :
+class RxSamples_v0_1_12 :
     
     pluto_rx_ctx : Pluto | None = None
     #samples_filename : str | None = None
@@ -402,7 +402,7 @@ class RxSamples_v0_1_10 :
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    frames : RxFrames_v0_1_9 = field ( init = False )
+    frames : RxFrames_v0_1_12 = field ( init = False )
     samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
 
     def __post_init__ ( self ) -> None :
@@ -433,7 +433,7 @@ class RxSamples_v0_1_10 :
 
     def detect_frames ( self ) -> None :
         self.filter_samples ()
-        self.frames = RxFrames_v0_1_9 ( samples_filtered = self.samples_filtered )
+        self.frames = RxFrames_v0_1_12 ( samples_filtered = self.samples_filtered )
         if self.frames.has_leftovers :
             self.clip_samples_leftovers ()
 
@@ -482,13 +482,13 @@ class RxSamples_v0_1_10 :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
 
 @dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_11 :
+class RxPluto_v0_1_12 :
 
     sn : str | None = None
     
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto | None = None
-    samples : RxSamples_v0_1_10 = field ( init = False )
+    samples : RxSamples_v0_1_12 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluot_rx ()
@@ -496,9 +496,9 @@ class RxPluto_v0_1_11 :
     def init_pluot_rx ( self ) -> None :
         if self.sn is not None :
             self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-            self.samples = RxSamples_v0_1_10 ( pluto_rx_ctx = self.pluto_rx_ctx )
+            self.samples = RxSamples_v0_1_12 ( pluto_rx_ctx = self.pluto_rx_ctx )
         else :
-            self.samples = RxSamples_v0_1_10 ()
+            self.samples = RxSamples_v0_1_12 ()
 
     def __repr__ ( self ) -> str :
         return (

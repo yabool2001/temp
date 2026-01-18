@@ -46,12 +46,12 @@ received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
 real = True
-wrt = True
+wrt = False
 
 if real :
-    rx_pluto = packet.RxPluto_v0_1_11 ( sn = sdr.PLUTO_RX_SN )
+    rx_pluto = packet.RxPluto_v0_1_12 ( sn = sdr.PLUTO_RX_SN )
 else :
-    rx_pluto = packet.RxPluto_v0_1_11 ()
+    rx_pluto = packet.RxPluto_v0_1_12 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
 while ( len (received_bytes) < 10000 and real ) or ( not real and received_bytes.size == 0 ) :
