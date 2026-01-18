@@ -24,7 +24,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 plt = False
 tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
 print ( f"\n{ script_filename= } { tx_pluto= }" )
-tx_pluto.samples.create_samples4pluto ( payload_bytes = settings[ "PAYLOAD_4BYTES_DEC" ] )
+tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( 64 ) )
 if plt :
     tx_pluto.samples.plot_symbols ( f"{script_filename} " )
     tx_pluto.samples.plot_complex_samples_filtered ( f"{script_filename} filtered samples" )
@@ -45,12 +45,12 @@ try :
             t.sleep ( 1 )  # anty-dubler
             tx_pluto.samples.tx ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( f"[o] Sample sent!" )
+            print ( f"[o] {tx_pluto.samples.payload_bytes=} {tx_pluto.samples.payload_bytes.size=} sent!" )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.samples.tx_cyclic ()
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( f"[c] Tx cyclic started..." )
+            print ( f"[c] Tx cyclic started for {tx_pluto.samples.payload_bytes=} {tx_pluto.samples.payload_bytes.size=}." )
         elif key == 's' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.samples.stop_tx_cyclic ()
@@ -59,8 +59,8 @@ try :
         elif key == 't' :
             t.sleep ( 1 ) # anty-dubler
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            t_nob = np.uint16 ( 20 )
-            t_repeat = np.uint32 ( 4 )
+            t_nob = np.uint16 ( 10 )
+            t_repeat = np.uint32 ( 1 )
             tx_pluto.samples.tx_incremeant_payload_and_repeat ( nob = t_nob , repeat = t_repeat )
             print ( f"[t] Tx.size = {t_nob} bytes with zeros payload created, incremented & repeated {t_repeat} times." )
         elif key > '0' and key <= '9' : # advanced test mode
@@ -70,7 +70,7 @@ try :
                 i = i * 5
                 print ( f"Notice: Odd number multiplied by 5." )
             tx_pluto.samples.tx ( repeat = i )
-            print ( f"Samples sent {i} time(s)." )
+            print ( f"{tx_pluto.samples.payload_bytes=} {tx_pluto.samples.payload_bytes.size=} sent {i} time(s)." )
         elif key == '\x1b':  # ESCAPE
             tx_pluto.samples.stop_tx_cyclic ()
             break
