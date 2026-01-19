@@ -17,8 +17,8 @@ BW = 1000000                        # bandwidth
 TX_GAIN = -10.0                     # transmit gain
 RX_GAIN = 70                        # receive gain
 GAIN_CONTROL = "slow_attack"        # gain control mode
-SAMPLES_BUFFER = 32768
-SAMPLES_BUFFER_SIZE = 32768
+SAMPLES_BUFFER = 614400
+SAMPLES_BUFFER_SIZE = 614400
 
 [ADALM-Pluto.URI]
 IP = "ip:192.168.2.1"
