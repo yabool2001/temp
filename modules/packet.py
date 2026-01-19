@@ -278,6 +278,7 @@ class RxPacket_v0_1_13 :
                 self.payload_bytes = payload_bytes
                 if settings["log"]["debugging"] : print ( samples_name )
                 return
+        # Przed dużymi zminami 
         # To poniższe cfo nie może zadziałać dobrze bo w samplach nie przekazuję barker13 do korekcji cfo, przecież przekazuję tylko wyciątą część sampli pakietu bez sync sequence, rozważyć przekazywanie całej ramki.
         self.correct_cfo ()
         if settings["log"]["debugging"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
