@@ -252,6 +252,7 @@ def add_timestamp_2_filename ( filename : str ) -> str :
 class RxPacket_v0_1_13 :
 
     samples_filtered : NDArray[ np.complex128 ]
+    packet_start_idx : np.uint32
     has_packet : bool = False
     samples_corrected : NDArray[ np.complex128 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
@@ -266,7 +267,7 @@ class RxPacket_v0_1_13 :
         payload_end_idx = len ( self.samples_filtered ) - ( CRC32_LEN_BITS * sps )
         samples_components = [ ( self.samples_filtered.real , "packet real" ) , ( self.samples_filtered.imag , "packet imag" ) , ( -self.samples_filtered.real , "packet -real" ) , ( -self.samples_filtered.imag , "packet -imag" ) ]
         for samples_component , samples_name in samples_components :
-            payload_symbols = samples_component [ : payload_end_idx : sps ]
+            payload_symbols = samples_component [ self.packet_start_idx : payload_end_idx : sps ]
             crc32_symbols = samples_component [ payload_end_idx : : sps ]
             payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
             payload_bytes = pad_bits2bytes ( payload_bits )
@@ -282,7 +283,7 @@ class RxPacket_v0_1_13 :
         # To poniższe cfo nie może zadziałać dobrze bo w samplach nie przekazuję barker13 do korekcji cfo, przecież przekazuję tylko wyciątą część sampli pakietu bez sync sequence, rozważyć przekazywanie całej ramki.
         self.correct_cfo ()
         if settings["log"]["debugging"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
-        payload_symbols = self.samples_corrected [ : payload_end_idx : sps ]
+        payload_symbols = self.samples_corrected [ self.packet_start_idx : payload_end_idx : sps ]
         crc32_symbols = self.samples_corrected [ payload_end_idx : : sps ]
         payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
         payload_bytes = pad_bits2bytes ( payload_bits )
@@ -373,7 +374,7 @@ class RxFrames_v0_1_13 :
         packet_len_start_idx = sync_sequence_end_idx
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.sps )
         crc32_start_idx = packet_len_end_idx
-        crc32_end_idx = crc32_start_idx + ( CRC32_LEN_BITS * self.sps )
+        crc32_end_idx : np.uint32 = ( crc32_start_idx + ( CRC32_LEN_BITS * self.sps ) ).astype ( np.uint32 )
 
         samples_components = [ ( self.samples_filtered.real , "sync sequence real" ) , ( self.samples_filtered.imag , "sync sequence imag" ) , ( -self.samples_filtered.real , "sync sequence -real" ) , ( -self.samples_filtered.imag , "sync sequence -imag" ) ]
         for samples_component , samples_name in samples_components :
@@ -392,7 +393,7 @@ class RxFrames_v0_1_13 :
                             add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
-                        packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
+                        packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - idx )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
