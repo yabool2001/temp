@@ -3,7 +3,7 @@
 Sekwencja uruchomienia skryptu:
 cd ~/python/temp/
 source .venv/bin/activate
-python bpsk_v0.1.6-tx.py
+python bpsk_v0.1.14-tx.py
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
@@ -16,7 +16,8 @@ import tomllib
 from modules import packet , payload_test_data as ptd , sdr
 
 if len ( sys.argv ) > 1 :
-    nob_dec15 = int ( sys.argv[ 1 ] )
+    n_o_bytes_uint16 = np.uint16 ( int ( sys.argv[ 1 ] ) )
+    n_o_repeats_uint32 = np.uint32 ( int ( sys.argv[ 2 ] ) )
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 
@@ -28,7 +29,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 plt = False
 tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
 print ( f"\n{ script_filename= } { tx_pluto= }" )
-tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( nob_dec15 ) )
+tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
 if plt :
     tx_pluto.samples.plot_symbols ( f"{script_filename} " )
     tx_pluto.samples.plot_complex_samples_filtered ( f"{script_filename} filtered samples" )
@@ -63,10 +64,8 @@ try :
         elif key == 't' :
             t.sleep ( 1 ) # anty-dubler
             print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            t_nob = np.uint16 ( 10 )
-            t_repeat = np.uint32 ( 1 )
-            tx_pluto.samples.tx_incremeant_payload_and_repeat ( nob = t_nob , repeat = t_repeat )
-            print ( f"[t] Tx.size = {t_nob} bytes with zeros payload created, incremented & repeated {t_repeat} times." )
+            tx_pluto.samples.tx_incremeant_payload_and_repeat ( n_o_bytes = n_o_bytes_uint16 , n_o_repeats = n_o_repeats_uint32 )
+            print ( f"[t] Tx.size = {n_o_bytes_uint16} bytes with zeros payload created, incremented & repeated {n_o_repeats_uint32} times." )
         elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             i = np.uint32 ( key )

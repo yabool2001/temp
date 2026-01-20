@@ -1,5 +1,4 @@
 import csv
-import logging
 import numpy as np
 import os
 import time as t
@@ -15,7 +14,9 @@ from pathlib import Path
 from scipy.signal import find_peaks
 from typing import Any
 
-np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
+np.set_printoptions ( threshold = np.inf , linewidth = np.inf ) # Ensures all array elements are displayed without truncation and prevents line wrapping for long output lines.
+
+
 script_filename = os.path.basename ( __file__ )
 
 # Wczytaj plik TOML z konfiguracją
@@ -654,19 +655,19 @@ class TxSamples_v0_1_12 :
         self.pluto_tx_ctx.tx_destroy_buffer ()
         self.pluto_tx_ctx.tx_cyclic_buffer = False
 
-    def tx_incremeant_payload_and_repeat ( self , nob : np.uint16 = 1 , repeat : np.uint32 = 1 ) -> None :
+    def tx_incremeant_payload_and_repeat ( self , n_o_bytes : np.uint16 = 1 , n_o_repeats : np.uint32 = 1 ) -> None :
         self.pluto_tx_ctx.tx_destroy_buffer ()
         self.pluto_tx_ctx.tx_cyclic_buffer = False
-        bytes = np.zeros ( nob , dtype = np.uint8 )
-        while repeat :
+        bytes = np.zeros ( n_o_bytes , dtype = np.uint8 )
+        while n_o_repeats :
             self.create_samples4pluto ( payload_bytes = bytes )
             self.pluto_tx_ctx.tx ( self.samples4pluto)
-            print ( f"\n\r{repeat}: Transmitted payload bytes: { bytes }" )
-            for i in range ( nob - 1 , -1 , -1 ) :
+            print ( f"\n\r{n_o_repeats}: Transmitted payload bytes: { bytes }" )
+            for i in range ( n_o_bytes - 1 , -1 , -1 ) :
                 bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
                 if bytes [ i ] != 0 :
                     break
-            repeat -= 1
+            n_o_repeats -= 1
         
 
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
