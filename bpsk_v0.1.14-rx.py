@@ -81,6 +81,7 @@ while ( len ( received_bytes ) < 10000 and real ) or ( not real and received_byt
         print ( f" { rx_pluto.samples.frames.samples_payloads_bytes[0]= }, { rx_pluto.samples.frames.samples_payloads_bytes.size= }" )
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto.samples.frames.samples_payloads_bytes ] )
         print ( f"{ received_bytes.size= }" )
+        if settings["log"]["debugging"] : rx_pluto.samples.analyze ( samples = rx_pluto.samples.samples_payloads )
         if packet.log_packet != "" :
             with open ( wrt_filename_log , "a" ) as wrt_file :
                 wrt_file.write ( packet.log_packet )

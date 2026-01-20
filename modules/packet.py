@@ -282,8 +282,10 @@ class RxPacket_v0_1_13 :
                 return
         # Przed dużymi zminami 
         # To poniższe cfo nie może zadziałać dobrze bo w samplach nie przekazuję barker13 do korekcji cfo, przecież przekazuję tylko wyciątą część sampli pakietu bez sync sequence, rozważyć przekazywanie całej ramki.
+        if settings["log"]["verbose_2"] : self.analyze ( samples = self.samples_filtered )
         self.correct_cfo ()
         if settings["log"]["debugging"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
+        if settings["log"]["verbose_2"] : self.analyze ( samples = self.samples_corrected )
         payload_symbols = self.samples_corrected [ self.packet_start_idx : payload_end_idx : sps ]
         crc32_symbols = self.samples_corrected [ payload_end_idx : : sps ]
         payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
@@ -303,6 +305,9 @@ class RxPacket_v0_1_13 :
     def plot_complex_samples_filtered_and_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"{title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def analyze ( self , samples ) -> None :
+        sdr.analyze_rx_signal ( samples )
 
     def __repr__ ( self ) -> str :
         return (
@@ -483,6 +488,9 @@ class RxSamples_v0_1_13 :
             f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
         )
 
+    def analyze ( self ) -> None :
+        sdr.analyze_rx_signal ( self.samples )
+
     def clip_samples ( self , start : np.uint32 , end : np.uint32 ) -> None :
         if start < 0 or end > ( self.samples.size - 1 ) :
             raise ValueError ( "Start must be >= 0 & end <= samples length" )
@@ -662,7 +670,7 @@ class TxSamples_v0_1_12 :
         while n_o_repeats :
             self.create_samples4pluto ( payload_bytes = bytes )
             self.pluto_tx_ctx.tx ( self.samples4pluto)
-            print ( f"\n\r{n_o_repeats}: Transmitted payload bytes: { bytes }" )
+            print ( f"\n\r  { n_o_repeats }: Transmitted payload bytes: { bytes }" )
             for i in range ( n_o_bytes - 1 , -1 , -1 ) :
                 bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
                 if bytes [ i ] != 0 :

@@ -31,10 +31,10 @@ tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
 if plt :
-    tx_pluto.samples.plot_symbols ( f"{script_filename} " )
-    tx_pluto.samples.plot_complex_samples_filtered ( f"{script_filename} filtered samples" )
-    tx_pluto.samples.plot_complex_samples4pluto ( f"{script_filename} samples4pluto" )
-    tx_pluto.samples.plot_samples_spectrum ( f"{script_filename} samples4pluto" )
+    tx_pluto.samples.plot_symbols ( f"{ script_filename } " )
+    tx_pluto.samples.plot_complex_samples_filtered ( f"{ script_filename } filtered samples" )
+    tx_pluto.samples.plot_complex_samples4pluto ( f"{ script_filename } samples4pluto" )
+    tx_pluto.samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
 
 stdscr = curses.initscr ()
 curses.noecho ()
@@ -48,33 +48,32 @@ try :
         key = stdscr.getkey ()
         if key ==  'o' :
             t.sleep ( 1 )  # anty-dubler
-            tx_pluto.samples.tx ()
-            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( f"[o] {tx_pluto.samples.payload_bytes[0]=} {tx_pluto.samples.payload_bytes.size=} sent!" )
+            print ( f"\n\r[o] Please, press '1' to send packet once." )
         elif key == 'c' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.samples.tx_cyclic ()
-            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( f"[c] Tx cyclic started for {tx_pluto.samples.payload_bytes[0]=} {tx_pluto.samples.payload_bytes.size=}." )
+            print ( f"\n\r[c] Tx cyclic started for { tx_pluto.samples.payload_bytes[0]= } { tx_pluto.samples.payload_bytes.size= }." )
+            print ( f"\n\r { tx_pluto.pluto_tx_ctx.tx_cyclic_buffer= }" )
         elif key == 's' :
             t.sleep ( 1 ) # anty-dubler
             tx_pluto.samples.stop_tx_cyclic ()
-            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
-            print ( "[s] Tx cyclic stopped" )
+            print ( "\n\r[s] Tx cyclic stopped" )
+            print ( f"\n\r { tx_pluto.pluto_tx_ctx.tx_cyclic_buffer= }" )
         elif key == 't' :
             t.sleep ( 1 ) # anty-dubler
-            print ( f"\n{tx_pluto.pluto_tx_ctx.tx_cyclic_buffer=}" )
+            print ( f"\n\r{ tx_pluto.pluto_tx_ctx.tx_cyclic_buffer= }" )
             tx_pluto.samples.tx_incremeant_payload_and_repeat ( n_o_bytes = n_o_bytes_uint16 , n_o_repeats = n_o_repeats_uint32 )
-            print ( f"[t] Tx.size = {n_o_bytes_uint16} bytes with zeros payload created, incremented & repeated {n_o_repeats_uint32} times." )
+            print ( f"\n\r[t] Tx.size = { n_o_bytes_uint16 } bytes with zeros payload created, incremented & repeated { n_o_repeats_uint32 } times." )
+            tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
         elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             i = np.uint32 ( key )
             if i % 2 == 0 :
                 i = i * 5
-                print ( f"Notice: Odd number multiplied by 5." )
+                print ( f"\n\rNotice: Odd number multiplied by 5." )
             tx_pluto.samples.tx ( repeat = i )
-            print ( f"{tx_pluto.samples.payload_bytes[0]=} {tx_pluto.samples.payload_bytes.size=} sent {i} time(s)." )
-        elif key == '\x1b':  # ESCAPE
+            print ( f"\n\r{ tx_pluto.samples.payload_bytes[0]= } { tx_pluto.samples.payload_bytes.size= } sent { i } time(s)." )
+        elif key == '\x1b' :  # ESCAPE
             tx_pluto.samples.stop_tx_cyclic ()
             break
         t.sleep ( 0.05 )  # odciążenie CPU

@@ -34,32 +34,6 @@ GAIN_CONTROL = pluto[ "GAIN_CONTROL" ]
 SAMPLES_BUFFER_SIZE = int ( pluto[ "SAMPLES_BUFFER_SIZE" ] )
 PLUTO_DAC_SCALE = 16384  # precomputed value of 2**14 for slight performance gain. The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
 
-
-@dataclass ( slots = True , eq = False )
-class TxSamples :
-    """
-    Wrapper for BPSK symbols -> TX samples pipeline.
-    Accepts BPSK symbols (0/1 or ±1) as np.complex128 array input to the constructor.
-    Applies the TX RRC filter (`filters.apply_tx_rrc_filter_v0_1_5`) to produce the waveform samples and stores them as `np.complex128`.
-    scale_to_pluto_dac() always performs in-place scaling and clipping of `self.samples` to Pluto DAC
-    """
-    symbols: NDArray[ np.complex128 ]
-    samples: NDArray[ np.complex128 ] = field ( init = False , repr = False )
-    
-    def __post_init__ ( self ) -> None :
-        self.samples = np.ravel (
-            filters.apply_tx_rrc_filter_v0_1_6 ( self.symbols)
-        ).astype ( np.complex128 , copy = False )
-        self.scale_to_pluto_dac ()
-
-    def scale_to_pluto_dac ( self ) -> None : # None, because In-place modification
-        # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
-        self.samples *= PLUTO_DAC_SCALE
-        np.clip ( self.samples, -PLUTO_DAC_SCALE, PLUTO_DAC_SCALE, out = self.samples )
-
-    def __repr__( self ) -> str:
-        return f"TxSamples ( samples.shape = { self.samples.shape }, dtype={ self.samples.dtype } )"
-
 def init_pluto_v0_1_9 ( sn : str) :
     uri = get_uri ( sn )
     if uri is None:
@@ -81,126 +55,12 @@ def init_pluto_v0_1_9 ( sn : str) :
     if settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     return sdr
 
-def init_pluto_v3 ( sn : str) :
-    uri = get_uri ( sn )
-    sdr = adi.Pluto ( uri )
-    sdr.tx_lo = F_C
-    sdr.rx_lo = F_C
-    sdr.sample_rate = F_S
-    sdr.rx_rf_bandwidth = BW
-    sdr.rx_buffer_size = SAMPLES_BUFFER_SIZE
-    sdr.tx_hardwaregain_chan0 = TX_GAIN
-    sdr.gain_control_mode_chan0 = GAIN_CONTROL
-    sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
-    sdr.rx_output_type = "SI"
-    sdr.tx_destroy_buffer ()
-    sdr.tx_cyclic_buffer = False
-    time.sleep ( 0.2 ) #delay after setting device parameters
-    print ( "SDR initialized:" )
-    if settings["log"]["verbose_0"] : print ( f"{sn=} {F_C=} {BW=} {F_S=}" )
-    if settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
-    return sdr
+def scale_to_pluto_dac_v0_1_11 ( samples : NDArray[ np.complex128 ] , scale : float = 1.0 ) -> NDArray[ np.complex128 ] : # None, because In-place modification
+    # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
+    samples_scaled = samples * PLUTO_DAC_SCALE * scale
+    #return np.clip ( samples_scaled, -PLUTO_DAC_SCALE, PLUTO_DAC_SCALE, out = samples_scaled )
+    return samples_scaled
 
-
-def init_pluto_v2 ( uri , f_c , f_s , bw , tx_gain) :
-    sdr = adi.Pluto ( uri )
-    sdr.tx_lo = int ( f_c )
-    sdr.rx_lo = int ( f_c )
-    sdr.sample_rate = int ( f_s )
-    sdr.rx_rf_bandwidth = int ( bw )
-    sdr.rx_buffer_size = int ( SAMPLES_BUFFER_SIZE )
-    sdr.tx_hardwaregain_chan0 = float ( tx_gain )
-    sdr.gain_control_mode_chan0 = GAIN_CONTROL
-    sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
-    sdr.rx_output_type = "SI"
-    #sdr.tx_destroy_buffer ()
-    #sdr.tx_cyclic_buffer = False
-    time.sleep ( 0.2 ) #delay after setting device parameters
-    return sdr
-
-def init_pluto ( uri , f_c , f_s , bw ) :
-    sdr = adi.Pluto ( uri )
-    sdr.tx_lo = int ( f_c )
-    sdr.rx_lo = int ( f_c )
-    sdr.sample_rate = int ( f_s )
-    sdr.rx_rf_bandwidth = int ( bw )
-    sdr.rx_buffer_size = int ( SAMPLES_BUFFER_SIZE )
-    sdr.tx_hardwaregain_chan0 = float ( TX_GAIN )
-    sdr.gain_control_mode_chan0 = GAIN_CONTROL
-    sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
-    sdr.rx_output_type = "SI"
-    sdr.tx_destroy_buffer ()
-    sdr.tx_cyclic_buffer = False
-    time.sleep ( 0.2 ) #delay after setting device parameters
-    return sdr
-
-def tx_once_v0_1_6 ( samples , sdr ) :
-    sdr.tx_destroy_buffer ()
-    sdr.tx_cyclic_buffer = False
-    sdr.tx ( samples )
-    if settings["log"]["verbose_0"] : print ( f"[t] Sample sent!" )
-
-def tx_cyclic_v0_1_6 ( samples , sdr ) :
-    sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
-    sdr.tx_cyclic_buffer = True
-    sdr.tx ( samples )
-    if settings["log"]["verbose_0"] : print ( f"[c] Tx cyclic started..." )
-
-def tx_once ( samples , sdr ) :
-    sdr.tx_destroy_buffer ()
-    sdr.tx_cyclic_buffer = False
-    sdr.tx ( scale_to_pluto_dac ( samples ) )
-    if settings["log"]["verbose_0"] : print ( f"[s] Sample sent!" )
-    if settings["log"]["verbose_1"] : plot.complex_waveform ( samples , script_filename + f" {samples.size=}" , True )
-    if settings["log"]["verbose_1"] : plot.spectrum_occupancy ( samples , 1024 , script_filename + f" {samples.size=}" )
-
-def tx_cyclic ( samples , sdr ) :
-    sdr.tx_destroy_buffer () # Dodałem to w wersji ok. v0.1.1 ale nie wiem czy to dobrze
-    sdr.tx_cyclic_buffer = True
-    sdr.tx ( scale_to_pluto_dac ( samples ) )
-    if settings["log"]["verbose_0"] : print ( f"[c] Tx cyclic started..." )
-    if settings["log"]["verbose_1"] : plot.complex_waveform ( samples , script_filename + f" {samples.size=}" , True )
-    if settings["log"]["verbose_1"] : plot.spectrum_occupancy ( samples , 1024 , script_filename + f" {samples.size=}" )
-
-def stop_tx_cyclic ( sdr ) :
-    sdr.tx_destroy_buffer ()
-    sdr.tx_cyclic_buffer = False
-    print ( f"{sdr.tx_cyclic_buffer=}" )
-    print ( "[s] Tc cyclic stopped" )
-
-def rx_samples ( sdr ) :
-    return sdr.rx ()
-
-def analyze_rx_signal ( samples ) :
-    # Real vs Imag plot
-    real = samples.real[:500]
-    imag = samples.imag[:500]
-    fig1 = px.line(y=[real, imag], title="Real vs Imag")
-    fig1.update_traces(name='Real', selector=dict(name='0'))
-    fig1.update_traces(name='Imag', selector=dict(name='1'))
-    fig1.update_layout(showlegend=True, xaxis_showgrid=True, yaxis_showgrid=True)
-    fig1.show()
-
-    # Constellation plot
-    fig2 = px.scatter(x=samples.real, y=samples.imag, opacity=0.3, title="Constellation")
-    fig2.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
-    fig2.show()
-
-    # Histogram amplitudy
-    fig3 = px.histogram(x=np.abs(samples), nbins=100, title="Histogram amplitudy")
-    fig3.show()
-"""
-def analyze_rx_signal_old ( samples ) :
-    plt.plot(samples.real[:500])
-    plt.plot(samples.imag[:500])
-    plt.title("Real vs Imag")
-    plt.grid()
-    plt.scatter(samples.real, samples.imag, alpha=0.3)
-    plt.axis('equal')
-    plt.title("Constellation")
-    plt.hist(np.abs(samples), bins=100)
-    plt.title("Histogram amplitudy")
-"""
 def get_uri ( serial: str , type_preference: str = "usb" ) -> str | None :
     """
     Zwraca URI kontekstu IIO dla danego numeru seryjnego.
@@ -265,13 +125,33 @@ def validate_samples ( samples: np.ndarray , buffer_size ) :
 
     return validation
 
-def scale_to_pluto_dac_v0_1_11 ( samples : NDArray[ np.complex128 ] , scale : float = 1.0 ) -> NDArray[ np.complex128 ] : # None, because In-place modification
-        # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
-        samples_scaled = samples * PLUTO_DAC_SCALE * scale
-        #return np.clip ( samples_scaled, -PLUTO_DAC_SCALE, PLUTO_DAC_SCALE, out = samples_scaled )
-        return samples_scaled
+def analyze_rx_signal ( samples ) :
+    # Real vs Imag plot
+    real = samples.real[:500]
+    imag = samples.imag[:500]
+    fig1 = px.line(y=[real, imag], title="Real vs Imag")
+    fig1.update_traces(name='Real', selector=dict(name='0'))
+    fig1.update_traces(name='Imag', selector=dict(name='1'))
+    fig1.update_layout(showlegend=True, xaxis_showgrid=True, yaxis_showgrid=True)
+    fig1.show()
 
-def scale_to_pluto_dac ( samples : NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] : # None, because In-place modification
-        # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
-        samples *= PLUTO_DAC_SCALE
-        return np.clip ( samples, -PLUTO_DAC_SCALE, PLUTO_DAC_SCALE, out = samples )
+    # Constellation plot
+    fig2 = px.scatter(x=samples.real, y=samples.imag, opacity=0.3, title="Constellation")
+    fig2.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
+    fig2.show()
+
+    # Histogram amplitudy
+    fig3 = px.histogram(x=np.abs(samples), nbins=100, title="Histogram amplitudy")
+    fig3.show()
+"""
+def analyze_rx_signal_old ( samples ) :
+    plt.plot(samples.real[:500])
+    plt.plot(samples.imag[:500])
+    plt.title("Real vs Imag")
+    plt.grid()
+    plt.scatter(samples.real, samples.imag, alpha=0.3)
+    plt.axis('equal')
+    plt.title("Constellation")
+    plt.hist(np.abs(samples), bins=100)
+    plt.title("Histogram amplitudy")
+"""
