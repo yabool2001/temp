@@ -15,23 +15,21 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
-with open ( "settings.json" , "r" ) as settings_file :
-    settings = json.load ( settings_file )
-    pluto = settings[ "ADALM-Pluto" ]
+#with open ( "settings.json" , "r" ) as settings_file :
+#    settings = json.load ( settings_file )
+#    pluto = settings[ "ADALM-Pluto" ]
 
 PLUTO_TX_SN = toml_settings["ADALM-Pluto"]["URI"]["SN_TX"]
 PLUTO_RX_SN = toml_settings["ADALM-Pluto"]["URI"]["SN_RX"]
 
-TX_SN = pluto[ "URI" ][ "SN_TX" ]
-RX_SN = pluto[ "URI" ][ "SN_RX" ]
-F_C = int ( pluto[ "F_C" ] )    # Carrier frequency [Hz]
-BW  = int ( pluto[ "BW" ] )     # BandWidth [Hz]
+F_C = int ( toml_settings["ADALM-Pluto"][ "F_C" ] )    # Carrier frequency [Hz]
+BW  = int ( toml_settings["ADALM-Pluto"][ "BW" ] )     # BandWidth [Hz]
 #F_S = 521100     # Sampling frequency [Hz] >= 521e3 && <
 F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 ) # Sampling frequency [Hz]
-TX_GAIN = float ( pluto[ "TX_GAIN" ] )
-RX_GAIN = int ( pluto[ "RX_GAIN" ] )
-GAIN_CONTROL = pluto[ "GAIN_CONTROL" ]
-SAMPLES_BUFFER_SIZE = int ( pluto[ "SAMPLES_BUFFER_SIZE" ] )
+TX_GAIN = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
+RX_GAIN = int ( toml_settings["ADALM-Pluto"][ "RX_GAIN" ] )
+GAIN_CONTROL = toml_settings["ADALM-Pluto"][ "GAIN_CONTROL" ]
+SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 PLUTO_DAC_SCALE = 16384  # precomputed value of 2**14 for slight performance gain. The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
 
 def init_pluto_v0_1_9 ( sn : str) :
@@ -51,8 +49,8 @@ def init_pluto_v0_1_9 ( sn : str) :
     sdr.tx_destroy_buffer ()
     sdr.tx_cyclic_buffer = False
     time.sleep ( 0.2 ) #delay after setting device parameters
-    if settings["log"]["verbose_0"] : print ( f"{sn=} {F_C=} {BW=} {F_S=}" )
-    if settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
+    if toml_settings["log"]["verbose_0"] : print ( f"{sn=} {F_C=} {BW=} {F_S=}" )
+    if toml_settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     return sdr
 
 def scale_to_pluto_dac_v0_1_11 ( samples : NDArray[ np.complex128 ] , scale : float = 1.0 ) -> NDArray[ np.complex128 ] : # None, because In-place modification
