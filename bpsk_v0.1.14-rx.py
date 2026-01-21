@@ -32,7 +32,6 @@ Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 #filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
 samples_filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
 #filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
-
         
 wrt_filename_npy = "np.samples/rx_samples_last.npy"
 wrt_filename_csv = "samples.csv/rx_samples_last.csv"
