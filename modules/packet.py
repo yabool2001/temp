@@ -16,7 +16,6 @@ from typing import Any
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf ) # Ensures all array elements are displayed without truncation and prevents line wrapping for long output lines.
 
-
 script_filename = os.path.basename ( __file__ )
 
 # Wczytaj plik TOML z konfiguracją
