@@ -34,7 +34,7 @@ BETA = 0.35                         # roll-off factor default = 0.35
 SPAN = 11                           # filter span in symbols
 
 [log]
-debugging = 1
+debugging = 0
 verbose_0 = 1
 verbose_1 = 1
 verbose_2 = 0
