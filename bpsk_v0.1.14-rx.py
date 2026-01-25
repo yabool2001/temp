@@ -25,13 +25,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
-#filename = "np.samples/rx_samples_0.1.7_02_32768.npy"
-#filename = "np.samples/rx_samples_0.1.8_08_1s_sat.npy"
-#filename = "np.samples/rx_samples_0.1.8_11_1s_sat.npy"
-#filename = "np.samples/rx_samples_0.1.8_13_1s_sat.npy"
-#filename = "np.samples/rx_samples_0.1.8_15_c_mode.npy"
-samples_filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
-#filename = "np.samples/rx_samples_0.1.8_17_c_mode_full.npy"
+samples_filename = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
+#samples_filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
         
 wrt_filename_npy = "np.samples/rx_samples_last.npy"
 wrt_filename_csv = "samples.csv/rx_samples_last.csv"
@@ -44,8 +39,8 @@ with open ( wrt_filename_log , "w" ) as wrt_file :
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
-real = True
-wrt = True
+real = False
+wrt = False
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_13 ( sn = sdr.PLUTO_RX_SN )
