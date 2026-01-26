@@ -97,7 +97,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
-    plt = False
+    plt = True
     wrt = False
     base_path = Path ( "logs/correlation_results.csv" )
     min_peak_height_ratio = 0.8
@@ -163,39 +163,26 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
     peaks_all = np.concatenate ( ( peaks_all , peaks_abs ) ).astype ( np.uint32 )
 
     if plt and peaks_all.size > 0 :
-        if peaks_all.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_real , f"corr real {samples.size=}" , False , peaks_real )
-            plot.real_waveform_v0_1_6 ( samples.real , f"samples real {samples.size=}" , False , peaks_real )
+        if peaks.size > 0 :
+            plot.real_waveform_v0_1_6 ( corr_norm , f"corr_norm {corr_norm.size=}" , False , peaks )
+            plot.complex_waveform_v0_1_6 ( samples , f"samples real {samples.size=}" , False , peaks )
         if peaks_real.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_real , f"corr real {samples.size=}" , False , peaks_real )
-            plot.real_waveform_v0_1_6 ( samples.real , f"samples real {samples.size=}" , False , peaks_real )
+            plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=}" , False , peaks_real )
+            plot.real_waveform_v0_1_6 ( samples.real , f"samples real {samples.real.size=}" , False , peaks_real )
         if peaks_neg_real.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_neg_real , f"corr neg real {samples.size=}" , False , peaks_neg_real )
-            plot.real_waveform_v0_1_6 ( -samples.real , f"samples neg real {samples.size=}" , False , peaks_neg_real )
+            plot.real_waveform_v0_1_6 ( corr_neg_real_norm , f"corr_neg_real_norm {corr_neg_real_norm.size=}" , False , peaks_neg_real )
+            plot.real_waveform_v0_1_6 ( -samples.real , f"samples neg real {samples.real.size=}" , False , peaks_neg_real )
         if peaks_imag.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_imag , f"corr imag {samples.size=}" , False , peaks_imag )
-            plot.real_waveform_v0_1_6 ( samples.imag , f"samples imag {samples.size=}" , False , peaks_imag )
+            plot.real_waveform_v0_1_6 ( corr_imag_norm , f"corr_imag_norm {corr_imag_norm.size=}" , False , peaks_imag )
+            plot.real_waveform_v0_1_6 ( samples.imag , f"samples imag {samples.imag.size=}" , False , peaks_imag )
         if peaks_neg_imag.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_neg_imag , f"corr neg imag {samples.size=}" , False , peaks_neg_imag )
-            plot.real_waveform_v0_1_6 ( -samples.imag , f"samples neg imag {samples.size=}" , False , peaks_neg_imag )
+            plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=}" , False , peaks_neg_imag )
+            plot.real_waveform_v0_1_6 ( -samples.imag , f"samples neg imag {samples.imag.size=}" , False , peaks_neg_imag )
         if peaks_abs.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_abs , f"corr abs {samples.size=}" , False , peaks_abs )
+            plot.real_waveform_v0_1_6 ( corr_abs_norm , f"corr_abs_norm {corr_abs_norm.size=}" , False , peaks_abs )
             plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=}" , False , peaks_abs )
-
-    if wrt and peaks_all.size > 0 :
-        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
-        with open ( filename , 'w' , newline='' ) as csvfile :
-            fieldnames = ['corr', 'peak_idx', 'peak_val']
-            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
-            writer.writeheader ()
-            for idx in peaks_abs :
-                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
-            for idx in peaks_real :
-                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
-            for idx in peaks_imag :
-                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
-            for idx in peaks :
-                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+        if peaks_all.size > 0 :
+            plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=}" , False , peaks_all )
 
     return peaks_all
 
