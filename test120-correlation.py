@@ -44,31 +44,52 @@ scenarios = [
 def my_correlation ( scenario : dict ) -> None :
 
     corr_2_amp_min_ratio = 12.0
-    min_peak_height_ratio = 0.4  # Ten cudowanie pokazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
+    min_peak_height_ratio = 0.75  # Ten cudowanie pokazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
 
-    samples : NDArray[ np.float64 ] = scenario["samples"]
     sync_sequence : NDArray[ np.float64 ] = scenario["sync_sequence"]
+    samples : NDArray[ np.float64 ] = scenario["samples"]
+    samples_normalized : NDArray[ np.float64 ] = ( samples / np.max ( np.abs ( samples ) ) * 2 )
+    plot.real_waveform_v0_1_6 ( samples_normalized , f"samples normalized {scenario['name']} {samples_normalized.size=}" , False )
 
     peaks = np.array ( [] ).astype ( np.uint32 )
-    max_amplitude = np.max ( np.abs ( samples ) )
-
-    #print ( f"{max_amplitude_real=} at {max_amplitude_real_idx=}, {max_amplitude_imag=} at {max_amplitude_imag_idx=}, {max_amplitude_abs=} at {max_amplitude_abs_idx=}" )
-    #avg_amplitude = np.mean(np.abs(scenario['sample']))
-    #percentile_95 = np.percentile(np.abs(scenario['sample']), 95)
-    #rms_amplitude = np.sqrt(np.mean(np.abs(scenario['sample'])**2))
+    peaks_normalized = np.array ( [] ).astype ( np.uint32 )
+    peaks_normalized2 = np.array ( [] ).astype ( np.uint32 )
 
     corr = np.correlate ( samples , sync_sequence , mode = "valid" )
+    corr_normalized = np.correlate ( samples_normalized , sync_sequence , mode = "valid" )
+
+    # Obliczamy lokalną energię sygnału (sliding sum of squares)
+    # Splot kwadratów sygnału z oknem z samych jedynek daje sumę energii w oknie
+    ones = np.ones(len(sync_sequence))
+    local_energy = np.correlate(samples**2, ones, mode="valid")
+    # Obliczamy normy do mianownika
+    # Norma sekwencji synchronizacyjnej (stała skalarna)
+    sync_seq_norm = np.linalg.norm(sync_sequence)
+    # Lokalna norma sygnału (wektor o długości wyniku korelacji)
+    # Dodajemy epsilon (np. 1e-10) lub maximum, aby uniknąć dzielenia przez zero w ciszy
+    local_signal_norm = np.sqrt(np.maximum(local_energy, 1e-10))
+    # Wynik znormalizowany (wartości teoretycznie od -1.0 do 1.0)
+    corr_normalized2 = corr / (local_signal_norm * sync_seq_norm)
+    max_amplitude_normalized2 = np.max ( np.abs ( corr_normalized2 ) )
 
     max_peak_val = np.max ( corr )
-    print (f"{max_peak_val=}, {max_amplitude=}, {scenario['name']=}, {scenario['desc']=}")
-
-    corr_2_amp = max_peak_val / max_amplitude
+    max_peak_val_normalized = np.max ( corr_normalized )
+    max_peak_val_normalized2 = np.max ( corr_normalized2 )
+    print ( f"{max_peak_val=}, {max_peak_val_normalized=}, {max_peak_val_normalized2=}" )
 
     peaks , _ = find_peaks ( corr , height = max_peak_val * min_peak_height_ratio )
+    peaks_normalized , _ = find_peaks ( corr_normalized , height = max_peak_val_normalized * min_peak_height_ratio )
+    peaks_normalized2 , _ = find_peaks ( corr_normalized2 , height = max_peak_val_normalized2 * min_peak_height_ratio )
 
-    plot.real_waveform_v0_1_6 ( corr , f"corr {scenario['name']} {samples.size=}" , False , peaks )
+    plot.real_waveform_v0_1_6 ( corr , f"corr {scenario['name']} {corr.size=}" , False , peaks )
     plot.real_waveform_v0_1_6 ( samples , f"samples corr {scenario['name']} {samples.size=}" , False , peaks )
+    plot.real_waveform_v0_1_6 ( corr_normalized , f"corr {scenario['name']} {corr_normalized.size=}" , False , peaks_normalized )
+    plot.real_waveform_v0_1_6 ( samples , f"samples normalized {scenario['name']} {samples.size=}" , False , peaks_normalized)
+    plot.real_waveform_v0_1_6 ( corr_normalized2 , f"corr normalized2 {scenario['name']} {corr_normalized2.size=}" , False , peaks_normalized2 )
+    plot.real_waveform_v0_1_6 ( samples , f"samples normalized {scenario['name']} {samples.size=}" , False , peaks_normalized2)
 
-for scenario in scenarios :
-    has_sync = my_correlation ( scenario )
+
+my_correlation ( scenarios[4] )
+#for scenario in scenarios :
+#    my_correlation ( scenario )
 
