@@ -55,6 +55,7 @@ def my_correlation ( scenario : dict ) -> None :
     corr = np.correlate ( samples , sync_sequence , mode = "valid" )
 
     max_peak_val = np.max ( corr )
+    print (f"{max_peak_val=}, {max_amplitude=}, {scenario['name']=}, {scenario['desc']=}")
 
     corr_2_amp = max_peak_val / max_amplitude
 
