@@ -104,7 +104,7 @@ def detect_sync_sequence_peaks_v0_1_11  ( samples: NDArray[ np.complex128 ] , sy
     corr_2_amp_min_ratio = 12.0
     #min_peak_height_ratio = 0.6  # Required minimal height of peaks in find_peaks
     #min_peak_height_ratio = 0.5  # Działa ale za dużo plot wyświetla ale niby print liczy dobrze liczbę bajtów payload
-    min_peak_height_ratio = 0.4  # Ten cudowanie opkazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
+    min_peak_height_ratio = 0.4  # Ten cudowanie pokazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
     
     peaks = np.array ( [] ).astype ( np.uint32 )
     peaks_real = np.array ( [] ).astype ( np.uint32 )
