@@ -97,7 +97,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
 
-    plt = True
+    plt = False
     min_peak_height_ratio = 0.8
     
     peaks_real = np.array ( [] ).astype ( np.uint32 )
@@ -142,34 +142,26 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
     max_peak_abs_val = np.max ( corr_abs_norm )
 
     peaks_real , _ = find_peaks ( corr_real_norm , height = max_peak_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_all = np.concatenate ( ( peaks_all , peaks_real ) ).astype ( np.uint32 )
     peaks_neg_real , _ = find_peaks ( corr_neg_real_norm , height = max_peak_neg_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_all = np.concatenate ( ( peaks_all , peaks_neg_real ) ).astype ( np.uint32 )
     peaks_imag , _ = find_peaks ( corr_imag_norm , height = max_peak_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_all = np.concatenate ( ( peaks_all , peaks_imag ) ).astype ( np.uint32 )
     peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = max_peak_neg_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_all = np.concatenate ( ( peaks_all , peaks_neg_imag ) ).astype ( np.uint32 )
+    peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
     peaks_abs , _ = find_peaks ( corr_abs_norm , height = max_peak_abs_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_all = np.concatenate ( ( peaks_all , peaks_abs ) ).astype ( np.uint32 )
 
     if plt and peaks_all.size > 0 :
         if peaks_real.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=}" , False , peaks_real )
-            plot.real_waveform_v0_1_6 ( samples.real , f"samples real {samples.size=}" , False , peaks_real )
+            plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=} {peaks_real.size=}" , False , peaks_real )
         if peaks_neg_real.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_neg_real_norm , f"corr_neg_real_norm {corr_neg_real_norm.size=}" , False , peaks_neg_real )
-            plot.real_waveform_v0_1_6 ( -samples.real , f"samples neg real {samples.size=}" , False , peaks_neg_real )
+            plot.real_waveform_v0_1_6 ( corr_neg_real_norm , f"corr_neg_real_norm {corr_neg_real_norm.size=} {peaks_neg_real.size=}" , False , peaks_neg_real )
         if peaks_imag.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_imag_norm , f"corr_imag_norm {corr_imag_norm.size=}" , False , peaks_imag )
-            plot.real_waveform_v0_1_6 ( samples.imag , f"samples imag {samples.size=}" , False , peaks_imag )
+            plot.real_waveform_v0_1_6 ( corr_imag_norm , f"corr_imag_norm {corr_imag_norm.size=} {peaks_imag.size=}" , False , peaks_imag )
         if peaks_neg_imag.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=}" , False , peaks_neg_imag )
-            plot.real_waveform_v0_1_6 ( -samples.imag , f"samples neg imag {samples.size=}" , False , peaks_neg_imag )
-        if peaks_abs.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_abs_norm , f"corr_abs_norm {corr_abs_norm.size=}" , False , peaks_abs )
-            plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=}" , False , peaks_abs )
+            plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=} {peaks_neg_imag.size=}" , False , peaks_neg_imag )
         if peaks_all.size > 0 :
-            plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=}" , False , peaks_all )
+            plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=} {peaks_all.size=}" , False , peaks_all )
+        if peaks_abs.size > 0 :
+            plot.real_waveform_v0_1_6 ( corr_abs_norm , f"corr_abs_norm {corr_abs_norm.size=} {peaks_abs.size=}" , False , peaks_abs )
+            plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=} {peaks_abs.size=}" , False , peaks_abs )
     '''
     if wrt and sync:
         filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
@@ -186,6 +178,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
             for idx in peaks :
                 writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
     '''
+    peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks_abs ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
     return peaks_all
 
 def gen_bits ( bytes ) :
