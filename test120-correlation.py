@@ -44,7 +44,7 @@ scenarios = [
 def my_correlation ( scenario : dict ) -> None :
 
     corr_2_amp_min_ratio = 12.0
-    min_peak_height_ratio = 0.75  # Ten cudowanie pokazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
+    min_peak_height_ratio = 0.8  # Ten cudowanie pokazuje liczbę sampli na plot i chyba też dobrą w print liczbę bajtów!!!
 
     sync_sequence : NDArray[ np.float64 ] = scenario["sync_sequence"]
     samples : NDArray[ np.float64 ] = scenario["samples"]
@@ -58,6 +58,20 @@ def my_correlation ( scenario : dict ) -> None :
     corr = np.correlate ( samples , sync_sequence , mode = "valid" )
     corr_normalized = np.correlate ( samples_normalized , sync_sequence , mode = "valid" )
 
+    '''Znormalizowaną Korelacją Wzajemną (Normalized Cross-Correlation).
+    Pozwala ono na wykrywanie wzorca (sekwencji synchronizacyjnej) nawet w fragmentach sygnału o bardzo niskiej amplitudzie,
+    ponieważ każda "karetka" korelacji jest dzielona przez energię sygnału znajdującego się aktualnie w oknie.
+
+    Zalety tego rozwiązania:
+
+    Odporność na zmiany amplitudy: Wykryjesz sekwencję tak samo dobrze, gdy sygnał jest bardzo cichy,
+    jak i gdy jest bardzo głośny (w ramach tego samego pliku samples).
+    Stały próg detekcji: Możesz ustawić próg height w find_peaks na stałą wartość, np. 0.8 (oznaczającą 80% podobieństwa kształtu),
+    bez zgadywania amplitudy.
+
+    Funkcja np.correlate nie ma wbudowanej opcji "lokalnej normalizacji", ale można ją bardzo szybko obliczyć "na boku",
+    wykorzystując trick z drugą korelacją (filtrem średniej ruchomej) na kwadratach próbek. Poniżej znajduje się implementacja tego podejścia.
+    '''
     # Obliczamy lokalną energię sygnału (sliding sum of squares)
     # Splot kwadratów sygnału z oknem z samych jedynek daje sumę energii w oknie
     ones = np.ones(len(sync_sequence))
