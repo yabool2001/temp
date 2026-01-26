@@ -8,32 +8,37 @@ import csv
 
 script_filename = os.path.basename ( __file__ )
 
-plt = True
+plt = False
 
 filename_sync_sequence = "correlation/test120_sync_sequence.npy"
 filename_samples_1_npy = "correlation/test120_samples_1.npy"
 filename_samples_2_npy = "correlation/test120_samples_2.npy"
 filename_samples_3_npy = "correlation/test120_samples_3.npy"
 filename_samples_4_npy = "correlation/test120_samples_4.npy"
+filename_samples_2_1_3_4_npy = "correlation/test120_samples_2_1_3_4.npy"
+
 
 sync_sequence = ops_file.open_real_float64_samples_from_npf ( filename_sync_sequence )
 samples_1 = ops_file.open_real_float64_samples_from_npf ( filename_samples_1_npy )
 samples_2  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_npy )
 samples_3  = ops_file.open_real_float64_samples_from_npf ( filename_samples_3_npy )
 samples_4  = ops_file.open_real_float64_samples_from_npf ( filename_samples_4_npy )
+samples_2_1_3_4  = ops_file.open_real_float64_samples_from_npf ( filename_samples_2_1_3_4_npy )
 
 if plt :
-    plot.real_waveform_v0_1_6 ( sync_sequence , f"{sync_sequence.size=}" , True )
-    plot.real_waveform_v0_1_6 ( samples_1 , f"{samples_1.size=}" , True )
-    plot.real_waveform_v0_1_6 ( samples_2 , f"{samples_2.size=}" , True )
-    plot.real_waveform_v0_1_6 ( samples_3 , f"{samples_3.size=}" , True )
-    plot.real_waveform_v0_1_6 ( samples_4 , f"{samples_4.size=}" , True )
+    plot.real_waveform_v0_1_6 ( sync_sequence , f"{sync_sequence.size=}" , False )
+    plot.real_waveform_v0_1_6 ( samples_1 , f"{samples_1.size=}" , False )
+    plot.real_waveform_v0_1_6 ( samples_2 , f"{samples_2.size=}" , False )
+    plot.real_waveform_v0_1_6 ( samples_3 , f"{samples_3.size=}" , False )
+    plot.real_waveform_v0_1_6 ( samples_4 , f"{samples_4.size=}" , False )
+    plot.real_waveform_v0_1_6 ( samples_2_1_3_4 , f"{samples_2_1_3_4.size=}" , False )
 
 scenarios = [
     { "name" : "samples_1" , "desc" : "identicall" , "samples" : samples_1 , "sync_sequence" : sync_sequence } ,
     { "name" : "samples_2" , "desc" : "amplitude x 10" , "samples" : samples_2 , "sync_sequence" : sync_sequence } ,
     { "name" : "samples_3" , "desc" : "1 position different" , "samples" : samples_3 , "sync_sequence" : sync_sequence } ,
     { "name" : "samples_4" , "desc" : "amplitude x 10 and 1 position different" , "samples" : samples_4 , "sync_sequence" : sync_sequence } ,
+    { "name" : "samples_2_1_3_4" , "desc" : "combined samples 2,1,3,4" , "samples" : samples_2_1_3_4 , "sync_sequence" : sync_sequence }
 ]
 
 def my_correlation ( scenario : dict ) -> None :
