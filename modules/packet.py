@@ -188,7 +188,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
                 writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
     '''
     peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks_abs ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
-    if settings["log"]["debugging"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_1"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     return peaks_all
 
 def gen_bits ( bytes ) :
@@ -327,11 +327,13 @@ class RxFrames_v0_1_13 :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ), fast = True )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["debugging"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
+        ts = t.perf_counter_ns ()
         for idx in self.sync_sequence_peaks :
             if idx > self.last_processed_idx :
                 self.last_processed_idx = self.process_frame ( idx = idx )
                 if self.has_leftovers :
                     break
+        if settings["log"]["verbose_1"] : print(f"Detekcja {self.sync_sequence_peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
         if not self.has_leftovers :
             self.samples_leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - filters.SPAN * self.sps // 2
             self.has_leftovers = True
