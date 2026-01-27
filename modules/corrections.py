@@ -4,6 +4,13 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from scipy.signal import correlate , butter, lfilter
+from numba import jit
+import time as t
+import tomllib
+
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    settings = tomllib.load ( settings_file )
 
 def estimate_cfo_drit ( samples , f_s ) :
     N = len(samples)
@@ -51,29 +58,35 @@ def estimate_cfo_drit ( samples , f_s ) :
     estimated_cfo = freqs[peak_index]
     print ( f"{estimated_cfo=}" )
 
-def pll_v0_1_3 ( rx_samples , freq_offset_initial ) :
-
+@jit(nopython=True)
+def pll_kernel_numba(rx_samples, freq_estimate, alpha, beta):
     phase_estimate = 0.0
-    freq_estimate = freq_offset_initial
-    loop_bw = 2 * np.pi * 100 / sdr.F_S  # szerokość pasma pętli (np. 50 Hz)
-    alpha = loop_bw
-    #alpha = 0.132 # wstawiłem z costas loop z pysdr ale okazało się klapą
-    beta = alpha**2 / 4
-    #beta = 0.00932 # wstawiłem z costas loop z pysdr ale okazało się klapą
-    corrected_samples = np.zeros_like ( rx_samples , dtype = complex )
-
-    for n, sample in enumerate ( rx_samples ) :
+    corrected_samples = np.zeros_like(rx_samples)
+    
+    for n in range(len(rx_samples)):
+        sample = rx_samples[n]
         # Korekcja aktualną estymacją
-        corrected_samples[ n ] = sample * np.exp ( -1j * phase_estimate )
+        val = sample * np.exp(-1j * phase_estimate)
+        corrected_samples[n] = val
 
         # Błąd fazy z demodulowanego symbolu BPSK
-        error = np.sign ( np.real ( corrected_samples[ n ] ) ) * np.imag ( corrected_samples[ n ] )
+        # np.real zwraca float, więc np.sign działa poprawnie w Numbie
+        error = np.sign(np.real(val)) * np.imag(val)
 
         # Aktualizacja estymacji częstotliwości i fazy
         freq_estimate += beta * error
         phase_estimate += freq_estimate + alpha * error
-
+        
     return corrected_samples
+
+def pll_v0_1_3 ( rx_samples , freq_offset_initial ) :
+
+    loop_bw = 2 * np.pi * 100 / sdr.F_S  # szerokość pasma pętli (np. 50 Hz)
+    alpha = loop_bw
+    beta = alpha**2 / 4
+    
+    # Wywołanie skompilowanego kernela Numby
+    return pll_kernel_numba(rx_samples, freq_offset_initial, alpha, beta)
 
 # Korekcja offsetu fazowego:
 def correct_phase_offset ( rx_samples , preamble_samples ) :
@@ -195,7 +208,9 @@ def full_compensation_v0_1_5 ( samples , preamble_samples ) :
     sps = modulation.SPS
 
     # 1) Coarse CFO estimate and correction
+    ts = t.perf_counter_ns ()
     coarse_f = estimate_cfo_from_preamble_v0_1_5 ( samples , preamble_samples , fs, sps )
+    if settings["log"]["verbose_1"] : print(f"estimate_cfo_from_preamble_v0_1_5 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     # Apply coarse correction
     if coarse_f != 0.0 :
     # Alternative apply coarse correction: if abs(coarse_f) > 1e-12:
@@ -203,10 +218,14 @@ def full_compensation_v0_1_5 ( samples , preamble_samples ) :
         samples = samples * np.exp ( -1j * 2.0 * np.pi * coarse_f * n / fs )
 
     # 2) PLL-based fine tracking
+    ts = t.perf_counter_ns ()
     pl_corrected = pll_v0_1_3 ( samples , freq_offset_initial = 0.0 )
+    if settings["log"]["verbose_1"] : print(f"pll_v0_1_3 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
 
     # 3) Phase offset correction using preamble
+    ts = t.perf_counter_ns ()
     rx_phase_corrected = correct_phase_offset_v3 ( pl_corrected , preamble_samples )
+    if settings["log"]["verbose_1"] : print(f"correct_phase_offset_v3 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
 
     # 4) IQ imbalance compensation
     rx_final_corrected = iq_balance ( rx_phase_corrected )

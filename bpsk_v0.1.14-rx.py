@@ -25,7 +25,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
-samples_filename = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
+#samples_filename = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
+samples_filename = "np.samples/rx_samples_0.1.14_1500B_01.npy"
 #samples_filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
         
 wrt_filename_npy = "np.samples/rx_samples_last.npy"
@@ -39,7 +40,7 @@ with open ( wrt_filename_log , "w" ) as wrt_file :
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
-real = False
+real = True
 wrt = False
 
 if real :
