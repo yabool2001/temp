@@ -31,7 +31,6 @@ scenarios = [
 
 def my_correlation ( scenario : dict ) -> None :
 
-    corr_2_amp_min_ratio = 12.0
     min_peak_height_ratio = 0.8
 
     sync_sequence : NDArray[ np.float64 ] = scenario["sync_sequence"]
@@ -52,13 +51,17 @@ def my_correlation ( scenario : dict ) -> None :
     local_signal_norm = np.sqrt ( np.maximum ( local_energy , 1e-10 ) )
     corr_norm = corr / ( local_signal_norm * sync_seq_norm )
 
+    # Dodajemy próg bezwzględny dla znormalizowanej korelacji (np. 0.6).
+    # W samym szumie max korelacja jest niska (np. 0.3), więc adaptive threshold (0.8 * max)
+    # ustawiałby się na 0.24 i wykrywał szum. Wymuszenie min. 0.6 eliminuje te piki.
+    min_correlation_threshold_abs = 0.6
+    
     max_peak_val_normalized = np.max ( corr_norm )
-    peaks , _ = find_peaks ( corr_norm , height = max_peak_val_normalized * min_peak_height_ratio )
+    
+    # Próg to maksimum z (bezwzględnego minimum, relatywnego progu od piku)
+    final_threshold = max ( min_correlation_threshold_abs , max_peak_val_normalized * min_peak_height_ratio )
 
-    max_amplitude_real = np.max ( np.abs ( samples  ) )
-    max_peak_real_val = np.max ( corr_norm )
-    corr_2_amp = max_peak_real_val / max_amplitude_real
-    #if corr_2_amp > corr_2_amp_min_ratio :
+    peaks , _ = find_peaks ( corr_norm , height = final_threshold )
 
     if plt :
         plot.real_waveform_v0_1_6 ( corr_norm , f"corr normalized2 {scenario['name']} {peaks.size=} {corr_norm.size=}" , False , peaks )
