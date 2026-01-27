@@ -25,9 +25,10 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
-samples_filename = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
+#samples_filename = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
 #samples_filename = "np.samples/rx_samples_0.1.14_1500B_01.npy"
 #samples_filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
+samples_filename = "np.samples/rx_samples_0.1.15_no_samples.npy"
         
 wrt_filename_npy = "np.samples/rx_samples_last.npy"
 wrt_filename_csv = "samples.csv/rx_samples_last.csv"
@@ -81,5 +82,8 @@ while ( len ( received_bytes ) < 10000 and real ) or ( not real and received_byt
             with open ( wrt_filename_log , "a" ) as wrt_file :
                 wrt_file.write ( packet.log_packet )
             packet.log_packet = ""
-    
+
     #t.sleep ( 5 )
+
+    if not real :
+        break

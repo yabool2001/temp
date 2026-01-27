@@ -42,11 +42,12 @@ def my_correlation ( scenario : dict ) -> None :
     # musimy użyć sprzężenia (conj), inaczej korelacja będzie błędna. To bezpieczne.
     # Różnica w czasie jest pomijalna a więc zostawię conjugate
     corr = np.abs ( np.correlate ( samples , np.conj(sync_sequence) , mode = "valid" ) )
+    #corr = np.correlate ( samples , np.conj(sync_sequence) , mode = "valid" )
     #corr = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
 
     ones = np.ones ( len ( sync_sequence ) )
     # Fix: Use abs(samples)**2 for calculating energy of complex signal
-    local_energy = np.correlate ( np.abs(samples)**2 , ones , mode = "valid" )
+    local_energy = np.correlate ( np.abs ( samples )**2 , ones , mode = "valid" )
     sync_seq_norm = np.linalg.norm ( sync_sequence )
     local_signal_norm = np.sqrt ( np.maximum ( local_energy , 1e-10 ) )
     corr_norm = corr / ( local_signal_norm * sync_seq_norm )
