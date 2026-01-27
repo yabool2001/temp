@@ -95,70 +95,79 @@ PACKET_BYTE_LEN_BITS = 8
 FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
-def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] ) -> NDArray[ np.uint32 ] :
-
+def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , fast : bool = False ) -> NDArray[ np.uint32 ] :
+    
+    ts = t.perf_counter_ns ()
     plt = False
     min_peak_height_ratio = 0.8
     
-    peaks_real = np.array ( [] ).astype ( np.uint32 )
-    peaks_neg_real = np.array ( [] ).astype ( np.uint32 )
-    peaks_imag = np.array ( [] ).astype ( np.uint32 )
-    peaks_neg_imag = np.array ( [] ).astype ( np.uint32 )
-    peaks_abs = np.array ( [] ).astype ( np.uint32 )
+    if not fast :
+        peaks_real = np.array ( [] ).astype ( np.uint32 )
+        peaks_neg_real = np.array ( [] ).astype ( np.uint32 )
+        peaks_imag = np.array ( [] ).astype ( np.uint32 )
+        peaks_neg_imag = np.array ( [] ).astype ( np.uint32 )
     peaks_all = np.array ( [] ).astype ( np.uint32 )
+    peaks_abs = np.array ( [] ).astype ( np.uint32 )
 
-    corr_real = np.correlate ( samples.real , sync_sequence.real , mode = "valid" )
-    corr_neg_real = np.correlate ( -samples.real , sync_sequence.real , mode = "valid" )
-    corr_imag = np.correlate ( samples.imag , sync_sequence.real , mode = "valid" )
-    corr_neg_imag = np.correlate ( -samples.imag , sync_sequence.real , mode = "valid" )
+    if not fast :
+        corr_real = np.correlate ( samples.real , sync_sequence.real , mode = "valid" )
+        corr_neg_real = np.correlate ( -samples.real , sync_sequence.real , mode = "valid" )
+        corr_imag = np.correlate ( samples.imag , sync_sequence.real , mode = "valid" )
+        corr_neg_imag = np.correlate ( -samples.imag , sync_sequence.real , mode = "valid" )
     corr_abs = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
 
     ones = np.ones ( len ( sync_sequence ) )
     sync_seq_norm = np.linalg.norm ( sync_sequence )
     
-    local_energy_real = np.correlate ( samples.real**2 , ones , mode = "valid" )
-    local_energy_neg_real = np.correlate ( ( -samples.real )**2 , ones , mode = "valid" )
-    local_energy_imag = np.correlate ( samples.imag**2 , ones , mode = "valid" )
-    local_energy_neg_imag = np.correlate ( ( -samples.imag )**2 , ones , mode = "valid" )
+    if not fast :
+        local_energy_real = np.correlate ( samples.real**2 , ones , mode = "valid" )
+        local_energy_neg_real = np.correlate ( ( -samples.real )**2 , ones , mode = "valid" )
+        local_energy_imag = np.correlate ( samples.imag**2 , ones , mode = "valid" )
+        local_energy_neg_imag = np.correlate ( ( -samples.imag )**2 , ones , mode = "valid" )
     local_energy_abs = np.correlate ( np.abs ( samples )**2 , ones , mode = "valid" )
     
-    local_signal_real_norm = np.sqrt ( np.maximum ( local_energy_real , 1e-10 ) )
-    local_signal_neg_real_norm = np.sqrt ( np.maximum ( local_energy_neg_real , 1e-10 ) )
-    local_signal_imag_norm = np.sqrt ( np.maximum ( local_energy_imag , 1e-10 ) )
-    local_signal_neg_imag_norm = np.sqrt ( np.maximum ( local_energy_neg_imag , 1e-10 ) )
+    if not fast :
+        local_signal_real_norm = np.sqrt ( np.maximum ( local_energy_real , 1e-10 ) )
+        local_signal_neg_real_norm = np.sqrt ( np.maximum ( local_energy_neg_real , 1e-10 ) )
+        local_signal_imag_norm = np.sqrt ( np.maximum ( local_energy_imag , 1e-10 ) )
+        local_signal_neg_imag_norm = np.sqrt ( np.maximum ( local_energy_neg_imag , 1e-10 ) )
     local_signal_abs_norm = np.sqrt ( np.maximum ( local_energy_abs , 1e-10 ) )
     
     # Wynik znormalizowany (wartości teoretycznie od -1.0 do 1.0)
-    corr_real_norm = corr_real / ( local_signal_real_norm * sync_seq_norm )
-    corr_neg_real_norm = corr_neg_real / ( local_signal_neg_real_norm * sync_seq_norm )
-    corr_imag_norm = corr_imag / ( local_signal_imag_norm * sync_seq_norm )
-    corr_neg_imag_norm = corr_neg_imag / ( local_signal_neg_imag_norm * sync_seq_norm )
+    if not fast :
+        corr_real_norm = corr_real / ( local_signal_real_norm * sync_seq_norm )
+        corr_neg_real_norm = corr_neg_real / ( local_signal_neg_real_norm * sync_seq_norm )
+        corr_imag_norm = corr_imag / ( local_signal_imag_norm * sync_seq_norm )
+        corr_neg_imag_norm = corr_neg_imag / ( local_signal_neg_imag_norm * sync_seq_norm )
     corr_abs_norm = corr_abs / ( local_signal_abs_norm * sync_seq_norm )
 
-    max_peak_real_val = np.max ( corr_real_norm )
-    max_peak_neg_real_val = np.max ( corr_neg_real_norm )
-    max_peak_imag_val = np.max ( corr_imag_norm )
-    max_peak_neg_imag_val = np.max ( corr_neg_imag_norm )
+    if not fast :
+        max_peak_real_val = np.max ( corr_real_norm )
+        max_peak_neg_real_val = np.max ( corr_neg_real_norm )
+        max_peak_imag_val = np.max ( corr_imag_norm )
+        max_peak_neg_imag_val = np.max ( corr_neg_imag_norm )
     max_peak_abs_val = np.max ( corr_abs_norm )
 
-    peaks_real , _ = find_peaks ( corr_real_norm , height = max_peak_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_neg_real , _ = find_peaks ( corr_neg_real_norm , height = max_peak_neg_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_imag , _ = find_peaks ( corr_imag_norm , height = max_peak_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = max_peak_neg_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
-    peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
+    if not fast :
+        peaks_real , _ = find_peaks ( corr_real_norm , height = max_peak_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_neg_real , _ = find_peaks ( corr_neg_real_norm , height = max_peak_neg_real_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag_norm , height = max_peak_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = max_peak_neg_imag_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
     peaks_abs , _ = find_peaks ( corr_abs_norm , height = max_peak_abs_val * min_peak_height_ratio , distance = len ( sync_sequence ) * modulation.SPS )
 
     if plt and peaks_all.size > 0 :
-        if peaks_real.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=} {peaks_real.size=}" , False , peaks_real )
-        if peaks_neg_real.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_neg_real_norm , f"corr_neg_real_norm {corr_neg_real_norm.size=} {peaks_neg_real.size=}" , False , peaks_neg_real )
-        if peaks_imag.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_imag_norm , f"corr_imag_norm {corr_imag_norm.size=} {peaks_imag.size=}" , False , peaks_imag )
-        if peaks_neg_imag.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=} {peaks_neg_imag.size=}" , False , peaks_neg_imag )
-        if peaks_all.size > 0 :
-            plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=} {peaks_all.size=}" , False , peaks_all )
+        if not fast :
+            if peaks_real.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=} {peaks_real.size=}" , False , peaks_real )
+            if peaks_neg_real.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_neg_real_norm , f"corr_neg_real_norm {corr_neg_real_norm.size=} {peaks_neg_real.size=}" , False , peaks_neg_real )
+            if peaks_imag.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_imag_norm , f"corr_imag_norm {corr_imag_norm.size=} {peaks_imag.size=}" , False , peaks_imag )
+            if peaks_neg_imag.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=} {peaks_neg_imag.size=}" , False , peaks_neg_imag )
+            if peaks_all.size > 0 :
+                plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=} {peaks_all.size=}" , False , peaks_all )
         if peaks_abs.size > 0 :
             plot.real_waveform_v0_1_6 ( corr_abs_norm , f"corr_abs_norm {corr_abs_norm.size=} {peaks_abs.size=}" , False , peaks_abs )
             plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=} {peaks_abs.size=}" , False , peaks_abs )
@@ -179,6 +188,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
                 writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
     '''
     peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks_abs ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
+    if settings["log"]["debugging"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     return peaks_all
 
 def gen_bits ( bytes ) :
@@ -282,7 +292,6 @@ class RxPacket_v0_1_13 :
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
             self.payload_bytes = payload_bytes
-            print ( "cfo" )
             return
 
     def correct_cfo ( self ) -> None :
@@ -316,7 +325,7 @@ class RxFrames_v0_1_13 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ), fast = True )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["debugging"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         for idx in self.sync_sequence_peaks :
             if idx > self.last_processed_idx :
