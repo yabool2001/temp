@@ -26,9 +26,9 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
 #samples_filename = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
+samples_filename = "np.samples/rx_samples_0.1.15_no_samples.npy"
 #samples_filename = "np.samples/rx_samples_0.1.14_1500B_01.npy"
 #samples_filename = "np.samples/rx_samples_0.1.8_16_c_mode.npy"
-samples_filename = "np.samples/rx_samples_0.1.15_no_samples.npy"
         
 wrt_filename_npy = "np.samples/rx_samples_last.npy"
 wrt_filename_csv = "samples.csv/rx_samples_last.csv"
@@ -68,7 +68,7 @@ while ( len ( received_bytes ) < 10000 and real ) or ( not real and received_byt
         #print ( f"{rx_pluto.samples.samples_leftovers.size=}\n{rx_pluto.samples.frames.samples_leftovers_start_idx=}")
 
     if rx_pluto.samples.frames.sync_sequence_peaks.size > 0 :
-        rx_pluto.samples.plot_complex_samples_filtered ( title = f"{ script_filename }" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
+        rx_pluto.samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto.samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
         #rx_pluto.samples.plot_complex_samples_corrected ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
