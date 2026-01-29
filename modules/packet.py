@@ -97,7 +97,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
 
-    plt = True
+    plt = False
     
     min_peak_height_ratio = 0.8
 
@@ -120,7 +120,8 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
     # Dodajemy próg bezwzględny dla znormalizowanej korelacji (np. 0.6).
     # W samym szumie max korelacja jest niska (np. 0.3), więc adaptive threshold (0.8 * max)
     # ustawiałby się na 0.24 i wykrywał szum. Wymuszenie min. 0.6 eliminuje te piki.
-    min_correlation_threshold_abs = 0.6
+    # EDIT: Dla filtrowanego szumu 0.6 to za mało (True Positives in Noise). Podnoszę do 0.8.
+    min_correlation_threshold_abs = 0.8
     
     max_peak_val_normalized = np.max ( corr_norm )
     
@@ -133,10 +134,12 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
         plot.real_waveform_v0_1_6 ( corr_norm , f"corr normalized {peaks.size=} {corr_norm.size=}" , False , peaks )
         plot.complex_waveform_v0_1_6 ( samples , f"samples normalized {peaks.size=} {samples.size=}" , False , peaks )
 
+    return peaks
+
 def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
     ts = t.perf_counter_ns ()
-    plt = True
+    plt = False
     min_peak_height_ratio = 0.8
     
     if deep :
@@ -459,7 +462,8 @@ class RxFrames_v0_1_13 :
 
     # Pola uzupełnianie w __post_init__
     sps = modulation.SPS
-    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    #sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
+    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     samples_filtered_len : np.uint32 = field ( init = False )
     last_processed_idx : np.uint32 = 0
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
