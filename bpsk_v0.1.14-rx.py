@@ -69,7 +69,7 @@ while ( len ( received_bytes ) < 10000 and real ) or ( not real and received_byt
 
     if rx_pluto.samples.frames.sync_sequence_peaks.size > 0 :
         rx_pluto.samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto.samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
-        #rx_pluto.samples.plot_complex_samples_corrected ( title = f"{script_filename}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
+    rx_pluto.samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto.samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto.samples.frames.sync_sequence_peaks )
 
     if rx_pluto.samples.frames.samples_payloads_bytes.size > 0 :
         print ( f" { rx_pluto.samples.frames.samples_payloads_bytes[0]= }, { rx_pluto.samples.frames.samples_payloads_bytes.size= }" )

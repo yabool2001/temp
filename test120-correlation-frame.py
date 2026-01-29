@@ -1,4 +1,4 @@
-from modules import ops_file , plot
+from modules import modulation , ops_file , plot
 import numpy as np
 from numpy.typing import NDArray
 import os
@@ -14,7 +14,8 @@ filename_sync_sequence = "np.samples/barker13_samples_clipped.npy"
 filename_samples_1_npy = "np.samples/rx_samples_0.1.14_128Bx20_missed_last_frames.npy"
 filename_samples_2_npy = "np.samples/rx_samples_0.1.15_no_samples.npy"
 
-sync_sequence = ops_file.open_samples_from_npf ( filename_sync_sequence )
+#sync_sequence = ops_file.open_samples_from_npf ( filename_sync_sequence )
+sync_sequence = modulation.generate_barker13_bpsk_samples_v0_1_7 ( True )
 samples_frames = ops_file.open_samples_from_npf ( filename_samples_1_npy )
 samples_noise  = ops_file.open_samples_from_npf ( filename_samples_2_npy )
 
