@@ -106,7 +106,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
     # W BPSK Q=0 teoretycznie, ale jeśli plik 'sync_sequence' jest typu complex,
     # musimy użyć sprzężenia (conj), inaczej korelacja będzie błędna. To bezpieczne.
     # Różnica w czasie jest pomijalna a więc zostawię conjugate
-    corr = np.abs ( np.correlate ( samples , np.conj(sync_sequence) , mode = "valid" ) )
+    corr = np.abs ( np.correlate ( samples , np.conj ( sync_sequence ) , mode = "valid" ) )
     #corr = np.correlate ( samples , np.conj(sync_sequence) , mode = "valid" )
     #corr = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
 
