@@ -131,7 +131,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
 
     peaks , _ = find_peaks ( corr_norm , height = final_threshold )
 
-    if settings["log"]["verbose_1"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15 {peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
 
     if plt :
         plot.real_waveform_v0_1_6 ( corr_norm , f"corr normalized {peaks.size=} {corr_norm.size=}" , False , peaks )
@@ -192,8 +192,7 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
         max_peak_neg_imag_val = np.max ( corr_neg_imag_norm )
     max_peak_val = np.max ( corr_norm )
 
-    min_correlation_threshold = 0.6    
-    final_threshold_abs = max ( min_correlation_threshold , max_peak_val * min_peak_height_ratio )
+    min_correlation_threshold = 0.8
 
     if deep :
         final_threshold_real = max ( min_correlation_threshold , max_peak_real_val * min_peak_height_ratio )
@@ -206,6 +205,7 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
         peaks_imag , _ = find_peaks ( corr_imag_norm , height = final_threshold_imag , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = final_threshold_neg_imag , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
+    final_threshold_abs = max ( min_correlation_threshold , max_peak_val * min_peak_height_ratio )
     peaks , _ = find_peaks ( corr_norm , height = final_threshold_abs )
 
     if plt and peaks_all.size > 0 :
@@ -240,7 +240,7 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
                 writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr[ idx ] ) } )
     '''
     peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
-    if settings["log"]["verbose_1"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15_current {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     return peaks_all
 
 
@@ -475,7 +475,7 @@ class RxFrames_v0_1_13 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15_current ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = True )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15_current ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = False )
         print ( f"Detected { self.sync_sequence_peaks=}" )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["debugging"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         ts = t.perf_counter_ns ()
@@ -484,7 +484,7 @@ class RxFrames_v0_1_13 :
                 self.last_processed_idx = self.process_frame ( idx = idx )
                 if self.has_leftovers :
                     break
-        if settings["log"]["verbose_1"] : print(f"Detekcja {self.sync_sequence_peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+        if settings["log"]["verbose_2"] : print(f"Detekcja {self.sync_sequence_peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
         if not self.has_leftovers :
             self.samples_leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - filters.SPAN * self.sps // 2
             self.has_leftovers = True

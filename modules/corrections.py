@@ -210,7 +210,7 @@ def full_compensation_v0_1_5 ( samples , preamble_samples ) :
     # 1) Coarse CFO estimate and correction
     ts = t.perf_counter_ns ()
     coarse_f = estimate_cfo_from_preamble_v0_1_5 ( samples , preamble_samples , fs, sps )
-    if settings["log"]["verbose_1"] : print(f"estimate_cfo_from_preamble_v0_1_5 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_2"] : print(f"estimate_cfo_from_preamble_v0_1_5 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     # Apply coarse correction
     if coarse_f != 0.0 :
     # Alternative apply coarse correction: if abs(coarse_f) > 1e-12:
@@ -220,12 +220,12 @@ def full_compensation_v0_1_5 ( samples , preamble_samples ) :
     # 2) PLL-based fine tracking
     ts = t.perf_counter_ns ()
     pl_corrected = pll_v0_1_3 ( samples , freq_offset_initial = 0.0 )
-    if settings["log"]["verbose_1"] : print(f"pll_v0_1_3 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_2"] : print(f"pll_v0_1_3 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
 
     # 3) Phase offset correction using preamble
     ts = t.perf_counter_ns ()
     rx_phase_corrected = correct_phase_offset_v3 ( pl_corrected , preamble_samples )
-    if settings["log"]["verbose_1"] : print(f"correct_phase_offset_v3 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_2"] : print(f"correct_phase_offset_v3 w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
 
     # 4) IQ imbalance compensation
     rx_final_corrected = iq_balance ( rx_phase_corrected )
