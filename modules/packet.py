@@ -98,6 +98,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
 
     plt = False
+    ts = t.perf_counter_ns ()
     
     min_peak_height_ratio = 0.8
 
@@ -130,6 +131,8 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
 
     peaks , _ = find_peaks ( corr_norm , height = final_threshold )
 
+    if settings["log"]["verbose_1"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+
     if plt :
         plot.real_waveform_v0_1_6 ( corr_norm , f"corr normalized {peaks.size=} {corr_norm.size=}" , False , peaks )
         plot.complex_waveform_v0_1_6 ( samples , f"samples normalized {peaks.size=} {samples.size=}" , False , peaks )
@@ -138,8 +141,8 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
 
 def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
+    plt = False
     ts = t.perf_counter_ns ()
-    plt = True
     min_peak_height_ratio = 0.8
     
     if deep :
