@@ -53,7 +53,7 @@ def my_correlation ( scenario : dict ) -> None :
     samples_normalized : NDArray[ np.float64 ] = ( samples / np.max ( np.abs ( samples ) ) * 2 )
     plot.real_waveform_v0_1_6 ( samples_normalized , f"samples normalized {scenario['name']} {samples_normalized.size=}" , False )
 
-    peaks_normalized = np.array ( [] ).astype ( np.uint32 )
+    peaks_normalized = np.array ([]).astype ( np.uint32 )
 
     corr = np.correlate ( samples , sync_sequence , mode = "valid" )
     corr = np.abs ( corr ) # niezbędne
