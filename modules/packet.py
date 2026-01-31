@@ -139,7 +139,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
 def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
     ts = t.perf_counter_ns ()
-    plt = False
+    plt = True
     min_peak_height_ratio = 0.8
     
     if deep :
@@ -148,14 +148,14 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
         peaks_imag = np.array ( [] ).astype ( np.uint32 )
         peaks_neg_imag = np.array ( [] ).astype ( np.uint32 )
     peaks_all = np.array ( [] ).astype ( np.uint32 )
-    peaks_abs = np.array ( [] ).astype ( np.uint32 )
+    peaks = np.array ( [] ).astype ( np.uint32 )
 
     if deep :
-        corr_real = np.correlate ( samples.real , sync_sequence.real , mode = "valid" )
-        corr_neg_real = np.correlate ( -samples.real , sync_sequence.real , mode = "valid" )
-        corr_imag = np.correlate ( samples.imag , sync_sequence.real , mode = "valid" )
-        corr_neg_imag = np.correlate ( -samples.imag , sync_sequence.real , mode = "valid" )
-    corr_abs = np.abs ( np.correlate ( samples , np.conj ( sync_sequence ) , mode = "valid" ) )
+        corr_real = np.abs ( np.correlate ( samples.real , sync_sequence.real , mode = "valid" ) )
+        corr_neg_real = np.abs ( np.correlate ( -samples.real , sync_sequence.real , mode = "valid" ) )
+        corr_imag = np.abs ( np.correlate ( samples.imag , sync_sequence.real , mode = "valid" ) )
+        corr_neg_imag = np.abs ( np.correlate ( -samples.imag , sync_sequence.real , mode = "valid" ) )
+    corr = np.abs ( np.correlate ( samples , np.conj ( sync_sequence ) , mode = "valid" ) )
 
     ones = np.ones ( len ( sync_sequence ) )
     sync_seq_norm = np.linalg.norm ( sync_sequence )
@@ -172,38 +172,38 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
         local_signal_neg_real_norm = np.sqrt ( np.maximum ( local_energy_neg_real , 1e-10 ) )
         local_signal_imag_norm = np.sqrt ( np.maximum ( local_energy_imag , 1e-10 ) )
         local_signal_neg_imag_norm = np.sqrt ( np.maximum ( local_energy_neg_imag , 1e-10 ) )
-    local_signal_abs_norm = np.sqrt ( np.maximum ( local_energy_abs , 1e-10 ) )
+    local_signal_norm = np.sqrt ( np.maximum ( local_energy_abs , 1e-10 ) )
     
     # Wynik znormalizowany (wartości teoretycznie od -1.0 do 1.0)
     if deep :
-        corr_real_norm = corr_real / ( local_signal_abs_norm * sync_seq_norm )
-        corr_neg_real_norm = corr_neg_real / ( local_signal_abs_norm * sync_seq_norm )
-        corr_imag_norm = corr_imag / ( local_signal_abs_norm * sync_seq_norm )
-        corr_neg_imag_norm = corr_neg_imag / ( local_signal_abs_norm * sync_seq_norm )
-    corr_abs_norm = corr_abs / ( local_signal_abs_norm * sync_seq_norm )
+        corr_real_norm = corr_real / ( local_signal_real_norm * sync_seq_norm )
+        corr_neg_real_norm = corr_neg_real / ( local_signal_neg_real_norm * sync_seq_norm )
+        corr_imag_norm = corr_imag / ( local_signal_imag_norm * sync_seq_norm )
+        corr_neg_imag_norm = corr_neg_imag / ( local_signal_neg_imag_norm * sync_seq_norm )
+    corr_norm = corr / ( local_signal_norm * sync_seq_norm )
 
     if deep :
         max_peak_real_val = np.max ( corr_real_norm )
         max_peak_neg_real_val = np.max ( corr_neg_real_norm )
         max_peak_imag_val = np.max ( corr_imag_norm )
         max_peak_neg_imag_val = np.max ( corr_neg_imag_norm )
-    max_peak_abs_val = np.max ( corr_abs_norm )
+    max_peak_val = np.max ( corr_norm )
 
-    min_correlation_threshold_abs = 0.6    
-    final_threshold_abs = max ( min_correlation_threshold_abs , max_peak_abs_val * min_peak_height_ratio )
+    min_correlation_threshold = 0.6    
+    final_threshold_abs = max ( min_correlation_threshold , max_peak_val * min_peak_height_ratio )
 
     if deep :
-        final_threshold_real = max ( min_correlation_threshold_abs , max_peak_real_val * min_peak_height_ratio )
-        final_threshold_neg_real = max ( min_correlation_threshold_abs , max_peak_neg_real_val * min_peak_height_ratio )
-        final_threshold_imag = max ( min_correlation_threshold_abs , max_peak_imag_val * min_peak_height_ratio )
-        final_threshold_neg_imag = max ( min_correlation_threshold_abs , max_peak_neg_imag_val * min_peak_height_ratio )
+        final_threshold_real = max ( min_correlation_threshold , max_peak_real_val * min_peak_height_ratio )
+        final_threshold_neg_real = max ( min_correlation_threshold , max_peak_neg_real_val * min_peak_height_ratio )
+        final_threshold_imag = max ( min_correlation_threshold , max_peak_imag_val * min_peak_height_ratio )
+        final_threshold_neg_imag = max ( min_correlation_threshold , max_peak_neg_imag_val * min_peak_height_ratio )
 
         peaks_real , _ = find_peaks ( corr_real_norm , height = final_threshold_real , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_neg_real , _ = find_peaks ( corr_neg_real_norm , height = final_threshold_neg_real , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_imag , _ = find_peaks ( corr_imag_norm , height = final_threshold_imag , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = final_threshold_neg_imag , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
-    peaks_abs , _ = find_peaks ( corr_abs_norm , height = final_threshold_abs )
+    peaks , _ = find_peaks ( corr_norm , height = final_threshold_abs )
 
     if plt and peaks_all.size > 0 :
         if deep :
@@ -217,9 +217,9 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
                 plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=} {peaks_neg_imag.size=}" , False , peaks_neg_imag )
             if peaks_all.size > 0 :
                 plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=} {peaks_all.size=}" , False , peaks_all )
-        if peaks_abs.size > 0 :
-            plot.real_waveform_v0_1_6 ( corr_abs_norm , f"corr_abs_norm {corr_abs_norm.size=} {peaks_abs.size=}" , False , peaks_abs )
-            plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=} {peaks_abs.size=}" , False , peaks_abs )
+        if peaks.size > 0 :
+            plot.real_waveform_v0_1_6 ( corr_norm , f"corr_norm {corr_norm.size=} {peaks.size=}" , False , peaks )
+            plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=} {peaks.size=}" , False , peaks )
     '''
     if wrt and sync:
         filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
@@ -227,16 +227,16 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
             fieldnames = ['corr', 'peak_idx', 'peak_val']
             writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
             writer.writeheader ()
-            for idx in peaks_abs :
-                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+            for idx in peaks :
+                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr[ idx ] ) } )
             for idx in peaks_real :
                 writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
             for idx in peaks_imag :
                 writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
             for idx in peaks :
-                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_abs[ idx ] ) } )
+                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr[ idx ] ) } )
     '''
-    peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks_abs ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
+    peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
     if settings["log"]["verbose_1"] : print(f"Detekcja {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     return peaks_all
 
@@ -472,7 +472,7 @@ class RxFrames_v0_1_13 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = False )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15_current ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = True )
         print ( f"Detected { self.sync_sequence_peaks=}" )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["debugging"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         ts = t.perf_counter_ns ()
