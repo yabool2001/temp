@@ -98,7 +98,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
 
     plt = False
-    ts = t.perf_counter_ns ()
+    if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
     
     min_peak_height_ratio = 0.8
 
@@ -142,7 +142,7 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
 def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
     plt = False
-    ts = t.perf_counter_ns ()
+    if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
     min_peak_height_ratio = 0.8
     
     if deep :
@@ -476,8 +476,8 @@ class RxFrames_v0_1_13 :
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15_current ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = False )
-        print ( f"Detected { self.sync_sequence_peaks=}" )
-        if self.sync_sequence_peaks.size > 0 and settings["log"]["debugging"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
+        if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : print ( f"Detected { self.sync_sequence_peaks=}" )
+        if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         ts = t.perf_counter_ns ()
         for idx in self.sync_sequence_peaks :
             if idx > self.last_processed_idx :
@@ -553,7 +553,7 @@ class RxFrames_v0_1_13 :
                             add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
                             if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
-        add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
+        if settings["log"]["verbose_2"] : add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}" )
         if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
         return idx
 
