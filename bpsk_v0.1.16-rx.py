@@ -85,6 +85,10 @@ while ( len ( received_bytes ) < 30000 and real ) or ( not real and received_byt
             rx_pluto_samples.save_complex_samples_2_npf ( wrt_filename_npy )
     
     if packet.log_packet != "" :
+        # To jest najlepszy i najprostszy wybór dla aplikacji SDR działającej w pętli.
+        # Pozwala na płynny odbiór próbek bez dławienia się przy zapisie na dysk.
+        # Ryzyko, że "wątek zginie" przy zamykaniu programu jest minimalne w porównaniu do korzyści z płynności działania,
+        # a systemowy bufor pliku i tak zazwyczaj zdąży się opróżnić.
         log_thread = threading.Thread ( target = ops_file.save_log_thread , args = ( wrt_filename_log , packet.log_packet ) , daemon = True  )
         log_thread.start ()
         packet.log_packet = ""
