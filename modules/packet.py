@@ -461,6 +461,7 @@ class RxPacket_v0_1_13 :
 class RxFrames_v0_1_13 :
     
     samples_filtered : NDArray[ np.complex128 ]
+    deep : bool = False
 
     # Pola uzupełnianie w __post_init__
     sps = modulation.SPS
@@ -474,7 +475,7 @@ class RxFrames_v0_1_13 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = False )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = self.deep )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : print ( f"Detected { self.sync_sequence_peaks=}" )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         ts = t.perf_counter_ns ()
@@ -604,9 +605,9 @@ class RxSamples_v0_1_13 :
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
-    def detect_frames ( self ) -> None :
+    def detect_frames ( self , deep : bool = False ) -> None :
         self.filter_samples ()
-        self.frames = RxFrames_v0_1_13 ( samples_filtered = self.samples_filtered )
+        self.frames = RxFrames_v0_1_13 ( samples_filtered = self.samples_filtered , deep = deep )
         if self.frames.has_leftovers :
             self.clip_samples_leftovers ()
 

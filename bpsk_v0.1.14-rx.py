@@ -57,7 +57,7 @@ while ( len ( received_bytes ) < 10000 and real ) or ( not real and received_byt
         rx_pluto.samples.rx ( samples_filename = samples_filename )
     if settings[ "log" ][ "debugging" ] :
         if rx_pluto.samples.has_amp_greater_than_ths : rx_pluto.samples.plot_complex_samples ( title = f"{ script_filename }" )
-    rx_pluto.samples.detect_frames ()
+    rx_pluto.samples.detect_frames ( deep = True )
     #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
 
     if rx_pluto.samples.has_amp_greater_than_ths :
