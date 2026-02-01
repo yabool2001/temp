@@ -97,7 +97,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
-    plt = False
+    plt = True
     if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
     min_peak_height_ratio = 0.8
     
