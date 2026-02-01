@@ -487,7 +487,7 @@ class RxFrames_v0_1_13 :
         return pad_bits2bytes ( bits )
     
     def complete_process_frame ( self , idx : np.uint32 ) -> None :
-        if settings["log"]["debugging"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+        if settings["log"]["verbose_2"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
         self.samples_leftovers_start_idx = idx - filters.SPAN * self.sps // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 

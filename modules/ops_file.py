@@ -6,6 +6,11 @@ import plotly.express as px
 from numpy.typing import NDArray
 from pathlib import Path
 
+# Zapis próbek do pliku CSV w osobnym wątku
+def save_log_thread(filename, content):
+    with open(filename, "a") as wrt_file:
+        wrt_file.write(content)
+
 def open_and_init_symbols_csv ( filename ) :
     csv_file = open ( filename , mode = "w" , newline = '' )
     csv_writer = csv.writer ( csv_file )
