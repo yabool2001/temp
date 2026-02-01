@@ -52,7 +52,8 @@ else :
     rx_pluto = packet.RxPluto_v0_1_13 ()
 
 print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-while ( len ( received_bytes ) < 10000 and real ) or ( not real and received_bytes.size == 0 ) :
+
+while ( len ( received_bytes ) < 30000 and real ) or ( not real and received_bytes.size == 0 ) :
     if real :
         rx_pluto.samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
