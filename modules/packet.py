@@ -407,13 +407,13 @@ class RxPacket_v0_1_13 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
                 self.payload_bytes = payload_bytes
-                if settings["log"]["debugging"] : print ( samples_name )
+                if settings["log"]["verbose_2"] : print ( samples_name )
                 return
         # Przed dużymi zminami 
         # To poniższe cfo nie może zadziałać dobrze bo w samplach nie przekazuję barker13 do korekcji cfo, przecież przekazuję tylko wyciątą część sampli pakietu bez sync sequence, rozważyć przekazywanie całej ramki.
         if settings["log"]["verbose_2"] : self.analyze ( samples = self.samples_filtered )
         self.correct_cfo ()
-        if settings["log"]["debugging"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
+        if settings["log"]["verbose_2"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
         if settings["log"]["verbose_2"] : self.analyze ( samples = self.samples_corrected )
         payload_symbols = self.samples_corrected [ self.packet_start_idx : payload_end_idx : sps ]
         crc32_symbols = self.samples_corrected [ payload_end_idx : : sps ]
@@ -530,16 +530,16 @@ class RxFrames_v0_1_13 :
                         has_frame = True
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
                             add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
-                            if settings["log"]["debugging"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
+                            if settings["log"]["verbose_2"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
                         packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - idx )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
-                            if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
+                            if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
         if settings["log"]["verbose_2"] : add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}" )
-        if settings["log"]["debugging"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
+        if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
         return idx
 
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
@@ -549,7 +549,7 @@ class RxFrames_v0_1_13 :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_13 :
+class RxSamples_v0_1_16 :
     
     pluto_rx_ctx : Pluto | None = None
     #samples_filename : str | None = None
@@ -644,13 +644,13 @@ class RxSamples_v0_1_13 :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
 
 @dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_13 :
+class RxPluto_v0_1_16 :
 
     sn : str | None = None
     
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto | None = None
-    samples : RxSamples_v0_1_13 = field ( init = False )
+    samples : RxSamples_v0_1_16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluot_rx ()
@@ -658,9 +658,9 @@ class RxPluto_v0_1_13 :
     def init_pluot_rx ( self ) -> None :
         if self.sn is not None :
             self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
-            self.samples = RxSamples_v0_1_13 ( pluto_rx_ctx = self.pluto_rx_ctx )
+            self.samples = RxSamples_v0_1_16 ( pluto_rx_ctx = self.pluto_rx_ctx )
         else :
-            self.samples = RxSamples_v0_1_13 ()
+            self.samples = RxSamples_v0_1_16 ()
 
     def __repr__ ( self ) -> str :
         return (
