@@ -97,7 +97,7 @@ FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
-    plt = True
+    plt = False
     if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
     min_peak_height_ratio = 0.8
     
@@ -161,10 +161,10 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
         peaks_imag , _ = find_peaks ( corr_imag_norm , height = final_threshold_imag , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = final_threshold_neg_imag , distance = len ( sync_sequence ) * modulation.SPS )
         peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
-    final_threshold_abs = max ( min_correlation_threshold , max_peak_val * min_peak_height_ratio )
-    peaks , _ = find_peaks ( corr_norm , height = final_threshold_abs )
+    final_threshold = max ( min_correlation_threshold , max_peak_val * min_peak_height_ratio )
+    peaks , _ = find_peaks ( corr_norm , height = final_threshold )
 
-    if plt and peaks_all.size > 0 :
+    if plt:
         if deep :
             if peaks_real.size > 0 :
                 plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=} {peaks_real.size=}" , False , peaks_real )
@@ -178,25 +178,10 @@ def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , syn
                 plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=} {peaks_all.size=}" , False , peaks_all )
         if peaks.size > 0 :
             plot.real_waveform_v0_1_6 ( corr_norm , f"corr_norm {corr_norm.size=} {peaks.size=}" , False , peaks )
-            plot.complex_waveform_v0_1_6 ( samples , f"samples abs {samples.size=} {peaks.size=}" , False , peaks )
-    '''
-    if wrt and sync:
-        filename = base_path.parent / f"V7_{samples.size=}_{base_path.name}"
-        with open ( filename , 'w' , newline='' ) as csvfile :
-            fieldnames = ['corr', 'peak_idx', 'peak_val']
-            writer = csv.DictWriter ( csvfile , fieldnames = fieldnames )
-            writer.writeheader ()
-            for idx in peaks :
-                writer.writerow ( { 'corr': 'abs' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr[ idx ] ) } )
-            for idx in peaks_real :
-                writer.writerow ( { 'corr' : 'real' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_real[ idx ] ) } )
-            for idx in peaks_imag :
-                writer.writerow ( { 'corr' : 'imag' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr_imag[ idx ] ) } )
-            for idx in peaks :
-                writer.writerow ( { 'corr' : 'all' , 'peak_idx' : int ( idx ) , 'peak_val' : float ( corr[ idx ] ) } )
-    '''
+            plot.complex_waveform_v0_1_6 ( samples , f"samples {samples.size=} {peaks.size=}" , False , peaks )
+
     peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
-    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15_current {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15 {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     return peaks_all
 
 def detect_sync_sequence_peaks_v0_1_15_no_deep ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
@@ -478,13 +463,13 @@ class RxFrames_v0_1_13 :
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = self.deep )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : print ( f"Detected { self.sync_sequence_peaks=}" )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
-        ts = t.perf_counter_ns ()
+        if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
         for idx in self.sync_sequence_peaks :
             if idx > self.last_processed_idx :
                 self.last_processed_idx = self.process_frame ( idx = idx )
                 if self.has_leftovers :
                     break
-        if settings["log"]["verbose_2"] : print(f"Detekcja {self.sync_sequence_peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+        if settings["log"]["verbose_1"] : print(f"Detekcja pakietów {self.sync_sequence_peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
         if not self.has_leftovers :
             self.samples_leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - filters.SPAN * self.sps // 2
             self.has_leftovers = True
