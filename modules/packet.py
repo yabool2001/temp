@@ -96,50 +96,6 @@ FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
-
-    plt = False
-    if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
-    
-    min_peak_height_ratio = 0.8
-
-    peaks = np.array ( [] ).astype ( np.uint32 )
-
-    # W BPSK Q=0 teoretycznie, ale jeśli plik 'sync_sequence' jest typu complex,
-    # musimy użyć sprzężenia (conj), inaczej korelacja będzie błędna. To bezpieczne.
-    # Różnica w czasie jest pomijalna a więc zostawię conjugate
-    corr = np.abs ( np.correlate ( samples , np.conj ( sync_sequence ) , mode = "valid" ) )
-    #corr = np.correlate ( samples , np.conj(sync_sequence) , mode = "valid" )
-    #corr = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
-
-    ones = np.ones ( len ( sync_sequence ) )
-    # Fix: Use abs(samples)**2 for calculating energy of complex signal
-    local_energy = np.correlate ( np.abs ( samples )**2 , ones , mode = "valid" )
-    sync_seq_norm = np.linalg.norm ( sync_sequence )
-    local_signal_norm = np.sqrt ( np.maximum ( local_energy , 1e-10 ) )
-    corr_norm = corr / ( local_signal_norm * sync_seq_norm )
-
-    # Dodajemy próg bezwzględny dla znormalizowanej korelacji (np. 0.6).
-    # W samym szumie max korelacja jest niska (np. 0.3), więc adaptive threshold (0.8 * max)
-    # ustawiałby się na 0.24 i wykrywał szum. Wymuszenie min. 0.6 eliminuje te piki.
-    # EDIT: Dla filtrowanego szumu 0.6 to za mało (True Positives in Noise). Podnoszę do 0.8.
-    min_correlation_threshold_abs = 0.8
-    
-    max_peak_val_normalized = np.max ( corr_norm )
-    
-    # Próg to maksimum z (bezwzględnego minimum, relatywnego progu od piku)
-    final_threshold = max ( min_correlation_threshold_abs , max_peak_val_normalized * min_peak_height_ratio )
-
-    peaks , _ = find_peaks ( corr_norm , height = final_threshold )
-
-    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15 {peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
-
-    if plt :
-        plot.real_waveform_v0_1_6 ( corr_norm , f"corr normalized {peaks.size=} {corr_norm.size=}" , False , peaks )
-        plot.complex_waveform_v0_1_6 ( samples , f"samples normalized {peaks.size=} {samples.size=}" , False , peaks )
-
-    return peaks
-
-def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
     plt = False
     if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
@@ -243,6 +199,49 @@ def detect_sync_sequence_peaks_v0_1_15_current ( samples: NDArray[ np.complex128
     if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15_current {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
     return peaks_all
 
+def detect_sync_sequence_peaks_v0_1_15_no_deep ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
+
+    plt = False
+    if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
+    
+    min_peak_height_ratio = 0.8
+
+    peaks = np.array ( [] ).astype ( np.uint32 )
+
+    # W BPSK Q=0 teoretycznie, ale jeśli plik 'sync_sequence' jest typu complex,
+    # musimy użyć sprzężenia (conj), inaczej korelacja będzie błędna. To bezpieczne.
+    # Różnica w czasie jest pomijalna a więc zostawię conjugate
+    corr = np.abs ( np.correlate ( samples , np.conj ( sync_sequence ) , mode = "valid" ) )
+    #corr = np.correlate ( samples , np.conj(sync_sequence) , mode = "valid" )
+    #corr = np.abs ( np.correlate ( samples , sync_sequence , mode = "valid" ) )
+
+    ones = np.ones ( len ( sync_sequence ) )
+    # Fix: Use abs(samples)**2 for calculating energy of complex signal
+    local_energy = np.correlate ( np.abs ( samples )**2 , ones , mode = "valid" )
+    sync_seq_norm = np.linalg.norm ( sync_sequence )
+    local_signal_norm = np.sqrt ( np.maximum ( local_energy , 1e-10 ) )
+    corr_norm = corr / ( local_signal_norm * sync_seq_norm )
+
+    # Dodajemy próg bezwzględny dla znormalizowanej korelacji (np. 0.6).
+    # W samym szumie max korelacja jest niska (np. 0.3), więc adaptive threshold (0.8 * max)
+    # ustawiałby się na 0.24 i wykrywał szum. Wymuszenie min. 0.6 eliminuje te piki.
+    # EDIT: Dla filtrowanego szumu 0.6 to za mało (True Positives in Noise). Podnoszę do 0.8.
+    min_correlation_threshold_abs = 0.8
+    
+    max_peak_val_normalized = np.max ( corr_norm )
+    
+    # Próg to maksimum z (bezwzględnego minimum, relatywnego progu od piku)
+    final_threshold = max ( min_correlation_threshold_abs , max_peak_val_normalized * min_peak_height_ratio )
+
+    peaks , _ = find_peaks ( corr_norm , height = final_threshold )
+
+    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks_v0_1_15 {peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+
+    if plt :
+        plot.real_waveform_v0_1_6 ( corr_norm , f"corr normalized {peaks.size=} {corr_norm.size=}" , False , peaks )
+        plot.complex_waveform_v0_1_6 ( samples , f"samples normalized {peaks.size=} {samples.size=}" , False , peaks )
+
+    return peaks
 
 def detect_sync_sequence_peaks_v0_1_15_old ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , fast : bool = False ) -> NDArray[ np.uint32 ] :
     
@@ -475,7 +474,7 @@ class RxFrames_v0_1_13 :
     
     def __post_init__ ( self ) -> None :
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15_current ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = False )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = False )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : print ( f"Detected { self.sync_sequence_peaks=}" )
         if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
         ts = t.perf_counter_ns ()
