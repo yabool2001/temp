@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
 plt = True
-wrt = True
+wrt = False
 
 filename = "np.samples/rx_samples_0.1.15_1500B_.npy"
 
