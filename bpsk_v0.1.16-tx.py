@@ -28,6 +28,9 @@ from modules import packet , payload_test_data as ptd , sdr
 if len ( sys.argv ) > 1 :
     n_o_bytes_uint16 = np.uint16 ( int ( sys.argv[ 1 ] ) )
     n_o_repeats_uint32 = np.uint32 ( int ( sys.argv[ 2 ] ) )
+else :
+    n_o_bytes_uint16 = np.uint16 ( 1500 )
+    n_o_repeats_uint32 = np.uint32 ( 1 )
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 
@@ -56,7 +59,21 @@ print ( " - 's' aby zatrzymać transmisję cykliczną" )
 
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-udp_sock.bind ( ( "192.168.1.60" , 10001 ) )
+
+# Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
+local_ip = "0.0.0.0" # Domyślny fallback
+try:
+    # Tworzymy tymczasowy socket żeby sprawdzić routing do sieci 192.168.1.x
+    # Łączymy się z przykładowym adresem (np. bramą) w tej sieci aby system wskazał właściwy interfejs
+    temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    temp_sock.connect(("192.168.1.1", 1)) 
+    local_ip = temp_sock.getsockname()[0]
+    temp_sock.close()
+except Exception:
+    pass
+
+print(f"Binding UDP to {local_ip}:10001")
+udp_sock.bind ( ( local_ip , 10001 ) )
 udp_sock.setblocking ( False )
 stdscr.nodelay ( True )
 
