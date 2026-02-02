@@ -3,7 +3,15 @@
 Sekwencja uruchomienia skryptu:
 cd ~/python/temp/
 source .venv/bin/activate
-python bpsk_v0.1.14-tx.py
+python bpsk_v0.1.16-tx.py
+
+Przykłady komend wysyłających pakiety UDP do skryptu:
+printf "\x34" | nc -u 192.168.1.60 10001
+echo -n "34" | nc -u 192.168.1.50 10001
+echo -n 4 | nc -u 192.168.1.50 10001
+
+echo -n -e '\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10' | nc -u 192.168.1.60 10001
+
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
@@ -48,7 +56,7 @@ print ( " - 's' aby zatrzymać transmisję cykliczną" )
 
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-udp_sock.bind ( ( "192.168.1.50" , 10001 ) )
+udp_sock.bind ( ( "192.168.1.60" , 10001 ) )
 udp_sock.setblocking ( False )
 stdscr.nodelay ( True )
 
