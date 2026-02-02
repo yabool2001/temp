@@ -7,6 +7,8 @@ python bpsk_v0.1.14-tx.py
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
+import socket
+import select
 import numpy as np
 import os
 import sys
@@ -43,9 +45,29 @@ print ( "Naciśnij:" )
 print ( " - 't' aby wysłać pakiet jednorazowo" )
 print ( " - 'c' aby rozpocząć transmisję cykliczną" )
 print ( " - 's' aby zatrzymać transmisję cykliczną" )
+
+# Setup UDP Socket
+udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
+udp_sock.bind ( ( "192.168.1.50" , 10001 ) )
+udp_sock.setblocking ( False )
+stdscr.nodelay ( True )
+
 try :
     while True :
-        key = stdscr.getkey ()
+        try :
+            payload_udp = udp_sock.recv ( 1500 )
+            print ( f"\n\r[UDP] Received { len(payload_udp) } bytes: { payload_udp }" )
+            tx_pluto.samples.create_samples4pluto ( payload_bytes = payload_udp )
+            tx_pluto.samples.tx ()
+            tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
+        except BlockingIOError :
+            pass
+        except Exception :
+            pass
+        try :
+            key = stdscr.getkey ()
+        except curses.error :
+            key = ''
         if key ==  'o' :
             t.sleep ( 1 )  # anty-dubler
             print ( f"\n\r[o] Please, press '1' to send packet once." )
