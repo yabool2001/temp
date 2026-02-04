@@ -38,7 +38,7 @@ wrt_filename_csv = "samples.csv/rx_samples_last.csv"
 wrt_filename_log = "logs/rx_perf_log.csv"
 
 with open ( wrt_filename_log , "w" ) as wrt_file :
-    wrt_file.write ( "time,idx,has_sync_sequence,has_frame,has_packet\n" )
+    wrt_file.write ( "time,log_name\n" )
     wrt_file.write ( packet.log_packet )
 
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )

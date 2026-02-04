@@ -519,6 +519,7 @@ class RxFrames_v0_1_13 :
         for samples_component , samples_name in samples_components :
             sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                add2log_packet ( f"{t.time()},{has_sync_sequence=},{idx}")
                 has_sync_sequence = True
                 packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
@@ -528,17 +529,17 @@ class RxFrames_v0_1_13 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         has_frame = True
+                        add2log_packet ( f"{t.time()},{has_frame=},{idx}")
                         if not self.packet_len_validation ( idx , packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}")
+                            add2log_packet ( f"{t.time()},{has_frame=},{idx}")
                             if settings["log"]["verbose_2"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
                             return idx
                         packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - idx )
                         if packet.has_packet :
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            add2log_packet(f"{t.time()},{idx},{has_sync_sequence},{has_frame},{packet.has_packet}")
+                            add2log_packet(f"{t.time()},{packet.has_packet=},{idx}")
                             if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
                             return packet_end_idx
-        if settings["log"]["verbose_2"] : add2log_packet ( f"{t.time()},{idx},{has_sync_sequence},{has_frame}" )
         if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
         return idx
 
