@@ -519,8 +519,8 @@ class RxFrames_v0_1_13 :
         for samples_component , samples_name in samples_components :
             sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                add2log_packet ( f"{t.time()},{has_sync_sequence=},{idx}")
                 has_sync_sequence = True
+                add2log_packet ( f"{t.time()},{has_sync_sequence=},{idx}")
                 packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
                 for samples_comp , frame_name in check_components :
