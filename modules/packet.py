@@ -654,11 +654,11 @@ class RxPluto_v0_1_16 :
     samples : RxSamples_v0_1_16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        self.init_pluot_rx ()
+        self.init_pluto_rx ()
 
-    def init_pluot_rx ( self ) -> None :
+    def init_pluto_rx ( self ) -> None :
         if self.sn is not None :
-            self.pluto_rx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
+            self.pluto_rx_ctx = sdr.init_pluto_v0_1_16 ( sn = self.sn )
             self.samples = RxSamples_v0_1_16 ( pluto_rx_ctx = self.pluto_rx_ctx )
         else :
             self.samples = RxSamples_v0_1_16 ()
