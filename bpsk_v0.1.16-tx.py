@@ -25,22 +25,25 @@ import tomllib
 
 from modules import packet , payload_test_data as ptd , sdr
 
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
+
 if len ( sys.argv ) > 1 :
     n_o_bytes_uint16 = np.uint16 ( int ( sys.argv[ 1 ] ) )
     n_o_repeats_uint32 = np.uint32 ( int ( sys.argv[ 2 ] ) )
+    tx_gain_float = float ( sys.argv[ 3 ] )
 else :
     n_o_bytes_uint16 = np.uint16 ( 1500 )
     n_o_repeats_uint32 = np.uint32 ( 1 )
+    tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 
 script_filename = os.path.basename ( __file__ )
-# Wczytaj plik TOML z konfiguracją
-with open ( "settings.toml" , "rb" ) as settings_file :
-    settings = tomllib.load ( settings_file )
 
 plt = False
-tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN)
+tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
 if plt :

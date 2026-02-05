@@ -32,7 +32,7 @@ GAIN_CONTROL = toml_settings["ADALM-Pluto"][ "GAIN_CONTROL" ]
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 PLUTO_DAC_SCALE = 16384  # precomputed value of 2**14 for slight performance gain. The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
 
-def init_pluto_v0_1_9 ( sn : str) :
+def init_pluto_v0_1_16 ( sn : str , tx_gain_float : float = TX_GAIN) -> adi.Pluto :
     uri = get_uri ( sn )
     if uri is None:
         raise ValueError ( f"ADALM-Pluto SN: {sn} is not connected. Check USB connection or IP settings.")
@@ -42,7 +42,7 @@ def init_pluto_v0_1_9 ( sn : str) :
     sdr.sample_rate = F_S
     sdr.rx_rf_bandwidth = BW
     sdr.rx_buffer_size = SAMPLES_BUFFER_SIZE
-    sdr.tx_hardwaregain_chan0 = TX_GAIN
+    sdr.tx_hardwaregain_chan0 = tx_gain_float
     sdr.gain_control_mode_chan0 = GAIN_CONTROL
     sdr.rx_hardwaregain_chan0 = float ( RX_GAIN )
     sdr.rx_output_type = "SI"
