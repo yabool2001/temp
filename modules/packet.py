@@ -830,10 +830,11 @@ class TxSamples_v0_1_12 :
         return ( f"{ self.frame.frame_bytes= }, { self.samples.size= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxPluto_v0_1_12 :
+class TxPluto_v0_1_16 :
     
     sn : str
-    
+    tx_gain_float : float = field ( default = sdr.TX_GAIN )
+
     # Pola uzupełnianie w __post_init__
     pluto_tx_ctx : Pluto  = field ( init = False )
     samples : TxSamples_v0_1_12 = field ( init = False )
@@ -842,7 +843,7 @@ class TxPluto_v0_1_12 :
         self.init_pluto_tx ()
 
     def init_pluto_tx ( self ) -> None :
-        self.pluto_tx_ctx = sdr.init_pluto_v0_1_9 ( sn = self.sn )
+        self.pluto_tx_ctx = sdr.init_pluto_v0_1_16 ( sn = self.sn , tx_gain_float = self.tx_gain_float )
         self.samples = TxSamples_v0_1_12 ( pluto_tx_ctx = self.pluto_tx_ctx )
 
     def __repr__ ( self ) -> str :
