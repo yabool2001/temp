@@ -43,7 +43,7 @@ np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 script_filename = os.path.basename ( __file__ )
 
 plt = False
-tx_pluto = packet.TxPluto_v0_1_12 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
+tx_pluto = packet.TxPluto_v0_1_16 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
 if plt :
