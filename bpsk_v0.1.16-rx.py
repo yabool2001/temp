@@ -26,12 +26,14 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
 if len ( sys.argv ) > 1 :
-    gain_control_mode = sys.argv[ 1 ]
-    rx_gain_int = np.uint32 ( int ( sys.argv[ 2 ] ) )
+    gain_control_mode_chan0 = sys.argv[ 1 ]
+    if len ( sys.argv ) > 2 :
+        rx_gain_chan0_int = int ( sys.argv[ 2 ] )
+    else :
+        rx_gain_chan0_int = int ( toml_settings["ADALM-Pluto"][ "RX_GAIN" ] )
 else :
-    gain_control_mode = sys.argv[ 1 ]
-    rx_gain_int = np.uint32 ( int ( sys.argv[ 2 ] ) )
-    tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
+    gain_control_mode_chan0 = toml_settings["ADALM-Pluto"][ "GAIN_CONTROL" ]
+    rx_gain_chan0_int = int ( toml_settings["ADALM-Pluto"][ "RX_GAIN" ] )
 
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
@@ -59,7 +61,7 @@ plt = True
 wrt = True
 
 if real :
-    rx_pluto = packet.RxPluto_v0_1_16 ( sn = sdr.PLUTO_RX_SN )
+    rx_pluto = packet.RxPluto_v0_1_16 ( sn = sdr.PLUTO_RX_SN , gain_control_mode_chan0 = gain_control_mode_chan0 , rx_gain_chan0_int = rx_gain_chan0_int )
 else :
     rx_pluto = packet.RxPluto_v0_1_16 ()
 
