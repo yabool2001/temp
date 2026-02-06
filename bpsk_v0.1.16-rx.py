@@ -6,13 +6,14 @@ source .venv/bin/activate
 python bpsk_v0.1.8-tx.py
 
 Po zakończeniu tej wersji wrócić do rozwoju wersji bpsk_v0.1.6-rx
+
+ssh do fedora na Surface 9 Pro: ssh yabool2001@192.168.1.60
+
 '''
 import numpy as np
 from numpy.typing import NDArray
-import os
-import threading
+import os , threading , tomllib , sys
 import time as t
-import tomllib
 from pathlib import Path
 from numpy import real
 
@@ -22,7 +23,15 @@ from modules import ops_file, packet , sdr
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
-    settings = tomllib.load ( settings_file )
+    toml_settings = tomllib.load ( settings_file )
+
+if len ( sys.argv ) > 1 :
+    gain_control_mode = sys.argv[ 1 ]
+    rx_gain_int = np.uint32 ( int ( sys.argv[ 2 ] ) )
+else :
+    gain_control_mode = sys.argv[ 1 ]
+    rx_gain_int = np.uint32 ( int ( sys.argv[ 2 ] ) )
+    tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
@@ -33,7 +42,7 @@ samples_filename = "np.samples/rx_samples_0.1.14_128Bx20.npy"
 #samples_filename = "np.samples/rx_samples_0.1.15_1500B_d0-4.npy"
 #samples_filename = "np.samples/rx_samples_0.1.15_1500B_d15x5.npy"
 
-wrt_filename_npy = "np.samples/rx_samples_0.1.16.npy"
+wrt_filename_npy = "np.samples/rx_samples_0.1.17.npy"
 wrt_filename_csv = "samples.csv/rx_samples_last.csv"
 wrt_filename_log = "logs/rx_perf_log.csv"
 
@@ -47,7 +56,7 @@ previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = 
 real = True
 debug = False
 plt = True
-wrt = False
+wrt = True
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_16 ( sn = sdr.PLUTO_RX_SN )
@@ -76,14 +85,14 @@ while ( len ( received_bytes ) < 100000 and real ) or ( not real and received_by
         #print ( f"{rx_pluto_samples.samples_leftovers.size=}\n{rx_pluto_samples.frames.samples_leftovers_start_idx=}")
     if rx_pluto_samples.frames.sync_sequence_peaks.size > 0 :
         if plt : rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
+        if wrt and real:
+            rx_pluto_samples.save_complex_samples_2_npf ( wrt_filename_npy )
     #rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
 
     if rx_pluto_samples.frames.samples_payloads_bytes.size > 0 :
         received_bytes = np.concatenate ( [ received_bytes , rx_pluto_samples.frames.samples_payloads_bytes ] )
         print ( f"{ rx_pluto_samples.frames.samples_payloads_bytes[0]= }, { rx_pluto_samples.frames.samples_payloads_bytes.size= } { received_bytes.size= }" )
         if debug : rx_pluto_samples.analyze ()
-        if wrt and real:
-            rx_pluto_samples.save_complex_samples_2_npf ( wrt_filename_npy )
     
     if packet.log_packet != "" :
         # To jest najlepszy i najprostszy wybór dla aplikacji SDR działającej w pętli.
