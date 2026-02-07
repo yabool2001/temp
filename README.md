@@ -42,7 +42,7 @@ rx () function implemented in `RxSamples` class can gather the samples in the re
 1. simulation mode: the data saved in .npy format gathered from the ADALM-Pluto SDR
 
 In each mode the leftovers from the previous samples can be insert before new samples.
-rx buffer sizes: 1024, 32768, 307200, 614400
+rx buffer sizes: 1024, 32768, 65536, 307200, 614400
 
 
 ## Samples corrections in corrections module
