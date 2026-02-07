@@ -34,8 +34,8 @@ if len ( sys.argv ) > 1 :
     n_o_repeats_uint32 = np.uint32 ( int ( sys.argv[ 2 ] ) )
     tx_gain_float = float ( sys.argv[ 3 ] )
 else :
-    n_o_bytes_uint16 = np.uint16 ( 1500 )
-    n_o_repeats_uint32 = np.uint32 ( 1 )
+    n_o_bytes_uint16 = np.uint16 ( 4 )
+    n_o_repeats_uint32 = np.uint32 ( 10 )
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
