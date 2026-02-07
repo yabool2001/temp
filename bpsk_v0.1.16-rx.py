@@ -58,7 +58,7 @@ previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = 
 real = True
 debug = False
 plt = True
-wrt = False
+wrt = True
 
 if real :
     rx_pluto = packet.RxPluto_v0_1_16 ( sn = sdr.PLUTO_RX_SN , gain_control_mode_chan0 = gain_control_mode_chan0 , rx_gain_chan0_int = rx_gain_chan0_int )
