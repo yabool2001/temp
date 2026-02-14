@@ -1,3 +1,33 @@
+'''
+ad9361-phy
+
+warstwa RF/PHY transceivera AD9361
+tu masz głównie konfigurację i telemetrię: LO, gain, BW, rate, RSSI, kalibracje itp.
+to nie jest główne źródło strumienia IQ do bufora
+
+cf-ad9361-lpc
+
+RX data path w FPGA (capture core)
+daje kanały IQ odbiornika do bufora IIO (czyli właściwe próbki RX)
+
+cf-ad9361-dds-core-lpc
+
+TX generator DDS w FPGA
+służy do generowania tonów/testowego sygnału na nadajnik (parametry częstotliwości, skali, fazy), a nie do pomiaru RX
+
+one-bit-adc-dac
+
+pomocniczy 1-bitowy interfejs GPIO/sterowanie (debug/trigger/proste I/O)
+wartości binarne lub proste stany, nie pełne IQ
+
+xadc
+
+monitor analogowy Xilinxa (FPGA)
+temperatura i napięcia zasilania (health monitoring), nie sygnał radiowy
+
+W skrócie: ad9361-phy = sterowanie radiem, cf-ad9361-lpc = próbki RX IQ, cf-ad9361-dds-core-lpc = generator TX, one-bit-adc-dac = 1-bit I/O, xadc = telemetryka sprzętu.
+
+'''
 import iio
 import tomllib
 
@@ -27,10 +57,10 @@ for dev in ctx.devices:
         else:
             print("{}".format(dev.name))
 
-for channels_attr in phy.channels :
+for channel in phy.channels :
         try:
-            print ( channels_attr._id].value
+            print ( channel['attrs'].label.value )
         except OSError:
             value = "N/A (OSError)"
-        print(f"{value=} {channels_attr._id=}")
+        print(f"{value=} {channel.id=}")
 pass
