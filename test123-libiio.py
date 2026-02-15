@@ -20,13 +20,33 @@ one-bit-adc-dac
 pomocniczy 1-bitowy interfejs GPIO/sterowanie (debug/trigger/proste I/O)
 wartości binarne lub proste stany, nie pełne IQ
 
-xadc
-
-monitor analogowy Xilinxa (FPGA)
-temperatura i napięcia zasilania (health monitoring), nie sygnał radiowy
+xadc (Xilinx ADC) - monitor analogowy Xilinxa (FPGA)
+- temperatura i napięcia zasilania (health monitoring), nie sygnał radiowy
+Jeśli nie zajmujesz się diagnostyką sprzętową (np. nie piszesz sterownika zarządzania energią),
+możesz te kanały (voltage4 i wyższe w XADC) całkowicie ignorować w swoim programie radiowym.
 
 W skrócie: ad9361-phy = sterowanie radiem, cf-ad9361-lpc = próbki RX IQ, cf-ad9361-dds-core-lpc = generator TX, one-bit-adc-dac = 1-bit I/O, xadc = telemetryka sprzętu.
 
+W Twoim pliku voltage4 i kolejne to konkretne szyny zasilające:
+voltage4 (label: vccpaux): Napięcie pomocnicze dla logiki programowalnej (Programmable Logic Auxiliary Voltage).
+
+
+Wartość: raw: 2431 * scale: 0.732... ≈ 1780 mV (1.8V).
+
+voltage5 (label: vccoddr)
+
+Co to jest: Napięcie zasilania pamięci DDR RAM.
+
+
+Wartość: raw: 1818 * scale: 0.732... ≈ 1331 mV (1.35V).
+
+voltage6 (label: vrefp)
+
+Co to jest: Dodatnie napięcie referencyjne dla samego przetwornika ADC.
+
+voltage7 (label: vrefn)
+
+Co to jest: Ujemne napięcie referencyjne (masa analogowa).
 '''
 import iio
 import tomllib
