@@ -54,6 +54,39 @@ import tomllib
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
+BW = int ( toml_settings["ADALM-Pluto"][ "BW" ] )
+F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 )
+
+
+def set_sampling_frequency_if_supported ( phy_device , target_rate : int ) -> None :
+    rx_ch = None
+    tx_ch = None
+
+    for channel in phy_device.channels:
+        if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
+            if channel.output:
+                tx_ch = channel
+            else:
+                rx_ch = channel
+
+    if rx_ch is None:
+        raise ValueError ( "RX channel voltage0 with sampling_frequency attribute not found." )
+
+    if "sampling_frequency_available" not in rx_ch.attrs:
+        raise ValueError ( "sampling_frequency_available attribute not found on RX voltage0." )
+
+    available_text = rx_ch.attrs["sampling_frequency_available"].value
+
+    if not is_sampling_frequency_supported ( target_rate , available_text ):
+        raise ValueError ( f"F_S={target_rate} not supported. sampling_frequency_available={available_text}" )
+
+    rx_ch.attrs["sampling_frequency"].value = str ( target_rate )
+
+    if tx_ch is not None:
+        tx_ch.attrs["sampling_frequency"].value = str ( target_rate )
+
+    print ( f"sampling_frequency set to {target_rate}" )
+
 uri_preference: str = "usb"
 
 contexts = iio.scan_contexts()
@@ -69,18 +102,27 @@ for uri, description in contexts.items():
             pluto_usb = uri
 ctx = iio.Context ( pluto_usb ) if uri_preference == "usb" else iio.Context ( pluto_ip )
 
+phy = None
+
 for dev in ctx.devices:
-        if "-phy" in dev.name : phy = dev
+        if dev.name and "-phy" in dev.name : phy = dev
         if dev.channels:
             for chan in dev.channels:
                 print("{} - {}".format(dev.name, chan._id))
         else:
             print("{}".format(dev.name))
 
+if phy is None:
+    raise ValueError ( "ad9361-phy device not found in IIO context." )
+
+set_sampling_frequency_if_supported ( phy , F_S )
+
 for channel in phy.channels :
-        try:
-            print ( channel['attrs'].label.value )
-        except OSError:
-            value = "N/A (OSError)"
-        print(f"{value=} {channel.id=}")
+    try:
+        print ( f"{channel.id=} - {channel.attrs['label'].value=}" )
+    except ( KeyError , OSError ):
+        print ( f"{channel.id=} - label=N/A" )
+    if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
+        side = "TX" if channel.output else "RX"
+        print(f"{side}: {channel.attrs['sampling_frequency'].value=}")
 pass
