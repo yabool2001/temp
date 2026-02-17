@@ -50,42 +50,13 @@ Co to jest: Ujemne napięcie referencyjne (masa analogowa).
 '''
 import iio
 import tomllib
+from modules import sdr
 
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
 BW = int ( toml_settings["ADALM-Pluto"][ "BW" ] )
 F_S = int ( BW * 3 if ( BW * 3 ) >= 521100 and ( BW * 3 ) <= 61440000 else 521100 )
-
-
-def set_sampling_frequency_if_supported ( phy_device , target_rate : int ) -> None :
-    rx_ch = None
-    tx_ch = None
-
-    for channel in phy_device.channels:
-        if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
-            if channel.output:
-                tx_ch = channel
-            else:
-                rx_ch = channel
-
-    if rx_ch is None:
-        raise ValueError ( "RX channel voltage0 with sampling_frequency attribute not found." )
-
-    if "sampling_frequency_available" not in rx_ch.attrs:
-        raise ValueError ( "sampling_frequency_available attribute not found on RX voltage0." )
-
-    available_text = rx_ch.attrs["sampling_frequency_available"].value
-
-    if not is_sampling_frequency_supported ( target_rate , available_text ):
-        raise ValueError ( f"F_S={target_rate} not supported. sampling_frequency_available={available_text}" )
-
-    rx_ch.attrs["sampling_frequency"].value = str ( target_rate )
-
-    if tx_ch is not None:
-        tx_ch.attrs["sampling_frequency"].value = str ( target_rate )
-
-    print ( f"sampling_frequency set to {target_rate}" )
 
 uri_preference: str = "usb"
 
@@ -115,8 +86,6 @@ for dev in ctx.devices:
 if phy is None:
     raise ValueError ( "ad9361-phy device not found in IIO context." )
 
-set_sampling_frequency_if_supported ( phy , F_S )
-
 for channel in phy.channels :
     try:
         print ( f"{channel.id=} - {channel.attrs['label'].value=}" )
@@ -125,4 +94,45 @@ for channel in phy.channels :
     if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
         side = "TX" if channel.output else "RX"
         print(f"{side}: {channel.attrs['sampling_frequency'].value=}")
-pass
+
+for channel in phy.channels:
+    if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
+        channel.attrs[ "sampling_frequency" ].value = str ( int ( sdr.F_S ) )
+
+for channel in phy.channels:
+    if channel.id == "voltage0" and "rf_bandwidth" in channel.attrs:
+        channel.attrs["rf_bandwidth"].value = str ( int ( sdr.BW ) )
+
+for channel in phy.channels:
+    if channel.id.startswith("altvoltage") and "frequency" in channel.attrs:
+        channel.attrs[ "frequency" ].value = str ( int ( sdr.F_C ) )
+
+for channel in phy.channels:
+    if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
+        print ( f"{channel.id=} - {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,}")
+
+for channel in phy.channels:
+    if channel.id == "voltage0" and "rf_bandwidth" in channel.attrs:
+        side = "TX" if channel.output else "RX"
+        print ( f"{side} rf_bandwidth ustawione na {int ( channel.attrs['rf_bandwidth'].value ):,}")
+
+for channel in phy.channels:
+    if channel.id.startswith("altvoltage") and "frequency" in channel.attrs:
+        side = "TX" if channel.output else "RX"
+        print ( f"{side} frequency ustawione na {int ( channel.attrs[ 'frequency' ].value ):,}")
+        if channel.output:
+            sdr.f_c_tx_readback = int ( channel.attrs[ "frequency" ].value )
+        else:
+            sdr.f_c_rx_readback = int ( channel.attrs[ "frequency" ].value )
+
+for channel in phy.channels:
+    if channel.id == "altvoltage1" and "frequency" in channel.attrs and channel.attrs["label"].value == "TX_LO" :
+        print ( f"{channel.id=} {channel.attrs['label'].value=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
+        sdr.f_c_tx0_readback = int ( channel.attrs[ "frequency" ].value )
+
+for channel in phy.channels:
+    if channel.id == "altvoltage0" and "frequency" in channel.attrs and channel.attrs["label"].value == "RX_LO" :
+        print ( f"{channel.id=} {channel.attrs['label'].value=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
+        sdr.f_c_rx0_readback = int ( channel.attrs[ "frequency" ].value )
+
+print ( f"{sdr.F_S=:,}" )
