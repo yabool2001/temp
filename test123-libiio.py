@@ -108,11 +108,11 @@ for channel in phy.channels:
         channel.attrs[ "frequency" ].value = str ( int ( sdr.F_C ) )
 
 for channel in phy.channels:
-    if channel.id == "voltage0" and "sampling_frequency" in channel.attrs:
+    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rxtx0_channel_id"] and "sampling_frequency" in channel.attrs:
         print ( f"{channel.id=} - {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,}")
 
 for channel in phy.channels:
-    if channel.id == "voltage0" and "rf_bandwidth" in channel.attrs:
+    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rxtx0_channel_id"] and "rf_bandwidth" in channel.attrs:
         side = "TX" if channel.output else "RX"
         print ( f"{side} rf_bandwidth ustawione na {int ( channel.attrs['rf_bandwidth'].value ):,}")
 
@@ -126,7 +126,7 @@ for channel in phy.channels:
             sdr.f_c_rx_readback = int ( channel.attrs[ "frequency" ].value )
 
 for channel in phy.channels:
-    if channel.id == "altvoltage1" and "frequency" in channel.attrs and channel.attrs["label"].value == "TX_LO" :
+    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["tx_lo_channel_id"] and "frequency" in channel.attrs:
         print ( f"{channel.id=} {channel.attrs['label'].value=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
         sdr.f_c_tx0_readback = int ( channel.attrs[ "frequency" ].value )
 
