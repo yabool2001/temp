@@ -50,6 +50,7 @@ Co to jest: Ujemne napięcie referencyjne (masa analogowa).
 '''
 import iio
 import tomllib
+import sys
 from modules import sdr
 
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -71,20 +72,26 @@ for uri, description in contexts.items():
             pluto_ip = uri
         elif uri.startswith ( "usb:" ) :
             pluto_usb = uri
+
+if pluto_ip is None and pluto_usb is None:
+    print ( "There is no Pluto connected (neither USB nor IP). Exiting script." )
+    raise SystemExit ( 0 )
+
 ctx = iio.Context ( pluto_usb ) if uri_preference == "usb" else iio.Context ( pluto_ip )
 
 phy = None
 
 for dev in ctx.devices:
-        if dev.name and "-phy" in dev.name : phy = dev
-        if dev.channels:
-            for chan in dev.channels:
-                print("{} - {}".format(dev.name, chan._id))
-        else:
-            print("{}".format(dev.name))
+    if dev.name and "-phy" in dev.name : phy = dev
+    if dev.channels:
+        for chan in dev.channels:
+            print("{} - {}".format(dev.name, chan._id))
+    else:
+        print("{}".format(dev.name))
 
 if phy is None:
-    raise ValueError ( "ad9361-phy device not found in IIO context." )
+    print ( "No ad9361-phy found in IIO context. Device not connected — exiting script without traceback." )
+    raise SystemExit ( 0 )
 
 for channel in phy.channels :
     try:
@@ -109,48 +116,55 @@ for channel in phy.channels:
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rx0tx0_channel_id"] and "sampling_frequency" in channel.attrs:
-        print ( f"{channel.id=} - {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,}")
+        print ( f"{channel.id=} - {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rx0tx0_channel_id"] and "rf_bandwidth" in channel.attrs:
         side = "TX" if channel.output else "RX"
-        print ( f"{side} rf_bandwidth ustawione na {int ( channel.attrs['rf_bandwidth'].value ):,}")
+        print ( f"{side} rf_bandwidth ustawione na {int ( channel.attrs['rf_bandwidth'].value ):,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rx0tx0_channel_id"] and channel.output == toml_settings["ADALM-Pluto"]["channels"]["rx_channel_output"] :
-        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,}")
+        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,} Hz" )
         sdr.f_s_rx0_readback = int ( channel.attrs[ "sampling_frequency" ].value )
-        print ( f"{sdr.f_s_rx0_readback=:,}" )
+        print ( f"{sdr.f_s_rx0_readback=:,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rx0tx0_channel_id"] and channel.output == toml_settings["ADALM-Pluto"]["channels"]["tx_channel_output"] :
-        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,}")
+        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'sampling_frequency' ].value )=:,} Hz" )
         sdr.f_s_tx0_readback = int ( channel.attrs[ "sampling_frequency" ].value )
-        print ( f"{sdr.f_s_tx0_readback=:,}" )
+        print ( f"{sdr.f_s_tx0_readback=:,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["rx0tx0_channel_id"] and channel.output == toml_settings["ADALM-Pluto"]["channels"]["rx_channel_output"] :
-        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'rf_bandwidth' ].value )=:,}")
+        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'rf_bandwidth' ].value )=:,} Hz" )
         sdr.bw_rx0_readback = int ( channel.attrs[ 'rf_bandwidth' ].value )
-        print ( f"{sdr.bw_rx0_readback=:,}" )
+        print ( f"{sdr.bw_rx0_readback=:,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings[ 'ADALM-Pluto' ][ 'channels' ][ 'rx0tx0_channel_id' ] and channel.output == toml_settings[ 'ADALM-Pluto' ][ 'channels' ][ 'tx_channel_output' ] :
-        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'rf_bandwidth' ].value )=:,}")
+        hardwaregain_db = float ( channel.attrs[ 'hardwaregain' ].value.split()[0] )
+        print ( f"{channel.id=} {channel.output=} {hardwaregain_db=:.2f} dB" )
+        sdr.bw_tx0_gain = hardwaregain_db
+        print ( f"{sdr.bw_tx0_gain=:.2f} dB" )
+
+for channel in phy.channels:
+    if channel.id == toml_settings[ 'ADALM-Pluto' ][ 'channels' ][ 'rx0tx0_channel_id' ] and channel.output == toml_settings[ 'ADALM-Pluto' ][ 'channels' ][ 'tx_channel_output' ] :
+        print ( f"{channel.id=} {channel.output=} {int ( channel.attrs[ 'rf_bandwidth' ].value )=:,} Hz" )
         sdr.bw_tx0_readback = int ( channel.attrs[ 'rf_bandwidth' ].value )
-        print ( f"{sdr.bw_tx0_readback=:,}" )
+        print ( f"{sdr.bw_tx0_readback=:,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0_channel_id"] and channel.name == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0_channel_name"] :
-        print ( f"{channel.id=} {channel.name=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
+        print ( f"{channel.id=} {channel.name=} {int ( channel.attrs[ 'frequency' ].value )=:,} Hz" )
         sdr.f_c_rx0_readback = int ( channel.attrs[ "frequency" ].value )
-        print ( f"{sdr.f_c_rx0_readback=:,}" )
+        print ( f"{sdr.f_c_rx0_readback=:,} Hz" )
 
 for channel in phy.channels:
     if channel.id == toml_settings["ADALM-Pluto"]["channels"]["lo_tx0_channel_id"] and channel.name == toml_settings["ADALM-Pluto"]["channels"]["lo_tx0_channel_name"] :
-        print ( f"{channel.id=} {channel.name=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
+        print ( f"{channel.id=} {channel.name=} {int ( channel.attrs[ 'frequency' ].value )=:,} Hz" )
         sdr.f_c_tx0_readback = int ( channel.attrs[ "frequency" ].value )
-        print ( f"{sdr.f_c_tx0_readback=:,}" )
+        print ( f"{sdr.f_c_tx0_readback=:,} Hz" )
 
 
 # gain_control_mode.value = "manual"
