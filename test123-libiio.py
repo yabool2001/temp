@@ -138,13 +138,13 @@ for channel in phy.channels:
         print ( f"{sdr.f_s_tx0_readback=}" )
 
 for channel in phy.channels:
-    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0tx0_channel_id"] and channel.name == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0_channel_name"] :
+    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0_channel_id"] and channel.name == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0_channel_name"] :
         print ( f"{channel.id=} {channel.name=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
         sdr.f_c_rx0_readback = int ( channel.attrs[ "frequency" ].value )
         print ( f"{sdr.f_c_rx0_readback=}" )
 
 for channel in phy.channels:
-    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["lo_rx0tx0_channel_id"] and channel.name == toml_settings["ADALM-Pluto"]["channels"]["lo_tx0_channel_name"] :
+    if channel.id == toml_settings["ADALM-Pluto"]["channels"]["lo_tx0_channel_id"] and channel.name == toml_settings["ADALM-Pluto"]["channels"]["lo_tx0_channel_name"] :
         print ( f"{channel.id=} {channel.name=} {int ( channel.attrs[ 'frequency' ].value )=:,}")
         sdr.f_c_tx0_readback = int ( channel.attrs[ "frequency" ].value )
         print ( f"{sdr.f_c_tx0_readback=}" )
