@@ -38,11 +38,11 @@ else :
 Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
 
 #samples_filename = "np.samples/rx_samples_0.1.15_no_samples.npy"
-samples_filename = "np.samples/rx_samples_0.1.14_128Bx20.npy"
+#samples_filename = "np.samples/rx_samples_0.1.14_128Bx20.npy"
 #samples_filename = "np.samples/rx_samples_0.1.15_1500B_d00x1.npy"
 #samples_filename = "np.samples/rx_samples_0.1.15_1500B_d15x1.npy"
 #samples_filename = "np.samples/rx_samples_0.1.15_1500B_d0-4.npy"
-#samples_filename = "np.samples/rx_samples_0.1.15_1500B_d15x5.npy"
+samples_filename = "np.samples/rx_samples_0.1.15_1500B_d15x5.npy"
 
 wrt_filename_npy = "np.samples/rx_samples_0.1.17.npy"
 wrt_filename_csv = "samples.csv/rx_samples_last.csv"
