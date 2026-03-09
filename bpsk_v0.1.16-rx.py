@@ -72,8 +72,8 @@ while ( len ( received_bytes ) < 100000 and real ) or ( not real and received_by
         rx_pluto_samples = packet.RxSamples_v0_1_16 ( pluto_rx_ctx = rx_pluto.pluto_rx_ctx )
         rx_pluto_samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
     else :
-        rx_pluto_samples.rx ( samples_filename = samples_filename )
         rx_pluto_samples = packet.RxSamples_v0_1_16 ()
+        rx_pluto_samples.rx ( samples_filename = samples_filename )
     if debug :
         if rx_pluto_samples.has_amp_greater_than_ths : rx_pluto_samples.plot_complex_samples ( title = f"{ script_filename }" )
     rx_pluto_samples.detect_frames ( deep = False )
