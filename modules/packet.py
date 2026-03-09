@@ -96,6 +96,38 @@ PACKET_BYTE_LEN_BITS = 8
 FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
 
+def detect_sync_sequence_peaks_v0_1_16 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
+
+    # Wzięte z Gemini Ultra Deep Thinking
+
+    # 1. Transformacja różnicowa (Matematyczna, bezwzględna obrona przed CFO)
+    rx_diff = samples[1:] * np.conj(samples[:-1])
+    sync_diff = sync_sequence[1:] * np.conj(sync_sequence[:-1])
+
+    # 2. Korelacja różnicowa (surowa)
+    corr_diff = np.abs(np.correlate(rx_diff, sync_diff, mode="valid"))
+
+    # --- LOKALNA NORMALIZACJA (Magia stabilności pożyczona z Twojego Wariantu 2) ---
+    sync_diff_norm = np.linalg.norm(sync_diff)
+
+    # Obliczamy lokalną energię sygnału różnicowego pod oknem korelacji
+    ones = np.ones(len(sync_diff))
+    # rx_diff podniesione do kwadratu modułu to moc sygnału w danym punkcie
+    local_energy_diff = np.correlate(np.abs(rx_diff)**2, ones, mode="valid")
+    local_signal_diff_norm = np.sqrt(np.maximum(local_energy_diff, 1e-10))
+
+    # 3. Wynik znormalizowany (wartości twardo zamknięte w przedziale od 0.0 do 1.0)
+    corr_norm = corr_diff / (local_signal_diff_norm * sync_diff_norm)
+
+    # 4. Stabilny, sztywny próg bezwzględny!
+    # Ze względu na podbijanie szumu przez operację różniczkową (squaring loss), 
+    # próg detekcji ustawia się zazwyczaj ciut niżej niż klasyczne 0.8.
+    threshold = 0.65 
+
+    peaks, _ = find_peaks ( corr_norm , height = threshold , distance = len ( sync_sequence ) * modulation.SPS )
+
+    return peaks
+
 def detect_sync_sequence_peaks_v0_1_15 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
     
     plt = False
