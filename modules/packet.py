@@ -8,7 +8,7 @@ import zlib
 
 from adi import Pluto
 from dataclasses import dataclass , field
-from modules import corrections , filters , modulation, ops_file, plot , sdr
+from modules import corrections , filters , modulation, ml , ops_file, plot , sdr
 from numpy.typing import NDArray
 
 from pathlib import Path
@@ -453,6 +453,7 @@ class RxFrames_v0_1_13 :
     sps = modulation.SPS
     #sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
+    packets_idx : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     samples_filtered_len : np.uint32 = field ( init = False )
     last_processed_idx : np.uint32 = 0
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
@@ -537,6 +538,7 @@ class RxFrames_v0_1_13 :
                             return idx
                         packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - idx )
                         if packet.has_packet :
+                            self.packets_idx = np.append ( self.packets_idx , idx )
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{packet.has_packet=},{idx}")
                             if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
@@ -594,7 +596,11 @@ class RxSamples_v0_1_16 :
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
+    def create_tensor ( self ) -> None :
+        self.tensor = ml.iq_to_tensor ( self.samples )
+
     def detect_frames ( self , deep : bool = False ) -> None :
+        self.create_tensor ()
         self.filter_samples ()
         self.frames = RxFrames_v0_1_13 ( samples_filtered = self.samples_filtered , deep = deep )
         if self.frames.has_leftovers :
@@ -608,6 +614,9 @@ class RxSamples_v0_1_16 :
 
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"RxSamples filtered {title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def plot_tensor ( self , title : str = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None , frame_idx : int | None = None ) -> None :
+        plot.tensor_waveform_v0_1_16 ( self.tensor , title = f"RxSamples tensor {title}" , marker_squares = marker , marker_peaks = peaks , frame_idx = frame_idx )
 
     def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )

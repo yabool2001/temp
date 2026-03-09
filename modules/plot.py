@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import torch
 from scipy import signal
 from typing import Optional
 
@@ -604,3 +605,59 @@ def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex128 ] , title 
         height=500
     )
     fig.show()
+
+def tensor_waveform_v0_1_16 (
+    signal_tensor : torch.Tensor | NDArray[ np.float32 ] ,
+    title : str = "Tensor RxSamples" ,
+    marker_squares : bool = False ,
+    marker_peaks : Optional[ NDArray[ np.int_ ] ] = None ,
+    frame_idx : Optional[ int ] = None
+) -> None :
+    """
+    Rysuje zawartość tensora I/Q w formie analogicznej do complex_waveform_v0_1_6.
+
+    Obsługiwane wejścia:
+    - [ batch , 2 , seq_len ]
+    - [ 2 , seq_len ]
+    - [ seq_len , 2 ]
+
+    Gdy przekazano tensor 3D i `frame_idx is None`, wszystkie ramki są łączone
+    w jeden ciąg czasowy, zachowując kolejność batchy.
+    """
+    if isinstance ( signal_tensor , torch.Tensor ) :
+        tensor_np = signal_tensor.detach ().cpu ().numpy ()
+    else :
+        tensor_np = np.asarray ( signal_tensor )
+
+    if tensor_np.size == 0 :
+        raise ValueError ( "Wejściowy tensor jest pusty." )
+
+    if tensor_np.ndim == 3 :
+        if tensor_np.shape[ 1 ] != 2 :
+            raise ValueError ( "Tensor 3D musi mieć układ [batch, 2, seq_len]." )
+        if frame_idx is not None :
+            if frame_idx < 0 or frame_idx >= tensor_np.shape[ 0 ] :
+                raise ValueError ( f"frame_idx poza zakresem: {frame_idx=}, batch={tensor_np.shape[0]}" )
+            iq_samples = tensor_np[ frame_idx ].T
+            resolved_title = f"{title} frame={frame_idx} shape={tuple(tensor_np.shape)}"
+        else :
+            iq_samples = np.transpose ( tensor_np , ( 0 , 2 , 1 ) ).reshape ( -1 , 2 )
+            resolved_title = f"{title} shape={tuple(tensor_np.shape)}"
+    elif tensor_np.ndim == 2 :
+        if tensor_np.shape[ 0 ] == 2 :
+            iq_samples = tensor_np.T
+        elif tensor_np.shape[ 1 ] == 2 :
+            iq_samples = tensor_np
+        else :
+            raise ValueError ( "Tensor 2D musi mieć układ [2, seq_len] albo [seq_len, 2]." )
+        resolved_title = f"{title} shape={tuple(tensor_np.shape)}"
+    else :
+        raise ValueError ( "Wejściowy tensor musi mieć 2 albo 3 wymiary." )
+
+    signal_complex = iq_samples[ : , 0 ].astype ( np.float32 ) + 1j * iq_samples[ : , 1 ].astype ( np.float32 )
+    complex_waveform_v0_1_6 (
+        signal_complex = signal_complex ,
+        title = resolved_title ,
+        marker_squares = marker_squares ,
+        marker_peaks = marker_peaks
+    )

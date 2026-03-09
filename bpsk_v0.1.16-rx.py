@@ -86,7 +86,9 @@ while ( len ( received_bytes ) < 100000 and real ) or ( not real and received_by
         previous_samples_leftovers = rx_pluto_samples.samples_leftovers
         #print ( f"{rx_pluto_samples.samples_leftovers.size=}\n{rx_pluto_samples.frames.samples_leftovers_start_idx=}")
     if rx_pluto_samples.frames.sync_sequence_peaks.size > 0 :
+        if plt : rx_pluto_samples.plot_tensor ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
         if plt : rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
+        print ( rx_pluto_samples.frames.packets_idx )
         if wrt and real:
             rx_pluto_samples.save_complex_samples_2_npf ( wrt_filename_npy )
     #rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
