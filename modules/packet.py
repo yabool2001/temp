@@ -3,6 +3,7 @@ import numpy as np
 import os
 import time as t
 import tomllib
+import torch
 import zlib
 
 from adi import Pluto
@@ -558,6 +559,7 @@ class RxSamples_v0_1_16 :
     # Pola uzupełnianie w __post_init__
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
+    tensor : torch.Tensor = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
@@ -567,6 +569,7 @@ class RxSamples_v0_1_16 :
 
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
+            self.tensor = torch.tensor ( [] , dtype = torch.float32 )
             self.samples_filtered = np.array ( [] , dtype = np.complex128 )
 
     def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None ) -> None :

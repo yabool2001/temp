@@ -55,7 +55,7 @@ with open ( wrt_filename_log , "w" ) as wrt_file :
 received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
 previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
 
-real = True
+real = False
 debug = False
 plt = True
 wrt = False
