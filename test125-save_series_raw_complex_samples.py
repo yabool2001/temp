@@ -7,7 +7,7 @@ import tomllib
 Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
 
 plt = True
-wrt = False
+wrt = True
 
 filename = "np.samples_series_01/rx_samples.npy"
 series_len = 2
@@ -28,11 +28,10 @@ else :
 
 rx_pluto = packet.RxPluto_v0_1_16 ( sn = sdr.PLUTO_RX_SN )
 # print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-rx_pluto.samples.rx ()
-rx_pluto.samples.save_complex_samples_2_npf ( filename )
 
 while series_len > 0 :
     series_len -= 1
+    rx_pluto.samples.rx ()
     if wrt :
         rx_pluto.samples.save_complex_samples_2_npf ( filename )
         
