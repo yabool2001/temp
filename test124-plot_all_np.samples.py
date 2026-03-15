@@ -6,7 +6,8 @@ from numpy.typing import NDArray
 from modules import ops_file , plot
 
 
-samples_dir = Path ( "np.samples" )
+#samples_dir = Path ( "np.samples" )
+samples_dir = Path ( "np.samples_series_01" )
 samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 
 if not samples_files :

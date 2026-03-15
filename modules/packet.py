@@ -856,7 +856,30 @@ class TxSamples_v0_1_12 :
                 if bytes [ i ] != 0 :
                     break
             n_o_repeats -= 1
-        
+
+    def tx_random_payload ( self , repeats : np.uint32 = 100 ) -> None :
+        self.pluto_tx_ctx.tx_destroy_buffer ()
+        self.pluto_tx_ctx.tx_cyclic_buffer = False
+        rng = np.random.default_rng ()
+        print ( f"\n\r Start random transmition" )
+        while repeats :
+            mode = rng.integers ( 0 , 2 )
+            if mode == 0 :
+                self.pluto_tx_ctx.tx_destroy_buffer ()
+                self.pluto_tx_ctx.tx_cyclic_buffer = True
+                payload_len = rng.integers ( 1 , 1501 )
+                payload_bytes = rng.integers ( 0 , 256 , size = payload_len , dtype = np.uint8 )
+                self.create_samples4pluto ( payload_bytes = payload_bytes )
+                self.pluto_tx_ctx.tx ( self.samples4pluto)
+            else :
+                self.pluto_tx_ctx.tx_destroy_buffer ()
+                self.pluto_tx_ctx.tx_cyclic_buffer = False
+                payload_len = rng.integers ( 1 , 1501 )
+                payload_bytes = rng.integers ( 0 , 256 , size = payload_len , dtype = np.uint8 )
+                self.create_samples4pluto ( payload_bytes = payload_bytes )
+                self.pluto_tx_ctx.tx ( self.samples4pluto)
+            repeats -= 1
+        print ( f"\n\r Stop random transmition" )
 
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
         plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )

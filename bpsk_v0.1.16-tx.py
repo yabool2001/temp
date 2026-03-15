@@ -115,6 +115,9 @@ try :
             tx_pluto.samples.tx_incremeant_payload_and_repeat ( n_o_bytes = n_o_bytes_uint16 , n_o_repeats = n_o_repeats_uint32 )
             print ( f"\n\r[t] Tx.size = { n_o_bytes_uint16 } bytes with zeros payload created, incremented & repeated { n_o_repeats_uint32 } times." )
             tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
+        elif key == 'd' :
+            t.sleep ( 1 ) # anty-dubler
+            tx_pluto.samples.tx_random_payload ( repeats = n_o_repeats_uint32 )
         elif key > '0' and key <= '9' : # advanced test mode
             t.sleep ( 1 )  # anty-dubler
             i = np.uint32 ( key )

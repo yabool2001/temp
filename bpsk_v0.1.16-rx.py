@@ -9,6 +9,10 @@ Po zakończeniu tej wersji wrócić do rozwoju wersji bpsk_v0.1.6-rx
 
 ssh do fedora na Surface 9 Pro: ssh yabool2001@192.168.1.60
 
+Konfiguracja rx dla tłumika 30 dBi:
+TX_GAIN = -10.0                     # transmit gain
+RX_GAIN = 48                        # receive gain
+
 '''
 import numpy as np
 from numpy.typing import NDArray

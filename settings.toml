@@ -15,8 +15,8 @@ F_C = 2900000000                    # center frequency
 F_S = 3000000                       # sample rate
 BW = 1000000                        # bandwidth
 TX_GAIN = -10.0                     # transmit gain
-RX_GAIN = 71                        # receive gain
-GAIN_CONTROL = "slow_attack"        # gain control mode
+RX_GAIN = 10                        # receive gain
+GAIN_CONTROL = "manual"        # gain control mode
 SAMPLES_BUFFER = 614400
 SAMPLES_BUFFER_SIZE = 614400
 
