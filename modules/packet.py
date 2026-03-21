@@ -585,7 +585,7 @@ class RxFrames_v0_1_13 :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_16 :
+class RxSamples_v0_1_17 :
     
     pluto_rx_ctx : Pluto | None = None
     #samples_filename : str | None = None
@@ -689,7 +689,7 @@ class RxSamples_v0_1_16 :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
 
 @dataclass ( slots = True , eq = False )
-class RxPluto_v0_1_16 :
+class RxPluto_v0_1_17 :
 
     sn : str | None = None
     gain_control_mode_chan0 : str = field ( default = sdr.GAIN_CONTROL )
@@ -697,7 +697,7 @@ class RxPluto_v0_1_16 :
     
     # Pola uzupełnianie w __post_init__
     pluto_rx_ctx : Pluto | None = None
-    samples : RxSamples_v0_1_16 = field ( init = False )
+    #samples : RxSamples_v0_1_16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_rx ()
@@ -705,14 +705,9 @@ class RxPluto_v0_1_16 :
     def init_pluto_rx ( self ) -> None :
         if self.sn is not None :
             self.pluto_rx_ctx = sdr.init_pluto_v0_1_17 ( sn = self.sn , gain_control_mode_chan0 = self.gain_control_mode_chan0 , rx_gain_chan0_int = self.rx_gain_chan0_int )
-            self.samples = RxSamples_v0_1_16 ( pluto_rx_ctx = self.pluto_rx_ctx )
-        else :
-            self.samples = RxSamples_v0_1_16 ()
 
     def __repr__ ( self ) -> str :
-        return (
-            f"{self.samples.samples.size=}, { self.pluto_rx_ctx= }" if self.sn is not None else f" no ADALM-Pluto connected,"
-        )
+        return ( f"{ self.pluto_rx_ctx= }" if self.sn is not None else f"There's no ADALM-Pluto connected!" )
 
 @dataclass ( slots = True , eq = False )
 class TxPacket_v0_1_11 :
@@ -772,7 +767,7 @@ class TxFrame_v0_1_11 :
             f"{ self.frame_bytes= }, { self.frame_bytes.size= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_12 :
+class TxSamples_v0_1_17 :
 
     pluto_tx_ctx : Pluto | None = None
 
@@ -882,7 +877,7 @@ class TxSamples_v0_1_12 :
         print ( f"\n\r Stop random transmition" )
 
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
-        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title}" )
+        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title} {self.samples_bpsk_symbols.size=}" )
         if constellation :
             plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
 
@@ -896,24 +891,24 @@ class TxSamples_v0_1_12 :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.frame.frame_bytes= }, { self.samples.size= }" )
+        return ( f"{ self.frame.frame_bytes= }, { self.samples_filtered.size= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxPluto_v0_1_16 :
+class TxPluto_v0_1_17 :
     
     sn : str
     tx_gain_float : float = field ( default = sdr.TX_GAIN )
 
     # Pola uzupełnianie w __post_init__
     pluto_tx_ctx : Pluto  = field ( init = False )
-    samples : TxSamples_v0_1_12 = field ( init = False )
+    #samples : TxSamples_v0_1_12 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
 
     def init_pluto_tx ( self ) -> None :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_17 ( sn = self.sn , tx_gain_float = self.tx_gain_float )
-        self.samples = TxSamples_v0_1_12 ( pluto_tx_ctx = self.pluto_tx_ctx )
+        #self.samples = TxSamples_v0_1_12 ( pluto_tx_ctx = self.pluto_tx_ctx )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.pluto_tx_ctx= }, { self.samples.samples4pluto.size= }" )
+        return ( f"{ self.pluto_tx_ctx= }" )

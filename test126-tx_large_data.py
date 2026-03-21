@@ -37,35 +37,44 @@ np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 
 script_filename = os.path.basename ( __file__ )
 
-plt = False
-tx_pluto = packet.TxPluto_v0_1_16 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
-print ( f"\n{ script_filename= } { tx_pluto= }" )
-tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
-if plt :
-    tx_pluto.samples.plot_symbols ( f"{ script_filename } " )
-    tx_pluto.samples.plot_complex_samples_filtered ( f"{ script_filename } filtered samples" )
-    tx_pluto.samples.plot_complex_samples4pluto ( f"{ script_filename } samples4pluto" )
-    tx_pluto.samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
+debug = True
+plt = True
 
-stdscr = curses.initscr ()
-curses.noecho ()
-stdscr.keypad ( True )
-print ( "Naciśnij:" )
-print ( " - 't' aby wysłać pakiet jednorazowo" )
-print ( " - 'c' aby rozpocząć transmisję cykliczną" )
-print ( " - 's' aby zatrzymać transmisję cykliczną" )
+UDP_DEST_IP = "192.168.1.50" # ubuntu
+UDP_TARGET_PORT = 10001
+ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
+ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
+ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
+MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * 0.8 # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
+
+tx_samples = []
+all_tx_samples_size = 0
+
+tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
+print ( f"\n{ script_filename= } { tx_pluto= }" )
+
+while all_tx_samples_size < MAX_SAMPLES_SIZE :
+    tx_samples.append ( packet.TxSamples_v0_1_17 ( pluto_tx_ctx = tx_pluto.pluto_tx_ctx ) )
+    tx_samples[ -1 ].create_samples4pluto ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
+    all_tx_samples_size += len ( tx_samples[-1].samples_filtered )
+print ( f"\n{ script_filename= } { all_tx_samples_size= }" )
+
+if plt :
+    tx_samples[ 0 ].plot_symbols ( f"{ script_filename } " )
+    tx_samples[ 0 ].plot_complex_samples_filtered ( f"{ script_filename } filtered samples" )
+    tx_samples[ 0 ].plot_complex_samples4pluto ( f"{ script_filename } samples4pluto" )
+    tx_samples[ 0 ].plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
 
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-
 # Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
 local_ip = "0.0.0.0" # Domyślny fallback
 try:
     # Tworzymy tymczasowy socket żeby sprawdzić routing do sieci 192.168.1.x
     # Łączymy się z przykładowym adresem (np. bramą) w tej sieci aby system wskazał właściwy interfejs
-    temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    temp_sock.connect(("192.168.1.1", 1)) 
-    local_ip = temp_sock.getsockname()[0]
+    temp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
+    temp_sock.connect ( ( "192.168.1.1" , 1 ) )
+    local_ip = temp_sock.getsockname ()[0]
     temp_sock.close()
 except Exception:
     pass
@@ -73,59 +82,30 @@ except Exception:
 print(f"Binding UDP to {local_ip}:10001")
 udp_sock.bind ( ( local_ip , 10001 ) )
 udp_sock.setblocking ( False )
-stdscr.nodelay ( True )
+print ( "Czekam na komendy na porcie UDP 10001" )
+payload_udp = b""
 
 try :
     while True :
         try :
-            payload_udp = udp_sock.recv ( 1500 )
-            print ( f"\n\r[UDP] Received { len(payload_udp) } bytes: { payload_udp }" )
-            tx_pluto.samples.create_samples4pluto ( payload_bytes = payload_udp )
-            tx_pluto.samples.tx ()
-            tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
+            payload_udp = udp_sock.recv ( 1 )
+            if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
         except BlockingIOError :
+            t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
             pass
         except Exception :
             pass
-        try :
-            key = stdscr.getkey ()
-        except curses.error :
-            key = ''
-        if key ==  'o' :
-            t.sleep ( 1 )  # anty-dubler
-            print ( f"\n\r[o] Please, press '1' to send packet once." )
-        elif key == 'c' :
-            t.sleep ( 1 ) # anty-dubler
-            tx_pluto.samples.tx_cyclic ()
-            print ( f"\n\r[c] Tx cyclic started for { tx_pluto.samples.payload_bytes[0]= } { tx_pluto.samples.payload_bytes.size= }." )
-            print ( f"\n\r { tx_pluto.pluto_tx_ctx.tx_cyclic_buffer= }" )
-        elif key == 's' :
-            t.sleep ( 1 ) # anty-dubler
-            tx_pluto.samples.stop_tx_cyclic ()
-            print ( "\n\r[s] Tx cyclic stopped" )
-            print ( f"\n\r { tx_pluto.pluto_tx_ctx.tx_cyclic_buffer= }" )
-        elif key == 't' :
-            t.sleep ( 1 ) # anty-dubler
-            print ( f"\n\r{ tx_pluto.pluto_tx_ctx.tx_cyclic_buffer= }" )
-            tx_pluto.samples.tx_incremeant_payload_and_repeat ( n_o_bytes = n_o_bytes_uint16 , n_o_repeats = n_o_repeats_uint32 )
-            print ( f"\n\r[t] Tx.size = { n_o_bytes_uint16 } bytes with zeros payload created, incremented & repeated { n_o_repeats_uint32 } times." )
-            tx_pluto.samples.create_samples4pluto ( payload_bytes = ptd.generate_payload_i_bytes_dec_15 ( n_o_bytes_uint16 ) )
-        elif key == 'd' :
-            t.sleep ( 1 ) # anty-dubler
-            tx_pluto.samples.tx_random_payload ( repeats = n_o_repeats_uint32 )
-        elif key > '0' and key <= '9' : # advanced test mode
-            t.sleep ( 1 )  # anty-dubler
-            i = np.uint32 ( key )
-            if i % 2 == 0 :
-                i = i * 5
-                print ( f"\n\rNotice: Odd number multiplied by 5." )
-            tx_pluto.samples.tx ( repeat = i )
-            print ( f"\n\r{ tx_pluto.samples.payload_bytes[0]= } { tx_pluto.samples.payload_bytes.size= } sent { i } time(s)." )
-        elif key == '\x1b' :  # ESCAPE
-            tx_pluto.samples.stop_tx_cyclic ()
+        if payload_udp == ASCII_CAN : # ESCAPE
+            if debug : print ( f"Received ASCII_CAN {payload_udp=}, stopping transmission & ending script!" )
             break
+        elif payload_udp == ASCII_ENQ : # ENQUIRY (START OF TRANSMISSION)
+            if debug : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
+            for tx_sample in tx_samples :
+                tx_sample.tx_cyclic ()
+            if debug : print ( f"All {all_tx_samples_size} samples transmitted." )
+            udp_sock.sendto ( ASCII_EOT , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+            if debug : print ( f"Sent ASCII_EOT to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+        payload_udp = b""
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
-    curses.echo ()
-    stdscr.keypad ( False )
-    curses.endwin ()
+    udp_sock.close ()
