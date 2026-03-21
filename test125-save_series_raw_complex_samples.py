@@ -10,7 +10,7 @@ Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
 
 debug = True
 plt = True
-wrt = False
+wrt = True
 del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
@@ -18,6 +18,7 @@ UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
 ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
 ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
+end_rx = False
 
 filename = "np.samples_series_01/rx_samples.npy"
 series_len = 10
@@ -47,20 +48,20 @@ rx_samples = packet.RxSamples_v0_1_17 ( pluto_rx_ctx = rx_pluto.pluto_rx_ctx )
 if debug : print ( f"\n{ script_filename= } { rx_samples.samples.size= }" )
 
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
+udp_sock.setblocking ( False )
+payload_udp = b""
+
 try :
     udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+    if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
     if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-    udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
-    if debug : print ( f"Sent ASCII_CAN to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-finally :
-    udp_sock.close ()
-
-
-try :
     while True :
         rx_samples.rx ()
         if wrt :
             rx_samples.save_complex_samples_2_npf ( filename )
+        if end_rx :
+            if debug : print ( f"End of reception, stopping { script_filename }!" )
+            break
         try :
             payload_udp = udp_sock.recv ( 1 )
             if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
@@ -73,7 +74,7 @@ try :
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
             if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-            break
+            end_rx = True
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     udp_sock.close ()
