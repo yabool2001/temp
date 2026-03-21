@@ -46,32 +46,30 @@ ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * 0.8 # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
-INTER_PACKET_GAP_SAMPLES = 0
 
 tx_samples = []
-all_tx_samples_size = 0
 tx_samples_4pluto = np.array ( [] , dtype = np.complex128 )
 
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 
+'''
 while all_tx_samples_size < MAX_SAMPLES_SIZE :
     tx_samples.append ( packet.TxSamples_v0_1_17 ( pluto_tx_ctx = tx_pluto.pluto_tx_ctx ) )
     tx_samples[ -1 ].create_samples4pluto ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
     if tx_samples_4pluto.size == 0 :
         tx_samples_4pluto = tx_samples[ -1 ].samples4pluto.copy ()
     else :
-        if INTER_PACKET_GAP_SAMPLES > 0 :
-            tx_samples_4pluto = np.concatenate ( (
-                tx_samples_4pluto ,
-                np.zeros ( INTER_PACKET_GAP_SAMPLES , dtype = np.complex128 ) ,
-                tx_samples[ -1 ].samples4pluto,
-            ) )
-        else :
-            tx_samples_4pluto = np.concatenate ( ( tx_samples_4pluto , tx_samples[ -1 ].samples4pluto ) )
+        tx_samples_4pluto = np.concatenate ( ( tx_samples_4pluto , tx_samples[ -1 ].samples4pluto ) )
     all_tx_samples_size = tx_samples_4pluto.size
     print ( f"Prepared TxSamples {tx_samples[ -1 ].samples4pluto.size=}" )
 print ( f"\n{ script_filename= } { all_tx_samples_size= }" )
+'''
+tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
+all_tx_samples_size = tx_samples_4pluto.size
+while all_tx_samples_size < MAX_SAMPLES_SIZE :
+    tx_samples.add_samples ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
+    all_tx_samples_size = tx_samples.samples4pluto.size
 
 if plt :
     tx_samples[ 0 ].plot_symbols ( f"{ script_filename } " )
@@ -115,9 +113,8 @@ try :
             break
         elif payload_udp == ASCII_ENQ : # ENQUIRY (START OF TRANSMISSION)
             if debug : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
-            tx_pluto.pluto_tx_ctx.tx_destroy_buffer ()
-            tx_pluto.pluto_tx_ctx.tx_cyclic_buffer = False
-            tx_pluto.pluto_tx_ctx.tx ( tx_samples_4pluto )
+            for tx_sample in tx_samples :
+                tx_sample.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
             if debug : print ( f"All {all_tx_samples_size} samples transmitted." )
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if debug : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )

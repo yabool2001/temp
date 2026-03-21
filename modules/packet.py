@@ -764,15 +764,15 @@ class TxFrame_v0_1_11 :
 
     def __repr__ ( self ) -> str :
         return (
-            f"{ self.frame_bytes= }, { self.frame_bytes.size= }" )
+            f"{self.frame_bytes=} , {self.frame_bytes.size=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples_v0_1_17 :
 
-    pluto_tx_ctx : Pluto | None = None
+    payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = field ( init = False )
+    payload_bits : list | tuple | np.ndarray[ np.uint8 ] = field ( init = False )
 
     # Pola uzupełnianie w __post_init__
-    payload_bytes : list | tuple | np.ndarray = field ( init = False )
     samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
@@ -784,6 +784,10 @@ class TxSamples_v0_1_17 :
     def create_empty_complex_samples ( self ) -> None :
         self.samples_filtered = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
+        if ( self.payload_bytes is not None and len ( self.payload_bytes ) > 0 ) :
+            self.create_samples_4pluto ( payload_bytes = self.payload_bytes )
+        elif ( self.payload_bits is not None and len ( self.payload_bits ) > 0 ) :
+            self.create_samples_4pluto ( payload_bits = self.payload_bits )
 
     def create_samples4pluto ( self , payload_bytes : list | tuple | NDArray[ np.uint8 ] = None , payload_bits : list | tuple | NDArray[ np.uint8 ] = None ) -> None :
         if payload_bytes is not None and len ( payload_bytes ) > 0 :
@@ -820,31 +824,31 @@ class TxSamples_v0_1_17 :
     def create_samples_4pluto ( self ) -> None :
         self.samples4pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples_filtered , scale = 1.0 )
 
-    def tx ( self , repeat : np.uint32 = 1 ) -> None :
-        self.pluto_tx_ctx.tx_destroy_buffer ()
+    def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
+        sdr_ctx.tx_destroy_buffer ()
+        sdr_ctx.tx_cyclic_buffer = False
         if repeat < 1 or repeat > 4294967295 :
             raise ValueError ( "Error: reapt value is out of the range! Allowed range is 1 to 4294967295." )
-        self.pluto_tx_ctx.tx_cyclic_buffer = False
         while repeat :
-            self.pluto_tx_ctx.tx ( self.samples4pluto )
+            sdr_ctx.tx ( self.samples4pluto )
             repeat -= 1
 
-    def tx_cyclic ( self ) -> None :
-        self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_cyclic_buffer = True
-        self.pluto_tx_ctx.tx ( self.samples4pluto )
+    def tx_cyclic ( self , sdr_ctx : Pluto ) -> None :
+        sdr_ctx.tx_destroy_buffer ()
+        sdr_ctx.tx_cyclic_buffer = True
+        sdr_ctx.tx ( self.samples4pluto )
 
-    def stop_tx_cyclic ( self ) :
-        self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_cyclic_buffer = False
+    def stop_tx_cyclic ( self , sdr_ctx : Pluto ) -> None :
+        sdr_ctx.tx_destroy_buffer ()
+        sdr_ctx.tx_cyclic_buffer = False
 
-    def tx_incremeant_payload_and_repeat ( self , n_o_bytes : np.uint16 = 1 , n_o_repeats : np.uint32 = 1 ) -> None :
-        self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_cyclic_buffer = False
+    def tx_incremeant_payload_and_repeat ( self , sdr_ctx : Pluto , n_o_bytes : np.uint16 = 1 , n_o_repeats : np.uint32 = 1 ) -> None :
+        sdr_ctx.tx_destroy_buffer ()
+        sdr_ctx.tx_cyclic_buffer = False
         bytes = np.zeros ( n_o_bytes , dtype = np.uint8 )
         while n_o_repeats :
             self.create_samples4pluto ( payload_bytes = bytes )
-            self.pluto_tx_ctx.tx ( self.samples4pluto)
+            sdr_ctx.tx ( self.samples4pluto)
             print ( f"\n\r  { n_o_repeats }: Transmitted payload bytes: { bytes }" )
             for i in range ( n_o_bytes - 1 , -1 , -1 ) :
                 bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
@@ -852,27 +856,18 @@ class TxSamples_v0_1_17 :
                     break
             n_o_repeats -= 1
 
-    def tx_random_payload ( self , repeats : np.uint32 = 100 ) -> None :
-        self.pluto_tx_ctx.tx_destroy_buffer ()
-        self.pluto_tx_ctx.tx_cyclic_buffer = False
+    def tx_random_payload ( self , sdr_ctx : Pluto , repeats : np.uint32 = 100 ) -> None :
+        sdr_ctx.tx_destroy_buffer ()
+        sdr_ctx.tx_cyclic_buffer = False
         rng = np.random.default_rng ()
-        print ( f"\n\r Start random transmition" )
+        print ( f"\n\r Start random transmition {repeats} times." )
         while repeats :
-            mode = rng.integers ( 0 , 2 )
-            if mode == 0 :
-                self.pluto_tx_ctx.tx_destroy_buffer ()
-                self.pluto_tx_ctx.tx_cyclic_buffer = True
-                payload_len = rng.integers ( 1 , 1501 )
-                payload_bytes = rng.integers ( 0 , 256 , size = payload_len , dtype = np.uint8 )
-                self.create_samples4pluto ( payload_bytes = payload_bytes )
-                self.pluto_tx_ctx.tx ( self.samples4pluto)
-            else :
-                self.pluto_tx_ctx.tx_destroy_buffer ()
-                self.pluto_tx_ctx.tx_cyclic_buffer = False
-                payload_len = rng.integers ( 1 , 1501 )
-                payload_bytes = rng.integers ( 0 , 256 , size = payload_len , dtype = np.uint8 )
-                self.create_samples4pluto ( payload_bytes = payload_bytes )
-                self.pluto_tx_ctx.tx ( self.samples4pluto)
+            sdr_ctx.tx_destroy_buffer ()
+            sdr_ctx.tx_cyclic_buffer = False
+            payload_len = rng.integers ( 1 , 1501 )
+            payload_bytes = rng.integers ( 0 , 256 , size = payload_len , dtype = np.uint8 )
+            self.create_samples4pluto ( payload_bytes = payload_bytes )
+            sdr_ctx.tx ( self.samples4pluto)
             repeats -= 1
         print ( f"\n\r Stop random transmition" )
 
@@ -901,14 +896,12 @@ class TxPluto_v0_1_17 :
 
     # Pola uzupełnianie w __post_init__
     pluto_tx_ctx : Pluto  = field ( init = False )
-    #samples : TxSamples_v0_1_12 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.init_pluto_tx ()
 
     def init_pluto_tx ( self ) -> None :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_17 ( sn = self.sn , tx_gain_float = self.tx_gain_float )
-        #self.samples = TxSamples_v0_1_12 ( pluto_tx_ctx = self.pluto_tx_ctx )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.pluto_tx_ctx= }" )
