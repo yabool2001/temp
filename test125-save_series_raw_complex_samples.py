@@ -10,7 +10,7 @@ plt = True
 wrt = True
 
 filename = "np.samples_series_01/rx_samples.npy"
-series_len = 2
+series_len = 10
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
