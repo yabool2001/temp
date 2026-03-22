@@ -778,29 +778,39 @@ class TxFrame_v0_1_12 :
 
 @dataclass ( slots = True , eq = False )
 class TxSamples_v0_1_17 :
-
-    payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = field ( init = False )
-    payload_bits : list | tuple | np.ndarray[ np.uint8 ] = field ( init = False )
+    '''Są 2 tryby tworzenia tx_samples. 
+    1. Concatenując sample utworzone w tx_frames. Wtedy mamy ładne przerwy między ramkami,
+        bo każda ramka jest filtrowana osobno i pomiędzy ramkami są przerwy bez sygnału z symbolami.
+    2. Tworząc ciągłe samples w tx_samples na podstawie symboli bpsk z tx_frames.
+        Wtedy nie ma przerw między ramkami, bo tworzymy ciągły strumień symboli bpsk z ramek i filtrujemy go jako całość.'''
+    payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
+    payload_bits : list | tuple | np.ndarray[ np.uint8 ] | None = None
 
     # Pola uzupełnianie w __post_init__
-    samples_bpsk_symbols : NDArray[ np.uint8 ] = field ( init = False )
+    bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
-    frame : TxFrame_v0_1_12 = field ( init = False )
-    frames = []
+    frames : list[ TxFrame_v0_1_12 ] = field ( init = False , default_factory = list )
 
     def __post_init__ ( self ) -> None :
         self.create_empty_complex_samples ()
-        if ( self.payload_bytes is not None and len ( self.payload_bytes ) > 0 ) :
-            self.create_samples_4pluto ( payload_bytes = self.payload_bytes )
-        elif ( self.payload_bits is not None and len ( self.payload_bits ) > 0 ) :
-            self.create_samples_4pluto ( payload_bits = self.payload_bits )
+        if self.payload_bytes is not None and len ( self.payload_bytes ) > 0 :
+            self.add_frame ( payload_bytes = self.payload_bytes )
+        elif self.payload_bits is not None and len ( self.payload_bits ) > 0 :
+            self.add_frame ( payload_bits = self.payload_bits )
 
     def create_empty_complex_samples ( self ) -> None :
+        self.bpsk_symbols = np.array ( [] , dtype = np.complex128 )
         self.samples = np.array ( [] , dtype = np.complex128 )
         self.samples_filtered = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
+
+    def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_12 :
+        tx_packet = TxPacket_v0_1_11 ( payload_bytes = payload_bytes )
+        tx_frame = TxFrame_v0_1_12 ( tx_packet = tx_packet )
+        tx_frame.create_samples4pluto ()
+        return tx_frame
 
     def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
         if payload_bytes is not None and len ( payload_bytes ) > 0 :
@@ -819,55 +829,23 @@ class TxSamples_v0_1_17 :
         else :
             raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
         self.frames.append ( self.create_tx_frame ( payload_bytes = payload_bytes_arr ) )
+        self.add_symbols ( self.frames[-1].bpsk_symbols )
+        self.add_samples4pluto ( self.frames[-1].samples4pluto )
 
-    def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_12 :
-        tx_packet = TxPacket_v0_1_11 ( payload_bytes = payload_bytes )
-        return TxFrame_v0_1_12 ( tx_packet = tx_packet )
+    def add_symbols ( self , bpsk_symbols : NDArray[ np.complex128 ] ) -> None :
+        if bpsk_symbols.size < 1 :
+            raise ValueError ( "Error: There are no symbols to add!" )
+        self.bpsk_symbols = np.concatenate ( [ self.bpsk_symbols , bpsk_symbols ] )
 
-    def create_samples ( self ) -> None :
-        if len ( self.frames ) < 1 :
-            raise ValueError ( "Error: There are no frames to create samples from!" )
-        for frame in self.frames :
-            self.create_bpsk_symbols ( bits = frame.frame_bits )
-            self.create_samples_filtered ()
-            self.create_samples_4pluto ()
+    def add_samples4pluto ( self , samples4pluto : NDArray[ np.complex128 ] ) -> None :
+        if samples4pluto.size < 1 :
+            raise ValueError ( "Error: There are no samples to add!" )
+        self.samples4pluto = np.concatenate ( [ self.samples4pluto , samples4pluto ] )
 
-    def create_bpsk_symbols ( self , bits : NDArray[ np.uint8 ] ) -> None :
-        self.symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits )
-
-
-
-
-    def create_samples4pluto ( self , payload_bytes : list | tuple | NDArray[ np.uint8 ] = None , payload_bits : list | tuple | NDArray[ np.uint8 ] = None ) -> None :
-        if payload_bytes is not None and len ( payload_bytes ) > 0 :
-            payload_arr = np.asarray ( payload_bytes , dtype = np.uint8 ).ravel ()
-            if payload_arr.max () > 255 :
-                raise ValueError ( "Error: Payload has not all values in 0 - 255!")
-            if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
-                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-            self.payload_bytes = payload_arr
-        elif payload_bits is not None and len ( payload_bits ) > 0 :
-            payload_arr = np.asarray ( self.payload_bits , dtype = np.uint8 ).ravel ()
-            if payload_arr.max () > 1 :
-                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
-            if len ( payload_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * 8 :
-                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-            self.payload_bytes = pad_bits2bytes ( payload_arr )
-        else :
-            raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
-        self.create_tx_frame ()
-        self.create_samples_bpsk_symbols ()
-        self.create_samples_filtered ()
-        self.create_samples_4pluto ()
-
-    def create_samples_bpsk_symbols ( self ) -> None :
-        self.samples_bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.frame.frame_bits )
-
-    def create_samples_filtered ( self ) -> None :
-        self.samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.samples_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-
-    def create_samples_4pluto ( self ) -> None :
-        self.samples4pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples_filtered , scale = 1.0 )
+    def create_samples4pluto ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
+        self.frames.clear ()
+        self.create_empty_complex_samples ()
+        self.add_frame ( payload_bytes = payload_bytes , payload_bits = payload_bits )
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()
@@ -917,12 +895,9 @@ class TxSamples_v0_1_17 :
         print ( f"\n\r Stop random transmition" )
 
     def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
-        plot.plot_symbols ( self.samples_bpsk_symbols , f"{title} {self.samples_bpsk_symbols.size=}" )
+        plot.plot_symbols ( self.bpsk_symbols , f"{title} {self.bpsk_symbols.size=}" )
         if constellation :
-            plot.complex_symbols_v0_1_6 ( self.samples_bpsk_symbols , f"{title}" )
-
-    def plot_complex_samples_filtered ( self , title = "" ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = False )
+            plot.complex_symbols_v0_1_6 ( self.bpsk_symbols , f"{title}" )
 
     def plot_complex_samples4pluto ( self , title = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title} {self.samples4pluto.size=}" , marker_squares = False )
@@ -931,7 +906,7 @@ class TxSamples_v0_1_17 :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.frame.frame_bytes= }, { self.samples_filtered.size= }" )
+        return ( f"{ self.bpsk_symbols.size= }, { self.samples4pluto.size= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxPluto_v0_1_17 :

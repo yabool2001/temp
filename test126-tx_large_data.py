@@ -38,7 +38,7 @@ np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 script_filename = os.path.basename ( __file__ )
 
 debug = True
-plt = False
+plt = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -66,16 +66,13 @@ while all_tx_samples_size < MAX_SAMPLES_SIZE :
 print ( f"\n{ script_filename= } { all_tx_samples_size= }" )
 '''
 tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
-all_tx_samples_size = tx_samples_4pluto.size
-while all_tx_samples_size < MAX_SAMPLES_SIZE :
+while tx_samples.samples4pluto.size < MAX_SAMPLES_SIZE :
     tx_samples.add_frame ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
-    all_tx_samples_size = tx_samples.samples4pluto.size
 
 if plt :
-    tx_samples[ 0 ].plot_symbols ( f"{ script_filename } " )
-    tx_samples[ 0 ].plot_complex_samples_filtered ( f"{ script_filename } filtered samples" )
-    tx_samples[ 0 ].plot_complex_samples4pluto ( f"{ script_filename } samples4pluto" )
-    tx_samples[ 0 ].plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
+    tx_samples.plot_symbols ( f"{ script_filename } " )
+    tx_samples.plot_complex_samples4pluto ( f"{ script_filename } samples4pluto" )
+    tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
 
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
@@ -113,9 +110,8 @@ try :
             break
         elif payload_udp == ASCII_ENQ : # ENQUIRY (START OF TRANSMISSION)
             if debug : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
-            for tx_sample in tx_samples :
-                tx_sample.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
-            if debug : print ( f"All {all_tx_samples_size} samples transmitted." )
+            tx_samples.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
+            if debug : print ( f"All {tx_samples.samples4pluto.size=} samples transmitted." )
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if debug : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
         payload_udp = b""
