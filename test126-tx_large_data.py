@@ -68,7 +68,7 @@ print ( f"\n{ script_filename= } { all_tx_samples_size= }" )
 tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
 all_tx_samples_size = tx_samples_4pluto.size
 while all_tx_samples_size < MAX_SAMPLES_SIZE :
-    tx_samples.add_samples ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
+    tx_samples.add_frame ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
     all_tx_samples_size = tx_samples.samples4pluto.size
 
 if plt :
