@@ -65,13 +65,19 @@ while all_tx_samples_size < MAX_SAMPLES_SIZE :
     print ( f"Prepared TxSamples {tx_samples[ -1 ].samples4pluto.size=}" )
 print ( f"\n{ script_filename= } { all_tx_samples_size= }" )
 '''
-tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
+total_bytes_len = 0
+payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
+total_bytes_len += len ( payload_bytes )
+tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = payload_bytes )
+print ( f"{tx_samples.samples4pluto.size=}, {len(payload_bytes)=}" )
 while tx_samples.samples4pluto.size < MAX_SAMPLES_SIZE :
-    tx_samples.add_frame ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
+    payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
+    total_bytes_len += len ( payload_bytes )
+    tx_samples.add_frame ( payload_bytes = payload_bytes )
 
 if plt :
-    tx_samples.plot_symbols ( f"{ script_filename } " )
-    tx_samples.plot_complex_samples4pluto ( f"{ script_filename } samples4pluto" )
+    tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
+    tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
     tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
 
 # Setup UDP Socket

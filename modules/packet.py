@@ -787,6 +787,7 @@ class TxSamples_v0_1_17 :
     payload_bits : list | tuple | np.ndarray[ np.uint8 ] | None = None
 
     # Pola uzupełnianie w __post_init__
+    bytes : np.ndarray[ np.uint8 ] = field ( init = False )
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
@@ -801,6 +802,7 @@ class TxSamples_v0_1_17 :
             self.add_frame ( payload_bits = self.payload_bits )
 
     def create_empty_complex_samples ( self ) -> None :
+        self.bytes = np.array ( [] , dtype = np.uint8 )
         self.bpsk_symbols = np.array ( [] , dtype = np.complex128 )
         self.samples = np.array ( [] , dtype = np.complex128 )
         self.samples_filtered = np.array ( [] , dtype = np.complex128 )
@@ -829,8 +831,14 @@ class TxSamples_v0_1_17 :
         else :
             raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
         self.frames.append ( self.create_tx_frame ( payload_bytes = payload_bytes_arr ) )
+        self.add_bytes ( self.frames[-1].bytes ) # Nie powinno być payload_bytes_arr bo wtedy w bytes będzie tylko payload bez sync sequence i packet len.
         self.add_symbols ( self.frames[-1].bpsk_symbols )
         self.add_samples4pluto ( self.frames[-1].samples4pluto )
+
+    def add_bytes ( self , payload_bytes_arr : NDArray[ np.uint8 ] ) -> None :
+        if payload_bytes_arr.size < 1 :
+            raise ValueError ( "Error: There are no bytes to add!" )
+        self.bytes = np.concatenate ( [ self.bytes , payload_bytes_arr ] )
 
     def add_symbols ( self , bpsk_symbols : NDArray[ np.complex128 ] ) -> None :
         if bpsk_symbols.size < 1 :
