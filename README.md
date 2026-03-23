@@ -35,19 +35,28 @@ The tx buffer size is implicitly managed by the length of the IQ sample array pa
 
 The tx () function is flexible and efficient for variable-length packets as long as you use non-cyclic mode (tx_cyclic_buffer = False), which prevents buffer repetition and allows for sequential sending of new data blocks. For very large packets, libiio manages the hardware buffer underneath (e.g., Pluto has a ~4MB limit), but in practice, chunking (e.g., 1024-8192 samples) helps avoid delays or overflow errors.
 
-TxPluto class object przechowuje kontekst ADALM-Pluto i jest argumentem rodziny funkcji tx () w klasie packet.RxSamples.
+The `TxPluto` class object (`tx_pluto`) stores ADALM-Pluto context. This is the argument dla rodziny funkcji tx () w klasie packet.RxSamples.
 
-The `TxSamples` class object (`tx_samples`) stores :
-**- `samples4pluto`: stores the concatenated samples prepared for ADALM-Pluto**
-**- `bpsk_symbols`: stores the concatenated BPSK symbols of all frames, crucial for ML**
-- `frames`: stores references to `TxFrames` objects
+The `TxSamples` class object (`tx_samples`) stores (min. v0_1_17) :
+- **`samples4pluto`: stores the concatenated samples aligned for ADALM-Pluto**
+- **`bpsk_symbols`: stores the concatenated BPSK symbols of all frames, crucial for ML**
+- `frames`: stores references to `TxFrame` objects
 - `bytes`: stores the concatenated bytes of all frames
 - `samples`: stores the concatenated samples of all frames
 - `payload_bytes` and `payload_bits`: store only the payload passed to the class constructor when the object is created
 
-The `TxSamples` object (`tx_samples`) stores `TxFrames` objects. Its fields are:
+The `TxFrame` class object (`tx_frame`) stores (min. v0_1_12) :
+- `bytes` : stores frame's bytes
+- `bits` : stores frame's bits
+- `bpsk_symbols` : stores frame's symbols
+- `samples4pluto` : stores frame's samples aligned for ADALM-Pluto SDR
 
-The `TxPacket` object (`tx_packet`) stores `TxFrames` objects. Its fields are:
+The `TxPacket` class object (`tx_packet`) stores (min. v0_1_11):
+- `crc32_bytes`: stores the CRC32 bytes calculated from `payload_bytes`
+- `packet_bytes`: stores the packet bytes, i.e. `payload_bytes` concatenated with `crc32_bytes`
+- `packet_len`: stores the packet length in bytes, i.e. the length of `payload_bytes` plus `crc32_bytes`
+- `payload_bytes`: stores the payload bytes passed from the `TxSamples` class constructor
+
 
 ### rx ()
 
