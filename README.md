@@ -37,14 +37,17 @@ The tx () function is flexible and efficient for variable-length packets as long
 
 TxPluto class object przechowuje kontekst ADALM-Pluto i jest argumentem rodziny funkcji tx () w klasie packet.RxSamples.
 
-The `TxSamples` object (`tx_samples`) stores `TxFrames` objects. Its fields are:
-- `bytes`: stores the concatenated bytes of all frames
-- `bpsk_symbols`: stores the concatenated BPSK symbols of all frames
-- `samples`: stores the concatenated samples of all frames
-- `samples4pluto`: stores the concatenated samples prepared for ADALM-Pluto
+The `TxSamples` class object (`tx_samples`) stores :
+**- `samples4pluto`: stores the concatenated samples prepared for ADALM-Pluto**
+**- `bpsk_symbols`: stores the concatenated BPSK symbols of all frames, crucial for ML**
 - `frames`: stores references to `TxFrames` objects
+- `bytes`: stores the concatenated bytes of all frames
+- `samples`: stores the concatenated samples of all frames
 - `payload_bytes` and `payload_bits`: store only the payload passed to the class constructor when the object is created
 
+The `TxSamples` object (`tx_samples`) stores `TxFrames` objects. Its fields are:
+
+The `TxPacket` object (`tx_packet`) stores `TxFrames` objects. Its fields are:
 
 ### rx ()
 
