@@ -790,7 +790,6 @@ class TxSamples_v0_1_17 :
     bytes : np.ndarray[ np.uint8 ] = field ( init = False )
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
-    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
     frames : list[ TxFrame_v0_1_12 ] = field ( init = False , default_factory = list )
 
@@ -805,7 +804,6 @@ class TxSamples_v0_1_17 :
         self.bytes = np.array ( [] , dtype = np.uint8 )
         self.bpsk_symbols = np.array ( [] , dtype = np.complex128 )
         self.samples = np.array ( [] , dtype = np.complex128 )
-        self.samples_filtered = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
 
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_12 :

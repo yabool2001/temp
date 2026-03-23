@@ -35,6 +35,17 @@ The tx buffer size is implicitly managed by the length of the IQ sample array pa
 
 The tx () function is flexible and efficient for variable-length packets as long as you use non-cyclic mode (tx_cyclic_buffer = False), which prevents buffer repetition and allows for sequential sending of new data blocks. For very large packets, libiio manages the hardware buffer underneath (e.g., Pluto has a ~4MB limit), but in practice, chunking (e.g., 1024-8192 samples) helps avoid delays or overflow errors.
 
+TxPluto class object przechowuje kontekst ADALM-Pluto i jest argumentem rodziny funkcji tx () w klasie packet.RxSamples.
+
+The `TxSamples` object (`tx_samples`) stores `TxFrames` objects. Its fields are:
+- `bytes`: stores the concatenated bytes of all frames
+- `bpsk_symbols`: stores the concatenated BPSK symbols of all frames
+- `samples`: stores the concatenated samples of all frames
+- `samples4pluto`: stores the concatenated samples prepared for ADALM-Pluto
+- `frames`: stores references to `TxFrames` objects
+- `payload_bytes` and `payload_bits`: store only the payload passed to the class constructor when the object is created
+
+
 ### rx ()
 
 rx () function implemented in `RxSamples` class can gather the samples in the real or simulation mode:
