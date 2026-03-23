@@ -11,6 +11,7 @@ cd ~/python/temp/
 source .venv/bin/activate
 
 python test126-tx_large_data.py -10.0
+
 '''
 
 import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
