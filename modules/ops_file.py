@@ -86,7 +86,15 @@ def open_samples_from_npf ( filename : str ) -> NDArray[ np.complex128 ] :
     try :
         samples = np.load ( filename ).astype ( np.complex128 , copy = False )
     except OSError as exc :
-        print ( f"Nie załadować sampli z pliku {filename}: {exc}" )
+        print ( f"ERROR: Nie mogę załadować sampli z pliku {filename}: {exc}" )
+        raise
+    return samples
+
+def open_npf_complex128_samples_to_complex64 ( filename : str ) -> NDArray[ np.complex64 ] :
+    try :
+        samples = np.load ( filename ).astype ( np.complex64 , copy = False )
+    except OSError as exc :
+        print ( f"ERROR: Nie mogę załadować sampli z pliku {filename}: {exc}" )
         raise
     return samples
 
@@ -94,7 +102,7 @@ def open_real_float64_samples_from_npf ( filename : str ) -> NDArray[ np.float64
     try :
         samples = np.load ( filename ).astype ( np.float64 , copy = False )
     except OSError as exc :
-        print ( f"Nie załadować sampli z pliku {filename}: {exc}" )
+        print ( f"ERROR: Nie mogę załadować sampli z pliku {filename}: {exc}" )
         raise
     return samples
 

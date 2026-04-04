@@ -1,0 +1,95 @@
+
+'''
+Sekwencja uruchomienia skryptu:
+cd ~/python/temp/
+source .venv/bin/activate
+
+Po zakończeniu tej wersji wrócić do rozwoju wersji bpsk_v0.1.6-rx
+
+'''
+import numpy as np
+from numpy.typing import NDArray
+import os , threading , tomllib , sys
+import time as t
+from pathlib import Path
+from numpy import real
+
+import time
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+#from pathlib import Path
+from modules import ops_file, packet , sdr
+
+script_filename = os.path.basename ( __file__ )
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
+
+Path ( "np.samples" ).mkdir ( parents = True , exist_ok = True )
+
+samples_folder_npy = "np.samples_series_01"
+
+
+with open ( wrt_filename_log , "w" ) as wrt_file :
+    wrt_file.write ( "time,log_name\n" )
+    wrt_file.write ( packet.log_packet )
+
+received_bytes : NDArray[ np.uint8 ] = np.array ( [] , dtype = np.uint8 )
+previous_samples_leftovers : NDArray[ np.complex128 ] = np.array ( [] , dtype = np.complex128 )
+
+real = False
+debug = False
+plt = True
+wrt = False
+
+if real :
+    rx_pluto = packet.RxPluto_v0_1_16 ( sn = sdr.PLUTO_RX_SN , gain_control_mode_chan0 = gain_control_mode_chan0 , rx_gain_chan0_int = rx_gain_chan0_int )
+else :
+    rx_pluto = packet.RxPluto_v0_1_16 ()
+
+print ( f"\n{ script_filename= } receiving: {rx_pluto=}" )
+
+while ( len ( received_bytes ) < 100000 and real ) or ( not real and received_bytes.size == 0 ) :
+    if real :
+        rx_pluto_samples = packet.RxSamples_v0_1_16 ( pluto_rx_ctx = rx_pluto.pluto_rx_ctx )
+        rx_pluto_samples.rx ( previous_samples_leftovers = previous_samples_leftovers )
+    else :
+        rx_pluto_samples = packet.RxSamples_v0_1_16 ()
+        rx_pluto_samples.rx ( samples_filename = samples_filename )
+    if debug :
+        if rx_pluto_samples.has_amp_greater_than_ths : rx_pluto_samples.plot_complex_samples ( title = f"{ script_filename }" )
+    rx_pluto_samples.detect_frames ( deep = False )
+    #print ( f"\n{ script_filename= } { rx_pluto.samples.samples.size= } { rx_pluto.samples.samples_filtered.size= }" )
+
+    if rx_pluto_samples.has_amp_greater_than_ths :
+        if debug : print ( f"{ script_filename } { rx_pluto_samples.has_amp_greater_than_ths= }" )
+    
+    if rx_pluto_samples.frames.has_leftovers :
+        previous_samples_leftovers = rx_pluto_samples.samples_leftovers
+        #print ( f"{rx_pluto_samples.samples_leftovers.size=}\n{rx_pluto_samples.frames.samples_leftovers_start_idx=}")
+    if rx_pluto_samples.frames.sync_sequence_peaks.size > 0 :
+        if plt : rx_pluto_samples.plot_tensor ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
+        if plt : rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
+        print ( rx_pluto_samples.frames.packets_idx )
+        if wrt and real:
+            rx_pluto_samples.save_complex_samples_2_npf ( wrt_filename_npy )
+    #rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename } {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
+
+    if rx_pluto_samples.frames.samples_payloads_bytes.size > 0 :
+        received_bytes = np.concatenate ( [ received_bytes , rx_pluto_samples.frames.samples_payloads_bytes ] )
+        print ( f"{ rx_pluto_samples.frames.samples_payloads_bytes[0]= }, { rx_pluto_samples.frames.samples_payloads_bytes.size= } { received_bytes.size= }" )
+        if debug : rx_pluto_samples.analyze ()
+    
+    if packet.log_packet != "" :
+        # To jest najlepszy i najprostszy wybór dla aplikacji SDR działającej w pętli.
+        # Pozwala na płynny odbiór próbek bez dławienia się przy zapisie na dysk.
+        # Ryzyko, że "wątek zginie" przy zamykaniu programu jest minimalne w porównaniu do korzyści z płynności działania,
+        # a systemowy bufor pliku i tak zazwyczaj zdąży się opróżnić.
+        log_thread = threading.Thread ( target = ops_file.save_log_thread , args = ( wrt_filename_log , packet.log_packet ) , daemon = True  )
+        log_thread.start ()
+        packet.log_packet = ""
+
+    if not real :
+        break

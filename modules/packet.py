@@ -15,6 +15,10 @@ from pathlib import Path
 from scipy.signal import find_peaks
 from typing import Any
 
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf ) # Ensures all array elements are displayed without truncation and prevents line wrapping for long output lines.
 
 script_filename = os.path.basename ( __file__ )
@@ -410,6 +414,86 @@ def add_timestamp_2_filename ( filename : str ) -> str :
     timestamp = int ( t.time () * 1000 )
     name, ext = os.path.splitext ( filename )
     return f"{name}_{timestamp}{ext}"
+
+class PureComplexLSTMCell ( nn.Module ) :
+    def __init__ ( self , input_size , hidden_size ) :
+        super ().__init__ ()
+        self.hidden_size = hidden_size
+        
+        # Warstwa Linear w przeciwieństwie do wbudowanego LSTM działa 
+        # w 100% na liczbach zespolonych! To tu sieć robi obroty Eulera i chwyta CFO.
+        self.W = nn.Linear(input_size + hidden_size, 4 * hidden_size, dtype=torch.complex64)
+
+    def forward (self , x , hx = None ) :
+        if hx is None:
+            # Pusta pamięć jako natywne zera zespolone (complex64)
+            h = torch.zeros ( x.size ( 0 ) , self.hidden_size , dtype = torch.complex64 , device = x.device )
+            c = torch.zeros ( x.size ( 0 ) , self.hidden_size , dtype = torch.complex64 , device = x.device )
+        else:
+            h, c = hx
+
+        combined = torch.cat ( [ x , h ] , dim = 1 )
+        
+        # Prawdziwe Zespolone Mnożenie Macierzy (RTX łapie wiatr w żagle)
+        gates = self.W(combined)
+        i_gate, f_gate, c_gate, o_gate = gates.chunk(4, 1)
+
+        # SPLIT-ACTIVATION: Ratujemy sieć przed wybuchami NaN.
+        # Faza zostaje utrzymana w ryzach matematycznych!
+        i = torch.complex(torch.sigmoid(i_gate.real), torch.sigmoid(i_gate.imag))
+        f = torch.complex(torch.sigmoid(f_gate.real), torch.sigmoid(f_gate.imag))
+        o = torch.complex(torch.sigmoid(o_gate.real), torch.sigmoid(o_gate.imag))
+        c_tilde = torch.complex(torch.tanh(c_gate.real), torch.tanh(c_gate.imag))
+
+        # Zespolona aktualizacja pamięci komórki
+        c_next = f * c + i * c_tilde
+        h_next = o * torch.complex(torch.tanh(c_next.real), torch.tanh(c_next.imag))
+
+        return h_next, c_next
+
+class PureComplexLSTM ( nn.Module ) :
+    def __init__ ( self , input_size , hidden_size ) :
+        super ().__init__ ()
+        self.cell = PureComplexLSTMCell ( input_size , hidden_size )
+
+    def forward(self, x):
+        # x wchodzi jako: [Batch, Czas, Cechy_Zespolone]
+        outputs = []
+        hx = None
+        
+        # Musimy fizycznie przepętlić sygnał po czasie, bo ominęliśmy wbudowany silnik C++
+        for t in range(x.size(1)):
+            h, c = self.cell(x[:, t, :], hx)
+            hx = (h, c)
+            outputs.append(h)
+        
+        return torch.stack(outputs, dim=1), hx
+
+class HardcoreComplexEqualizer ( nn.Module ) :
+    def __init__ ( self ) :
+        super ().__init__ ()
+        
+        self.conv1 = nn.Conv1d ( in_channels = 1 , out_channels = 16 , kernel_size = 8 , stride = 4 , padding = 2 , dtype = torch.complex64)
+        
+        # WCHODZI NASZE PRAWDZIWE ZESPOLONE LSTM (żadnego dzielenia!)
+        self.lstm = PureComplexLSTM ( input_size = 16 , hidden_size = 64 )
+        
+        # Klasyfikator wypluwa urojone koordynaty
+        self.fc = nn.Linear ( 64 , 1 , dtype = torch.complex64 )
+
+    def forward(self, x):
+        # Wejście: [Batch, 1, 4096] na twardym complex64
+        x = self.conv1 ( x ) # -> [Batch, 16, 1024] 
+        x = x.transpose ( 1 , 2 ) # -> [Batch, 1024, 16]
+        
+        # Pełna faza wchodzi, pełna faza wychodzi
+        x_lstm, _ = self.lstm(x) # -> [Batch, 1024, 64] (complex64)
+        out = self.fc(x_lstm) # -> [Batch, 1024, 1] (complex64)
+        
+        # BPSK leży tylko na osi Real (-1, 1). Na samym końcu wyciągamy
+        # komponent rzeczywisty by obliczyć błąd (MSE Loss). Autograd PyTorcha
+        # prawidłowo przetransferuje tzw. gradienty Wirtingera przez całą sieć!
+        return out.squeeze(-1).real
 
 @dataclass ( slots = True , eq = False )
 class RxPacket_v0_1_13 :
