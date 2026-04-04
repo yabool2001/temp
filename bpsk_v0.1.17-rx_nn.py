@@ -1,11 +1,5 @@
-
 '''
-Sekwencja uruchomienia skryptu:
-cd ~/python/temp/
-source .venv/bin/activate
-
-Po zakończeniu tej wersji wrócić do rozwoju wersji bpsk_v0.1.6-rx
-
+Skrypt na podstawie ostatniej odpowiedzi gemini w chat LSTM w SATCOM
 '''
 import numpy as np
 from numpy.typing import NDArray

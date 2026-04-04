@@ -1,3 +1,13 @@
+'''
+Skrypt do zapisywania do pliku sampli wygenerowanych przez skrypt python test126-tx_large_data.py.
+
+Sekwencja uruchomienia skryptu w ubuntu:
+cd ~/python/temp/
+source .venv/bin/activate
+
+python test126-tx_large_data.py -10.0
+
+'''
 from modules import packet , sdr
 from pathlib import Path
 import numpy as np
