@@ -496,6 +496,18 @@ class HardcoreComplexEqualizer ( nn.Module ) :
         return out.squeeze(-1).real
 
 @dataclass ( slots = True , eq = False )
+class Rx_y_Train_v0_0_0 :
+
+    symbols : NDArray[ np.int8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.int8 ) , init = False )
+    
+    def __post_init__ ( self ) -> None :
+        #self.symbols = np.array ( [] , dtype = np.complex128 )
+        pass
+    
+    def __repr__ ( self ) -> str :
+        return ( f"{self.symbols.size=}, {self.symbols.dtype=} {self.symbols=}")
+
+@dataclass ( slots = True , eq = False )
 class RxPacket_v0_1_13 :
 
     samples_filtered : NDArray[ np.complex128 ]
@@ -714,7 +726,7 @@ class RxSamples_v0_1_17 :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
     def create_tensor ( self ) -> None :
-        self.tensor = ml.iq_to_tensor ( self.samples )
+        self.tensor = ml.iq_to_tensor_v2 ( self.samples )
 
     def detect_frames ( self , deep : bool = False ) -> None :
         self.create_tensor ()

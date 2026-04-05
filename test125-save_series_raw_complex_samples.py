@@ -53,8 +53,7 @@ if del_old :
             file_path.unlink ( missing_ok = True )
 
 rx_pluto = packet.RxPluto_v0_1_17 ( sn = sdr.PLUTO_RX_SN )
-# print ( f"\n{ script_filename= } receiving: {rx_pluto=} { rx_pluto.samples.samples.size= }" )
-rx_samples = packet.RxSamples_v0_1_17 ( pluto_rx_ctx = rx_pluto.pluto_rx_ctx )
+rx_samples = packet.RxSamples_v0_1_17 ()
 if debug : print ( f"\n{ script_filename= } { rx_samples.samples.size= }" )
 
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
@@ -66,7 +65,7 @@ try :
     if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
     if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
     while True :
-        rx_samples.rx ()
+        rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
         if wrt :
             rx_samples.save_complex_samples_2_npf ( filename )
         if end_rx :
