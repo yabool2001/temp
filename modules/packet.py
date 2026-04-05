@@ -497,7 +497,7 @@ class HardcoreComplexEqualizer ( nn.Module ) :
 
 @dataclass ( slots = True , eq = False )
 class Rx_y_Train_v0_0_0 :
-
+    # na razie klasa do niczego nei potrzeba!
     symbols : NDArray[ np.int8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.int8 ) , init = False )
     
     def __post_init__ ( self ) -> None :
@@ -508,13 +508,14 @@ class Rx_y_Train_v0_0_0 :
         return ( f"{self.symbols.size=}, {self.symbols.dtype=} {self.symbols=}")
 
 @dataclass ( slots = True , eq = False )
-class RxPacket_v0_1_13 :
+class RxPacket_v0_1_18 :
 
     samples_filtered : NDArray[ np.complex128 ]
     packet_start_idx : np.uint32
     has_packet : bool = False
     samples_corrected : NDArray[ np.complex128 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    packet_symbols : NDArray[ np.complex128 ] = field ( init = False )
     
     # Pola uzupełnianie w __post_init__
 
@@ -526,7 +527,7 @@ class RxPacket_v0_1_13 :
         payload_end_idx = len ( self.samples_filtered ) - ( CRC32_LEN_BITS * sps )
         samples_components = [ ( self.samples_filtered.real , "packet real" ) , ( self.samples_filtered.imag , "packet imag" ) , ( -self.samples_filtered.real , "packet -real" ) , ( -self.samples_filtered.imag , "packet -imag" ) ]
         for samples_component , samples_name in samples_components :
-            payload_symbols = samples_component [ self.packet_start_idx : payload_end_idx : sps ]
+            payload_symbols = samples_component [ : payload_end_idx : sps ]
             crc32_symbols = samples_component [ payload_end_idx : : sps ]
             payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
             payload_bytes = pad_bits2bytes ( payload_bits )
@@ -535,6 +536,7 @@ class RxPacket_v0_1_13 :
             crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
+                self.packet_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ payload_bits, crc32_bits ] ) , sps = sps )
                 self.payload_bytes = payload_bytes
                 if settings["log"]["verbose_2"] : print ( samples_name )
                 return
@@ -544,7 +546,7 @@ class RxPacket_v0_1_13 :
         self.correct_cfo ()
         if settings["log"]["verbose_2"] : self.plot_complex_samples_filtered_and_corrected ( title = f"RxPacket_v0_1_13 after CFO" , marker = False )
         if settings["log"]["verbose_2"] : self.analyze ( samples = self.samples_corrected )
-        payload_symbols = self.samples_corrected [ self.packet_start_idx : payload_end_idx : sps ]
+        payload_symbols = self.samples_corrected [ : payload_end_idx : sps ]
         crc32_symbols = self.samples_corrected [ payload_end_idx : : sps ]
         payload_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( payload_symbols )
         payload_bytes = pad_bits2bytes ( payload_bits )
@@ -553,6 +555,7 @@ class RxPacket_v0_1_13 :
         crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
+            self.packet_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ payload_bits, crc32_bits ] ) , sps = sps )
             self.payload_bytes = payload_bytes
             return
 
@@ -575,6 +578,7 @@ class RxPacket_v0_1_13 :
 class RxFrames_v0_1_13 :
     
     samples_filtered : NDArray[ np.complex128 ]
+    signal_start_idx : np.uint32
     deep : bool = False
 
     # Pola uzupełnianie w __post_init__
@@ -589,20 +593,42 @@ class RxFrames_v0_1_13 :
     samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
     
     def __post_init__ ( self ) -> None :
-        self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = self.deep )
-        if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : print ( f"Detected { self.sync_sequence_peaks=}" )
-        if self.sync_sequence_peaks.size > 0 and settings["log"]["verbose_2"] : self.plot_complex_samples_filtered ( title = f"RxFrames_v0_1_9 __post_init__" , marker = False , peaks = self.sync_sequence_peaks )
-        if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
-        for idx in self.sync_sequence_peaks :
-            if idx > self.last_processed_idx :
-                self.last_processed_idx = self.process_frame ( idx = idx )
-                if self.has_leftovers :
-                    break
-        if settings["log"]["verbose_1"] : print(f"Detekcja pakietów {self.sync_sequence_peaks.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
-        if not self.has_leftovers :
-            self.samples_leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - filters.SPAN * self.sps // 2
-            self.has_leftovers = True
+        has_frame = False
+        sync_sequence_start_idx = self.signal_start_idx + filters.SPAN * self.sps // 2
+        sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
+        packet_len_start_idx = sync_sequence_end_idx
+        packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.sps )
+        crc32_start_idx = packet_len_end_idx
+        crc32_end_idx : np.uint32 = ( crc32_start_idx + ( CRC32_LEN_BITS * self.sps ) ).astype ( np.uint32 )
+
+        samples_components = [ ( self.samples_filtered.real , "sync sequence real" ) , ( self.samples_filtered.imag , "sync sequence imag" ) , ( -self.samples_filtered.real , "sync sequence -real" ) , ( -self.samples_filtered.imag , "sync sequence -imag" ) ]
+        for samples_component , samples_name in samples_components :
+            sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
+            if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
+                has_sync_sequence = True
+                add2log_packet ( f"{t.time()},{has_sync_sequence=},{sync_sequence_start_idx=}")
+                packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
+                check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
+                for samples_comp , frame_name in check_components :
+                    crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
+                    crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
+                    if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
+                        packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
+                        has_frame = True
+                        add2log_packet ( f"{t.time()},{has_frame=},{sync_sequence_start_idx=}")
+                        if not self.packet_len_validation ( self.signal_start_idx , packet_end_idx ) :
+                            add2log_packet ( f"{t.time()},{has_frame=},{sync_sequence_start_idx=}")
+                            if settings["log"]["verbose_2"] : print ( f"{ sync_sequence_start_idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
+                            return self.signal_start_idx
+                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ self.signal_start_idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - self.signal_start_idx )
+                        if packet.has_packet :
+                            self.packets_idx = np.append ( self.packets_idx , self.signal_start_idx )
+                            self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
+                            add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx}")
+                            if settings["log"]["verbose_2"] : print ( f"{self.signal_start_idx=} {has_sync_sequence=}, {has_frame=}, {packet.has_packet= }" )
+                            return packet_end_idx
+        if settings["log"]["verbose_2"] : print ( f"{ self.signal_start_idx= } { has_sync_sequence= }, { has_frame= }" )
+        return self.signal_start_idx
     
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
         sync_sequence_symbols = samples [ : : self.sps ]
@@ -634,45 +660,103 @@ class RxFrames_v0_1_13 :
             return False
         return True
 
-    def process_frame ( self , idx : np.uint32 ) -> np.uint32 :
-        if not self.frame_len_validation ( idx ) :
-            return idx
-        has_frame = has_sync_sequence = False
-        sync_sequence_start_idx = idx + filters.SPAN * self.sps // 2
+    def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
+
+@dataclass ( slots = True , eq = False )
+class RxFrame_v0_1_18 :
+    
+    samples_filtered : NDArray[ np.complex128 ]
+    frame_sync_sequence_peak_idx : np.uint32
+
+    # Pola uzupełnianie w __post_init__
+    sps = modulation.SPS
+    frame_start_idx : np.uint32 = field ( init = False )
+    packet_start_idx : NDArray[ np.uint32 ] = field ( init = False )
+    samples_leftovers_start_idx : np.uint32 = field ( init = False )
+    has_frame : bool = False
+    has_packet : bool = False
+    has_leftovers : bool = False
+    samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
+    
+    def __post_init__ ( self ) -> None :
+        if not self.frame_len_validation () :
+            return self.frame_sync_sequence_peak_idx
+        self.process_packet ()
+    
+    def process_packet ( self ) -> None :
+        sync_sequence_start_idx = filters.SPAN * self.sps // 2
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
         packet_len_start_idx = sync_sequence_end_idx
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.sps )
         crc32_start_idx = packet_len_end_idx
-        crc32_end_idx : np.uint32 = ( crc32_start_idx + ( CRC32_LEN_BITS * self.sps ) ).astype ( np.uint32 )
+        crc32_end_idx : np.uint32 = np.uint32 ( crc32_start_idx + ( CRC32_LEN_BITS * self.sps ) )
 
         samples_components = [ ( self.samples_filtered.real , "sync sequence real" ) , ( self.samples_filtered.imag , "sync sequence imag" ) , ( -self.samples_filtered.real , "sync sequence -real" ) , ( -self.samples_filtered.imag , "sync sequence -imag" ) ]
         for samples_component , samples_name in samples_components :
-            sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
+            sync_sequence_symbols = samples_component [ sync_sequence_start_idx : sync_sequence_end_idx : self.sps ]
+            sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                 has_sync_sequence = True
-                add2log_packet ( f"{t.time()},{has_sync_sequence=},{idx}")
-                packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
+                add2log_packet ( f"{t.time()},{has_sync_sequence=},{self.frame_sync_sequence_peak_idx}")
+                packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.sps ]
+                packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
+                packet_len_uint16 = self.bits2uint16 ( packet_len_bits )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
                 for samples_comp , frame_name in check_components :
-                    crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
+                    crc32_symbols = samples_comp [ crc32_start_idx : crc32_end_idx : self.sps ]
+                    crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
+                    crc32_bytes_read = pad_bits2bytes ( crc32_bits )
+                    crc32_bytes_calculated = create_crc32_bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) )
                     crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
-                        has_frame = True
-                        add2log_packet ( f"{t.time()},{has_frame=},{idx}")
-                        if not self.packet_len_validation ( idx , packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{has_frame=},{idx}")
-                            if settings["log"]["verbose_2"] : print ( f"{ idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
-                            return idx
-                        packet = RxPacket_v0_1_13 ( samples_filtered = self.samples_filtered [ idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - idx )
+                        self.has_frame = True
+                        self.frame_start_idx = sync_sequence_start_idx
+                        add2log_packet ( f"{t.time()},{self.frame_sync_sequence_peak_idx=},{self.has_frame=},{self.frame_start_idx=}")
+                        if not self.packet_len_validation ( self.frame_sync_sequence_peak_idx , packet_end_idx ) :
+                            add2log_packet ( f"{t.time()},{self.has_frame=},{self.frame_sync_sequence_peak_idx}")
+                            if settings["log"]["verbose_2"] : print ( f"{ self.frame_sync_sequence_peak_idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { self.has_frame=}" )
+                            return
+                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = self.frame_sync_sequence_peak_idx + crc32_end_idx )
                         if packet.has_packet :
-                            self.packets_idx = np.append ( self.packets_idx , idx )
+                            self.has_packet = True
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            add2log_packet(f"{t.time()},{packet.has_packet=},{idx}")
-                            if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }, { packet.has_packet= }" )
+                            add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
+                            if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {has_sync_sequence=}, {self.frame_start_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return packet_end_idx
-        if settings["log"]["verbose_2"] : print ( f"{ idx= } { has_sync_sequence= }, { has_frame= }" )
-        return idx
+        if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {has_sync_sequence=}, {self.has_frame=}" )
+        return self.frame_sync_sequence_peak_idx
+    
+    def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
+        return modulation.bpsk_symbols_2_bits_v0_1_7 ( samples [ : : self.sps ] )
+
+    def bits2uint16 ( self , bits : NDArray[ np.uint8 ] ) -> np.uint16 :
+        return np.uint16 ( bits_2_int ( bits ) )
+
+    def samples2bytes ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
+        bits = self.samples2bits ( samples )
+        return pad_bits2bytes ( bits )
+    
+    def complete_process_frame ( self , idx : np.uint32 ) -> None :
+        if settings["log"]["verbose_2"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
+        self.samples_leftovers_start_idx = idx - filters.SPAN * self.sps // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
+        self.has_leftovers = True
+
+    def frame_len_validation ( self ) -> bool :
+        if np.uint32 ( self.samples_filtered.size ) <= np.uint32 ( FRAME_LEN_SAMPLES ) :
+            self.complete_process_frame ( self.frame_sync_sequence_peak_idx )
+            return False
+        return True
+
+    def packet_len_validation ( self , idx : np.uint32 , packet_end_idx : np.uint32 ) -> bool :
+        if packet_end_idx > np.uint32 ( self.samples_filtered.size ) :
+            self.complete_process_frame ( idx )
+            return False
+        return True
 
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
@@ -681,7 +765,7 @@ class RxFrames_v0_1_13 :
         return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
 
 @dataclass ( slots = True , eq = False )
-class RxSamples_v0_1_17 :
+class RxSamples_v0_1_18 :
 
     # Pola uzupełnianie w __post_init__
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -690,9 +774,14 @@ class RxSamples_v0_1_17 :
     samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
     has_amp_greater_than_ths : bool = False
     ths : float = 1000.0
-    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    frames : RxFrames_v0_1_13 = field ( init = False )
+    frames_old : RxFrames_v0_1_13 = field ( init = False )
+    frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
+
+    samples_filtered_len : np.uint32 = field ( init = False )
+    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
+    has_leftovers : bool = False
+    leftovers_start_idx : np.uint32 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
@@ -729,10 +818,24 @@ class RxSamples_v0_1_17 :
         self.tensor = ml.iq_to_tensor_v2 ( self.samples )
 
     def detect_frames ( self , deep : bool = False ) -> None :
-        self.create_tensor ()
         self.filter_samples ()
-        self.frames = RxFrames_v0_1_13 ( samples_filtered = self.samples_filtered , deep = deep )
-        if self.frames.has_leftovers :
+        self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
+        previous_processed_idx : np.uint32 = 0
+        for idx in self.sync_sequence_peaks :
+            if idx > previous_processed_idx :
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_filtered [ idx : ] , frame_sync_sequence_peak_idx = idx )
+                previous_processed_idx = self.process_frame ( idx = idx )
+                if self.has_leftovers :
+                    break
+        if not self.has_leftovers :
+            self.leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - filters.SPAN * self.sps // 2
+            self.has_leftovers = True
+
+        self.frames_old = RxFrames_v0_1_13 ( samples_filtered = self.samples_filtered , deep = deep )
+        frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_filtered , deep = deep )
+        self.frames.append ( frame )
+        if self.frames_old.has_leftovers :
             self.clip_samples_leftovers ()
 
     def sample_initial_assesment (self) -> None :
@@ -778,7 +881,7 @@ class RxSamples_v0_1_17 :
         self.samples_filtered = self.samples_filtered [ start : end ]
 
     def clip_samples_leftovers ( self ) -> None :
-        self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
+        self.samples_leftovers = self.samples [ self.frames_old.samples_leftovers_start_idx : ]
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.samples.size= }, { self.samples.dtype= }")
