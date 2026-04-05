@@ -711,7 +711,6 @@ class RxFrame_v0_1_18 :
                     crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
                     crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                     crc32_bytes_calculated = create_crc32_bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) )
-                    crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
                         self.has_frame = True
