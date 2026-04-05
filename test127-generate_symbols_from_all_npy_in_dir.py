@@ -15,7 +15,7 @@ samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 if not samples_files :
 	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
 
+rx_pluto_samples = packet.RxSamples_v0_1_17 ()
 for samples_file in samples_files :
-	rx_pluto_samples = packet.RxSamples_v0_1_17 ()
-	rx_pluto_samples.rx ( samples_filename = str ( samples_file ) )
-	#rx_pluto_samples.detect_frames ( deep = False )
+	rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
+plot.complex_waveform_v0_1_6 ( rx_pluto_samples.samples , f"concatenated samples {rx_pluto_samples.samples.size=}" )

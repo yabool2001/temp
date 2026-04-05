@@ -670,9 +670,6 @@ class RxFrames_v0_1_13 :
 
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_17 :
-    
-    pluto_rx_ctx : Pluto | None = None
-    #samples_filename : str | None = None
 
     # Pola uzupełnianie w __post_init__
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -690,24 +687,28 @@ class RxSamples_v0_1_17 :
             self.tensor = torch.tensor ( [] , dtype = torch.float32 )
             self.samples_filtered = np.array ( [] , dtype = np.complex128 )
 
-    def rx ( self , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None ) -> None :
-        if self.pluto_rx_ctx is not None :
-            if previous_samples_leftovers is None :
-                self.samples = self.pluto_rx_ctx.rx ()
-            else :
-                self.samples = np.concatenate ( [ previous_samples_leftovers , self.pluto_rx_ctx.rx () ] )
-            self.sample_initial_assesment ()
+    def rx ( self , sdr_ctx : Pluto  | None = None , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None , concatenate : bool = False ) -> None :
+        '''
+        concatenated: powoduje nawarstwienie nowych sampli na stare. UWAGA! Nieostrożne stosowanie może spowodować zawieszenie komputera z powodu braku pamięci RAM, jeśli próbujemy nawarstwić zbyt dużo sampli. Używaj z rozwagą i monitoruj zużycie pamięci.
+        '''
+        if sdr_ctx is not None :
+            samples = sdr_ctx.rx ()
         elif samples_filename is not None :
             if samples_filename.endswith('.npy'):
-                self.samples = ops_file.open_samples_from_npf ( samples_filename )
+                samples = ops_file.open_samples_from_npf ( samples_filename )
             elif samples_filename.endswith('.csv'):
-                self.samples = ops_file.open_csv_and_load_np_complex128 ( samples_filename )
+                samples = ops_file.open_csv_and_load_np_complex128 ( samples_filename )
             else:
                 raise ValueError(f"Error: unsupported file format for {samples_filename}! Supported formats: .npy, .csv")
-            if previous_samples_leftovers is not None :
-                self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
         else :
-            raise ValueError ( "Either pluto_rx_ctx or samples_filename must be provided." )
+            raise ValueError ( "Either sdr_ctx or samples_filename must be provided." )
+        if concatenate :
+            self.samples = np.concatenate ( [ self.samples , samples ] )
+        else :
+            self.samples = samples
+        if previous_samples_leftovers is not None :
+            self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
+        self.sample_initial_assesment ()
 
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
@@ -745,11 +746,6 @@ class RxSamples_v0_1_17 :
         filename_with_timestamp = add_timestamp_2_filename ( filename )
         ops_file.save_complex_samples_2_csv ( filename_with_timestamp , self.samples )
 
-    def __repr__ ( self ) -> str :
-        return (
-            f"{ self.samples.size= }, dtype = { self.samples.dtype= } { self.pluto_rx_ctx= }" if self.pluto_rx_ctx is not None else f"{ self.samples_filename= }"
-        )
-
     def analyze ( self ) -> None :
         sdr.analyze_rx_signal ( self.samples )
 
@@ -771,6 +767,9 @@ class RxSamples_v0_1_17 :
 
     def clip_samples_leftovers ( self ) -> None :
         self.samples_leftovers = self.samples [ self.frames.samples_leftovers_start_idx : ]
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.samples.size= }, { self.samples.dtype= }")
 
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_17 :
