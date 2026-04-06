@@ -6,12 +6,13 @@ from numpy.typing import NDArray
 from modules import ops_file , plot
 
 
-#samples_dir = Path ( "np.samples" )
-samples_dir = Path ( "np.samples_series_01" )
-samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
+#dir_name = Path ( "np.samples" )
+#dir_name = Path ( "np.samples_series_01" )
+dir_name = Path ( "np.simple-frames" )
+samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 
 if not samples_files :
-	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
+	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {dir_name}" )
 
 for samples_file in samples_files :
 	samples : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( str ( samples_file ) )

@@ -821,10 +821,11 @@ class RxSamples_v0_1_18 :
     def create_tensor ( self ) -> None :
         self.tensor = ml.iq_to_tensor_v2 ( self.samples )
 
-    def detect_frames ( self , deep : bool = False ) -> None :
-        #self.filter_samples ()
-        self.samples_filtered = self.samples
-        self.plot_complex_samples_filtered ( title = "filtered before frame detection" )
+    def detect_frames ( self , deep : bool = False , filter : bool = False ) -> None :
+        if filter :
+            self.filter_samples ()
+        else :
+            self.samples_filtered = self.samples
         self.has_leftovers = False
         self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )

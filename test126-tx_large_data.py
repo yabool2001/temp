@@ -54,18 +54,6 @@ tx_samples_4pluto = np.array ( [] , dtype = np.complex128 )
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 
-'''
-while all_tx_samples_size < MAX_SAMPLES_SIZE :
-    tx_samples.append ( packet.TxSamples_v0_1_17 ( pluto_tx_ctx = tx_pluto.pluto_tx_ctx ) )
-    tx_samples[ -1 ].create_samples4pluto ( payload_bytes = ptd.generate_payload_rand_up_2_1500b () )
-    if tx_samples_4pluto.size == 0 :
-        tx_samples_4pluto = tx_samples[ -1 ].samples4pluto.copy ()
-    else :
-        tx_samples_4pluto = np.concatenate ( ( tx_samples_4pluto , tx_samples[ -1 ].samples4pluto ) )
-    all_tx_samples_size = tx_samples_4pluto.size
-    print ( f"Prepared TxSamples {tx_samples[ -1 ].samples4pluto.size=}" )
-print ( f"\n{ script_filename= } { all_tx_samples_size= }" )
-'''
 total_bytes_len = 0
 payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
 total_bytes_len += len ( payload_bytes )
