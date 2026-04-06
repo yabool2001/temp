@@ -670,7 +670,7 @@ class RxFrames_v0_1_13 :
 class RxFrame_v0_1_18 :
     
     samples_filtered : NDArray[ np.complex128 ]
-    frame_sync_sequence_peak_idx : np.uint32
+    sync_sequence_peak_idx : np.uint32
 
     # Pola uzupełnianie w __post_init__
     SPS = modulation.SPS
@@ -685,7 +685,7 @@ class RxFrame_v0_1_18 :
     
     def __post_init__ ( self ) -> None :
         if not self.frame_len_validation () :
-            return self.frame_sync_sequence_peak_idx
+            return self.sync_sequence_peak_idx
         self.process_packet ()
     
     def process_packet ( self ) -> None :
@@ -702,7 +702,7 @@ class RxFrame_v0_1_18 :
             sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
             if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
                 has_sync_sequence = True
-                add2log_packet ( f"{t.time()},{has_sync_sequence=},{self.frame_sync_sequence_peak_idx}")
+                add2log_packet ( f"{t.time()},{has_sync_sequence=},{sync_sequence_start_idx}")
                 packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.SPS ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
                 packet_len_uint16 = self.bits2uint16 ( packet_len_bits )
@@ -716,18 +716,19 @@ class RxFrame_v0_1_18 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         has_frame_header = True
                         self.frame_start_idx = sync_sequence_start_idx
-                        add2log_packet ( f"{t.time()},{self.frame_sync_sequence_peak_idx=},{has_frame_header=},{self.frame_start_idx=}")
-                        if not self.packet_len_validation ( self.frame_sync_sequence_peak_idx , packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{has_frame_header=},{self.frame_sync_sequence_peak_idx}")
-                            if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {has_frame_header=}" )
+                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{has_frame_header=},{self.frame_start_idx=}")
+                        if not self.packet_len_validation ( self.sync_sequence_peak_idx , packet_end_idx ) :
+                            add2log_packet ( f"{t.time()},{has_frame_header=},{sync_sequence_start_idx=}")
+                            if settings["log"]["verbose_2"] : print ( f"{self.sync_sequence_peak_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {has_frame_header=}" )
                             return
-                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = self.frame_sync_sequence_peak_idx + crc32_end_idx )
+                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = sync_sequence_start_idx + crc32_end_idx )
                         if packet.has_packet :
                             self.has_frame = True
-                            self.frame_end_idx = self.frame_sync_sequence_peak_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
+                            self.frame_start_idx = sync_sequence_start_idx
+                            self.frame_end_idx = sync_sequence_start_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
                             self.payload_bytes = np.concatenate ( [ self.payload_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
-                            if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {has_sync_sequence=}, {self.frame_start_idx=} {self.has_frame=}, {packet.has_packet=}" )
+                            if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.frame_start_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return
         if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {has_sync_sequence=}, {self.has_frame=}" )
         return
@@ -744,12 +745,12 @@ class RxFrame_v0_1_18 :
     
     def complete_process_frame ( self , idx : np.uint32 ) -> None :
         if settings["log"]["verbose_2"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-        self.leftovers_start_idx = self.frame_sync_sequence_peak_idx + idx - self.SPAN * self.SPS // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
+        self.leftovers_start_idx = self.sync_sequence_peak_idx + idx - self.SPAN * self.SPS // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 
     def frame_len_validation ( self ) -> bool :
         if np.uint32 ( self.samples_filtered.size ) <= np.uint32 ( FRAME_LEN_SAMPLES ) :
-            self.complete_process_frame ( self.frame_sync_sequence_peak_idx )
+            self.complete_process_frame ( self.sync_sequence_peak_idx )
             return False
         return True
 
@@ -828,7 +829,7 @@ class RxSamples_v0_1_18 :
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx :
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_filtered [ idx : ] , frame_sync_sequence_peak_idx = idx )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_filtered [ idx : ] , sync_sequence_peak_idx = idx )
                 if frame.has_frame :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_idx
