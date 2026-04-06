@@ -23,6 +23,7 @@ rx_pluto_samples = packet.RxSamples_v0_1_18 ()
 # do usunięcia
 rx_pluto_samples.rx ( samples_filename = "np.samples/rx_samples_0.1.14_128Bx20.npy" )
 rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename}" )
+print ( f"{ rx_pluto_samples.samples.size=}" )
 rx_pluto_samples.detect_frames ( deep = False )
 
 

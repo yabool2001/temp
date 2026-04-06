@@ -675,6 +675,7 @@ class RxFrame_v0_1_18 :
     # Pola uzupełnianie w __post_init__
     sps = modulation.SPS
     frame_start_idx : np.uint32 = field ( init = False )
+    frame_end_idx : np.uint32 = field ( init = False )
     packet_start_idx : NDArray[ np.uint32 ] = field ( init = False )
     samples_leftovers_start_idx : np.uint32 = field ( init = False )
     has_frame : bool = False
@@ -723,12 +724,13 @@ class RxFrame_v0_1_18 :
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = self.frame_sync_sequence_peak_idx + crc32_end_idx )
                         if packet.has_packet :
                             self.has_packet = True
+                            self.frame_end_idx = packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
                             self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
                             if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {has_sync_sequence=}, {self.frame_start_idx=} {self.has_frame=}, {packet.has_packet=}" )
-                            return packet_end_idx
+                            return
         if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_idx=} {has_sync_sequence=}, {self.has_frame=}" )
-        return self.frame_sync_sequence_peak_idx
+        return
     
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
         return modulation.bpsk_symbols_2_bits_v0_1_7 ( samples [ : : self.sps ] )
@@ -824,7 +826,11 @@ class RxSamples_v0_1_18 :
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx :
                 frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_filtered [ idx : ] , frame_sync_sequence_peak_idx = idx )
-                previous_processed_idx = self.process_frame ( idx = idx )
+                if frame.has_frame :
+                    self.frames.append ( frame )
+                    previous_processed_idx = idx + frame.frame_end_idx
+                else :
+                    previous_processed_idx = idx
                 if self.has_leftovers :
                     break
         if not self.has_leftovers :
