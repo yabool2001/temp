@@ -11,6 +11,8 @@ from modules import ops_file, packet , plot
 
 script_filename = os.path.basename ( __file__ )
 
+np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+
 s1 = "np.samples_series_01/rx_samples_1774207593372.npy"
 
 samples_dir = Path ( "np.samples_series_01" )
