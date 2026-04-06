@@ -22,7 +22,7 @@ rx_pluto_samples = packet.RxSamples_v0_1_18 ()
 
 # do usunięcia
 rx_pluto_samples.rx ( samples_filename = "np.samples/rx_samples_0.1.14_128Bx20.npy" )
-rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename}" )
+rx_pluto_samples.plot_complex_samples ( title = f"{ script_filename}" )
 print ( f"{ rx_pluto_samples.samples.size=}" )
 rx_pluto_samples.detect_frames ( deep = False )
 
@@ -31,6 +31,7 @@ for samples_file in samples_files :
 	rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 #plot.complex_waveform_v0_1_6 ( rx_pluto_samples.samples , f"concatenated samples {rx_pluto_samples.samples.size=}" )
 rx_pluto_samples.detect_frames ( deep = False )
-rx_pluto_samples.plot_complex_samples_filtered ( title = f"{ script_filename} concatenated samples {rx_pluto_samples.frames.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.frames.sync_sequence_peaks )
-print ( f"{ rx_pluto_samples.frames.samples_payloads_bytes[0]=}, {rx_pluto_samples.frames.samples_payloads_bytes.size=}" )
-print ( f"{ rx_pluto_samples.frames.packets_idx=}" )
+rx_pluto_samples.plot_complex_samples_filtered ( title = f"{script_filename} concatenated samples {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
+print ( f"{rx_pluto_samples.frames=}" )
+for frame in rx_pluto_samples.frames :
+	print ( f"{ frame.payload_bytes=}, {frame.samples_payload_bytes.size=}" )

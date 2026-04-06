@@ -19,14 +19,13 @@ pyadi-iio documentation is available at: https://analogdevicesinc.github.io/pyad
 
 ## Data structure
 All user data is encapsulated in a FRAME that comprise:
+1. FRAME HEADER (7 bytes)
 - 13 bits of SYNC_SEQUENCE ( e.g. BARKER13)
 - 11 bits of PACKET_LEN
-- 32 bits FRAME_CRC32
-- PACKET (max. of 1504 bytes: max. 1500 payload bytes and 4 CRC32 bytes)
-
-PACKET comprise:
-- PAYLOAD whose maximum length is 2047 bytes (recommended maximum is 1500 bytes according with IP max. lenght over ETH)
-- 4 bytes of PACKET_CRC32
+- 32 bits FRAME_CRC32 (4 bytes)
+2. PACKET (max. of 1504 bytes)
+- PAYLOAD (max. 1500 payload bytes according with IP max. lenght over ETH)
+- 32 bits PAYLOAD_CRC32 (4 bytes)
 
 ## Functions
 
