@@ -61,7 +61,8 @@ while i :
     total_bytes_len += len ( payload_bytes )
     tx_samples.add_frame ( payload_bytes = payload_bytes )
     i -= 1
-print ( f"{tx_samples.samples4pluto.size=}, {len(payload_bytes)=}" )
+print ( f"{tx_samples.samples4pluto.size=}, {total_bytes_len=}" )
+print ( f"{tx_samples.frames=}" )
 
 
 if plt :
