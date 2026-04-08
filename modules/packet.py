@@ -711,7 +711,7 @@ class RxFrame_v0_1_18 :
                     crc32_symbols = samples_comp [ crc32_start_idx : crc32_end_idx : self.SPS ]
                     crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
                     crc32_bytes_read = pad_bits2bytes ( crc32_bits )
-                    crc32_bytes_calculated = create_crc32_bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) )
+                    crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         has_frame_header = True
@@ -821,7 +821,7 @@ class RxSamples_v0_1_18 :
     def create_tensor ( self ) -> None :
         self.tensor = ml.iq_to_tensor_v2 ( self.samples )
 
-    def detect_frames ( self , deep : bool = False , filter : bool = False ) -> None :
+    def detect_frames ( self , deep : bool = False , filter : bool = True ) -> None :
         if filter :
             self.filter_samples ()
         else :
