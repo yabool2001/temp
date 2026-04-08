@@ -681,7 +681,8 @@ class RxFrame_v0_1_18 :
     leftovers_start_idx : np.uint32 = field ( init = False )
     has_frame : bool = False # ustawiany dopiero po walidacji pakietu, wcześniej używamy tylko lokalnego has_frame_header
     has_leftovers : bool = False
-    payload_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
+    # do zapamiętania jako tip przed skasowaniem payload_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
+    packet : RxPacket_v0_1_18 = field ( init = False )
     
     def __post_init__ ( self ) -> None :
         if not self.frame_len_validation () :
@@ -724,9 +725,8 @@ class RxFrame_v0_1_18 :
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = sync_sequence_start_idx + crc32_end_idx )
                         if packet.has_packet :
                             self.has_frame = True
-                            self.frame_start_idx = sync_sequence_start_idx
+                            self.packet = packet
                             self.frame_end_idx = sync_sequence_start_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
-                            self.payload_bytes = np.concatenate ( [ self.payload_bytes , packet.payload_bytes ] )
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
                             if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.frame_start_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return
@@ -764,7 +764,7 @@ class RxFrame_v0_1_18 :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
+        return ( f"{self.packet=}, {self.has_frame=}, {self.has_leftovers=}" )
 
 @dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_18 :
@@ -892,7 +892,7 @@ class RxSamples_v0_1_18 :
         self.samples_leftovers = self.samples [ self.leftovers_start_idx : ]
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.samples.size= }, { self.samples.dtype= }")
+        return ( f"{self.samples.size=}, {self.samples.dtype=}")
 
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_17 :
