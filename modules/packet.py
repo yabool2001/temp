@@ -770,10 +770,11 @@ class RxFrame_v0_1_18 :
 class RxSamples_v0_1_18 :
 
     # Pola uzupełnianie w __post_init__
-    #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     tensor : torch.Tensor = field ( init = False )
-    samples_filtered : NDArray[ np.complex128 ] = field ( init = False )
+    #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples_corrected : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     has_amp_greater_than_ths : bool = False
     SPS = modulation.SPS
     SPAN = filters.SPAN
@@ -789,7 +790,8 @@ class RxSamples_v0_1_18 :
 
     def __post_init__ ( self ) -> None :
             self.samples = np.array ( [] , dtype = np.complex128 )
-            self.samples_filtered = np.array ( [] , dtype = np.complex128 )
+            #self.samples_filtered = np.array ( [] , dtype = np.complex128 )
+            #self.samples_corrected = np.array ( [] , dtype = np.complex128 )
             #self.tensor = torch.tensor ( [] , dtype = torch.float32 )
 
     def rx ( self , sdr_ctx : Pluto  | None = None , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None , concatenate : bool = False ) -> None :
@@ -818,21 +820,28 @@ class RxSamples_v0_1_18 :
     def filter_samples ( self ) -> None :
         self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
 
+    def correct_samples ( self ) -> None :
+        self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+
     def create_tensor ( self ) -> None :
         self.tensor = ml.iq_to_tensor_v2 ( self.samples )
 
-    def detect_frames ( self , deep : bool = False , filter : bool = True ) -> None :
+    def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False ) -> None :
         if filter :
             self.filter_samples ()
         else :
             self.samples_filtered = self.samples
+        if correct :
+            self.correct_samples ()
+        else :
+            self.samples_corrected = self.samples_filtered
         self.has_leftovers = False
-        self.samples_filtered_len = np.uint32 ( len ( self.samples_filtered ) )
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
+        self.samples_filtered_len = np.uint32 ( len ( self.samples_corrected ) )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_corrected , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx :
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_filtered [ idx : ] , sync_sequence_peak_idx = idx )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx : ] , sync_sequence_peak_idx = idx )
                 if frame.has_frame :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_idx
