@@ -14,10 +14,9 @@ script_filename = os.path.basename ( __file__ )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 s1 : list = []
-s1.append ( "np.samples/rx_samples_0.1.18_4Bx2.npy" )
 
 #samples_dir = Path ( "np.simple-frames" )
-samples_dir = Path ( "np.samples_series_01" )
+samples_dir = Path ( "np.samples_test127" )
 samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 if not samples_files :
 	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
@@ -30,4 +29,5 @@ rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
 rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} concatenated samples {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
 print ( f"{rx_pluto_samples.frames=}" )
 for frame in rx_pluto_samples.frames :
-	print ( f"{ frame.packet.payload_bytes=}, {frame.packet.payload_bytes.size=}" )
+	frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
+	print ( f"{ frame_symbols.size=}, {frame_symbols[ : 8 ]=}" )

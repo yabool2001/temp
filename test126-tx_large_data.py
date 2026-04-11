@@ -58,7 +58,7 @@ print ( f"\n{ script_filename= } { tx_pluto= }" )
 total_bytes_len = 0
 payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
 total_bytes_len += len ( payload_bytes )
-tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = payload_bytes )
+tx_samples = packet.TxSamples_v0_1_18 ( payload_bytes = payload_bytes )
 print ( f"{tx_samples.samples4pluto.size=}, {len(payload_bytes)=}" )
 
 while tx_samples.samples4pluto.size < MAX_SAMPLES_SIZE :
@@ -66,8 +66,9 @@ while tx_samples.samples4pluto.size < MAX_SAMPLES_SIZE :
     tx_samples.add_frame ( payload_bytes = payload_bytes )
 timestamp = ops_os.milis_timestamp ()
 
-dir_name = "np.tensors"
-tx_samples.save_frames2tensor ( filename = timestamp , dir_name = dir_name )
+if wrt :
+    dir_name = "np.tensors"
+    tx_samples.save_frames2flat_tensor ( filename = timestamp , dir_name = dir_name )
 
 print ( f"Final payload bytes length: { total_bytes_len } bytes" )
 for frame in tx_samples.frames :

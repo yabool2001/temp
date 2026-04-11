@@ -510,8 +510,10 @@ class RxPacket_v0_1_18 :
     packet_start_idx : np.uint32
     has_packet : bool = False
     samples_corrected : NDArray[ np.complex128 ] = field ( init = False )
+    bits : NDArray[ np.uint8 ] = field ( init = False )
+    bytes : NDArray[ np.uint8 ] = field ( init = False )
     payload_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    packet_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     
     # Pola uzupełnianie w __post_init__
 
@@ -532,7 +534,9 @@ class RxPacket_v0_1_18 :
             crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
-                self.packet_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ payload_bits, crc32_bits ] ) , sps = sps )
+                self.bits = np.concatenate ( [ payload_bits , crc32_bits ] )
+                self.bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.bits , sps = sps )
+                self.bytes = np.concatenate ( [ payload_bytes , crc32_bytes_read ] )
                 self.payload_bytes = payload_bytes
                 if settings["log"]["verbose_2"] : print ( samples_name )
                 return
@@ -551,7 +555,9 @@ class RxPacket_v0_1_18 :
         crc32_bytes_calculated = create_crc32_bytes ( payload_bytes )
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
-            self.packet_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ payload_bits, crc32_bits ] ) , sps = sps )
+            self.bits = np.concatenate ( [ payload_bits , crc32_bits ] )
+            self.bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.bits , sps = sps )
+            self.bytes = np.concatenate ( [ payload_bytes , crc32_bytes_read ] )
             self.payload_bytes = payload_bytes
             return
 
@@ -571,98 +577,6 @@ class RxPacket_v0_1_18 :
         )
 
 @dataclass ( slots = True , eq = False )
-class RxFrames_v0_1_13 :
-    
-    samples_filtered : NDArray[ np.complex128 ]
-    signal_start_idx : np.uint32
-    deep : bool = False
-
-    # Pola uzupełnianie w __post_init__
-    sps = modulation.SPS
-    #sync_sequence_peaks : NDArray[ np.uint32 ] = field ( init = False )
-    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
-    packets_idx : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
-    samples_filtered_len : np.uint32 = field ( init = False )
-    last_processed_idx : np.uint32 = 0
-    samples_leftovers_start_idx : np.uint32 = field ( init = False )
-    has_leftovers : bool = False
-    samples_payloads_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
-    
-    def __post_init__ ( self ) -> None :
-        has_frame = False
-        sync_sequence_start_idx = self.signal_start_idx + filters.SPAN * self.sps // 2
-        sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.sps )
-        packet_len_start_idx = sync_sequence_end_idx
-        packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.sps )
-        crc32_start_idx = packet_len_end_idx
-        crc32_end_idx : np.uint32 = ( crc32_start_idx + ( CRC32_LEN_BITS * self.sps ) ).astype ( np.uint32 )
-
-        samples_components = [ ( self.samples_filtered.real , "sync sequence real" ) , ( self.samples_filtered.imag , "sync sequence imag" ) , ( -self.samples_filtered.real , "sync sequence -real" ) , ( -self.samples_filtered.imag , "sync sequence -imag" ) ]
-        for samples_component , samples_name in samples_components :
-            sync_sequence_bits = self.samples2bits ( samples_component [ sync_sequence_start_idx : sync_sequence_end_idx ] )
-            if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                has_sync_sequence = True
-                add2log_packet ( f"{t.time()},{has_sync_sequence=},{sync_sequence_start_idx=}")
-                packet_len_uint16 = self.samples2uint16 ( samples_component [ packet_len_start_idx : packet_len_end_idx ] )
-                check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
-                for samples_comp , frame_name in check_components :
-                    crc32_bytes_read = self.samples2bytes ( samples_comp [ crc32_start_idx : crc32_end_idx ] )
-                    crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( self.samples2bits ( samples_comp [ sync_sequence_start_idx : packet_len_end_idx ] ) ) )
-                    if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                        packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.sps )
-                        has_frame = True
-                        add2log_packet ( f"{t.time()},{has_frame=},{sync_sequence_start_idx=}")
-                        if not self.packet_len_validation ( self.signal_start_idx , packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{has_frame=},{sync_sequence_start_idx=}")
-                            if settings["log"]["verbose_2"] : print ( f"{ sync_sequence_start_idx= } { samples_name } { frame_name= } { has_sync_sequence= }, { has_frame= }" )
-                            return self.signal_start_idx
-                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ self.signal_start_idx : packet_end_idx ] , packet_start_idx = crc32_end_idx - self.signal_start_idx )
-                        if packet.has_packet :
-                            self.packets_idx = np.append ( self.packets_idx , self.signal_start_idx )
-                            self.samples_payloads_bytes = np.concatenate ( [ self.samples_payloads_bytes , packet.payload_bytes ] )
-                            add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx}")
-                            if settings["log"]["verbose_2"] : print ( f"{self.signal_start_idx=} {has_sync_sequence=}, {has_frame=}, {packet.has_packet= }" )
-                            return packet_end_idx
-        if settings["log"]["verbose_2"] : print ( f"{ self.signal_start_idx= } { has_sync_sequence= }, { has_frame= }" )
-        return self.signal_start_idx
-    
-    def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
-        sync_sequence_symbols = samples [ : : self.sps ]
-        return modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
-
-    def samples2uint16 ( self , samples : NDArray[ np.complex128 ] ) -> np.uint16 :
-        bits = self.samples2bits ( samples )
-        return np.uint16 ( bits_2_int ( bits ) )
-
-    def samples2bytes ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
-        bits = self.samples2bits ( samples )
-        return pad_bits2bytes ( bits )
-    
-    def complete_process_frame ( self , idx : np.uint32 ) -> None :
-        if settings["log"]["verbose_2"] : print ( f"Samples at index { idx } is too close to the end of samples to contain a full frame. Skipping." )
-        self.samples_leftovers_start_idx = idx - filters.SPAN * self.sps // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
-        self.has_leftovers = True
-
-    def frame_len_validation ( self, idx : np.uint32 ) -> bool :
-        remainings_len = self.samples_filtered_len - idx
-        if remainings_len <= FRAME_LEN_SAMPLES :
-            self.complete_process_frame ( idx )
-            return False
-        return True
-
-    def packet_len_validation ( self , idx : np.uint32 , packet_end_idx : np.uint32 ) -> bool :
-        if packet_end_idx > self.samples_filtered_len :
-            self.complete_process_frame ( idx )
-            return False
-        return True
-
-    def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"{title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
-
-    def __repr__ ( self ) -> str :
-        return ( f"{ self.frames.size= } , dtype = { self.frames.dtype= }")
-
-@dataclass ( slots = True , eq = False )
 class RxFrame_v0_1_18 :
     
     samples_filtered : NDArray[ np.complex128 ]
@@ -671,6 +585,7 @@ class RxFrame_v0_1_18 :
     # Pola uzupełnianie w __post_init__
     SPS = modulation.SPS
     SPAN = filters.SPAN
+    header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     frame_start_idx : np.uint32 = field ( init = False )
     frame_end_idx : np.uint32 = field ( init = False )
     packet_start_idx : NDArray[ np.uint32 ] = field ( init = False )
@@ -721,6 +636,8 @@ class RxFrame_v0_1_18 :
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = sync_sequence_start_idx + crc32_end_idx )
                         if packet.has_packet :
                             self.has_frame = True
+                            #self.bpsk_symbols = np.concatenate ( [ sync_sequence_symbols , packet_len_symbols , crc32_symbols , packet.packet_symbols ] )
+                            self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] ) , sps = self.SPS )
                             self.packet = packet
                             self.frame_end_idx = sync_sequence_start_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
@@ -775,7 +692,6 @@ class RxSamples_v0_1_18 :
     SPS = modulation.SPS
     SPAN = filters.SPAN
     ths : float = 1000.0
-    frames_old : RxFrames_v0_1_13 = field ( init = False )
     frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     samples_leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
 
@@ -921,46 +837,45 @@ class RxPluto_v0_1_17 :
         return ( f"{ self.pluto_rx_ctx= }" if self.sn is not None else f"There's no ADALM-Pluto connected!" )
 
 @dataclass ( slots = True , eq = False )
-class TxPacket_v0_1_11 :
+class TxPacket_v0_1_18 :
     
     payload_bytes : NDArray[ np.uint8 ]
     
     # Pola uzupełnianie w __post_init__
-    crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    packet_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    packet_len : np.uint16 = field ( init = False )
-
-    def __post_init__ ( self ) -> None :
-        self.create_crc32_bytes ()
-        self.create_packet_bytes ()
-        self.packet_len = np.uint16 ( len ( self.payload_bytes ) + len ( self.crc32_bytes ) )  # payload + crc32
-
-    def create_crc32_bytes ( self ) -> None :
-        self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
-
-    def create_packet_bytes ( self ) -> None:
-        self.packet_bytes = np.concatenate ( [ self.payload_bytes , self.crc32_bytes ] )
-
-    def __repr__ ( self ) -> str :
-        return ( f"{ self.payload_bytes= }, { self.crc32_bytes= }, { self.packet_len= }" )
-
-@dataclass ( slots = True , eq = False )
-class TxFrame_v0_1_12 :
-
-    tx_packet : TxPacket_v0_1_11
-        
-    # Pola uzupełnianie w __post_init__
+    bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bytes : NDArray[ np.uint8 ] = field ( init = False )
     bits : NDArray[ np.uint8 ] = field ( init = False )
+    len : np.uint16 = field ( init = False )
+
+    def __post_init__ ( self ) -> None :
+        crc32_bytes = create_crc32_bytes ( self.payload_bytes )
+        self.bytes = np.concatenate ( [ self.payload_bytes , crc32_bytes ] )
+        self.len = np.uint16 ( len ( self.payload_bytes ) + len ( crc32_bytes ) )  # payload + crc32
+        self.bits = bytes2bits ( self.bytes )
+        self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.bits )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.payload_bytes= }, { self.bytes= }, { self.len= }" )
+
+@dataclass ( slots = True , eq = False )
+class TxFrame_v0_1_18 :
+
+    tx_packet : TxPacket_v0_1_18
+        
+    # Pola uzupełnianie w __post_init__
+    header_bytes : NDArray[ np.uint8 ] = field ( init = False )
+    bytes : NDArray[ np.uint8 ] = field ( init = False )
+    bits : NDArray[ np.uint8 ] = field ( init = False )
+    header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         sync_sequence_bits : NDArray[ np.uint8 ] = self.create_sync_sequence_bits ()
         packet_len_bits : NDArray[ np.uint8 ] = self.create_packet_len_bits ()
-        frame_main_bytes = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
-        crc32_bytes = self.create_crc32_bytes ( frame_main_bytes )
-        self.bytes = np.concatenate ( [ frame_main_bytes , crc32_bytes , self.tx_packet.packet_bytes ] )
+        self.header_bytes = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
+        crc32_bytes = self.create_crc32_bytes ( self.header_bytes )
+        self.bytes = np.concatenate ( [ self.header_bytes , crc32_bytes , self.tx_packet.bytes ] )
         self.bits = self.create_frame_bits ()
         self.bpsk_symbols = self.create_frame_bpsk_symbols ()
 
@@ -968,7 +883,7 @@ class TxFrame_v0_1_12 :
         return BARKER13_BITS
 
     def create_packet_len_bits ( self ) -> NDArray[ np.uint8 ] :
-        return dec2bits ( self.tx_packet.packet_len , PACKET_LEN_LEN_BITS )
+        return dec2bits ( self.tx_packet.len , PACKET_LEN_LEN_BITS )
 
     def create_crc32_bytes ( self , frame_main_bytes ) -> NDArray[ np.uint8 ] :
         return create_crc32_bytes ( frame_main_bytes )
@@ -988,7 +903,7 @@ class TxFrame_v0_1_12 :
             f"{self.bytes=}, {self.bytes.size=}, {self.bpsk_symbols.size=}" )
 
 @dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_17 :
+class TxSamples_v0_1_18 :
     '''Są 2 tryby tworzenia tx_samples. 
     1. Concatenując sample utworzone w tx_frames. Wtedy mamy ładne przerwy między ramkami,
         bo każda ramka jest filtrowana osobno i pomiędzy ramkami są przerwy bez sygnału z symbolami.
@@ -1002,7 +917,8 @@ class TxSamples_v0_1_17 :
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
-    frames : list[ TxFrame_v0_1_12 ] = field ( init = False , default_factory = list )
+    frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
+    SPS = modulation.SPS
 
     def __post_init__ ( self ) -> None :
         self.create_empty_complex_samples ()
@@ -1017,9 +933,9 @@ class TxSamples_v0_1_17 :
         self.samples = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
 
-    def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_12 :
-        tx_packet = TxPacket_v0_1_11 ( payload_bytes = payload_bytes )
-        tx_frame = TxFrame_v0_1_12 ( tx_packet = tx_packet )
+    def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
+        tx_packet = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
+        tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_packet )
         tx_frame.create_samples4pluto ()
         return tx_frame
 
@@ -1122,12 +1038,13 @@ class TxSamples_v0_1_17 :
     def plot_samples_spectrum ( self , title = "" ) -> None :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
 
-    def save_frames2tensor ( self , filename : str , dir_name : str ) -> None :
+    def save_frames2flat_tensor ( self , filename : str , dir_name : str ) -> None :
         # It's not the actual y_train, but a reference truth for validating rx data (after receiving the frame).
-        # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania zamiast próbować tworzyć regularną macierz z ramek o różnych długościach.
+        # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania
+        # oraz proste powielenie każdego symbolu self.SPS razy.
         tensor_filename = f"{dir_name}/{filename}.pt"
         if self.frames :
-            all_symbols = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex64 , copy = False )
+            all_symbols = np.concatenate ( [ np.repeat ( frame.bpsk_symbols , self.SPS ) for frame in self.frames ] ).astype ( np.complex64 , copy = False )
         else :
             all_symbols = np.array ( [] , dtype = np.complex64 )
         frames_bpsk_symbols = torch.from_numpy ( all_symbols )
