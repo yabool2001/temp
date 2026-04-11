@@ -1,8 +1,9 @@
-import csv
+import csv , os , time as t
 import numpy as np
 import pandas as pd
 import plotly.express as px
 
+from modules import ops_os
 from numpy.typing import NDArray
 from pathlib import Path
 
@@ -10,6 +11,10 @@ from pathlib import Path
 def save_log_thread(filename, content):
     with open(filename, "a") as wrt_file:
         wrt_file.write(content)
+
+def add_timestamp_2_filename ( filename : str ) -> str :
+    name, ext = os.path.splitext ( filename )
+    return f"{name}_{ops_os.milis_timestamp ()}{ext}"
 
 def open_and_init_symbols_csv ( filename ) :
     csv_file = open ( filename , mode = "w" , newline = '' )
@@ -41,6 +46,7 @@ def save_complex_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] )
         writer.writerow ( [ 'real' , 'imag' ] )  # nagłówki kolumn
         for sample in samples :
             writer.writerow ( [ sample.real , sample.imag ] )
+
 def write_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
     with open ( filename , mode = 'w' , newline = '') as file :
         writer = csv.writer ( file )

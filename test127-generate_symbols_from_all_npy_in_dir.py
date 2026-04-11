@@ -16,13 +16,14 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 s1 : list = []
 s1.append ( "np.samples/rx_samples_0.1.18_4Bx2.npy" )
 
-samples_dir = Path ( "np.simple-frames" )
+#samples_dir = Path ( "np.simple-frames" )
+samples_dir = Path ( "np.samples_series_01" )
 samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 if not samples_files :
 	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
 
 rx_pluto_samples = packet.RxSamples_v0_1_18 ()
-for samples_file in s1 :
+for samples_file in samples_files :
 	rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
 rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )

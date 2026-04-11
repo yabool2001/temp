@@ -23,7 +23,7 @@ import sys
 import time as t
 import tomllib
 
-from modules import packet , payload_test_data as ptd , sdr
+from modules import ops_file, ops_os , packet , payload_test_data as ptd , sdr
 
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -40,6 +40,7 @@ script_filename = os.path.basename ( __file__ )
 
 debug = True
 plt = True
+wrt = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -59,10 +60,29 @@ payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
 total_bytes_len += len ( payload_bytes )
 tx_samples = packet.TxSamples_v0_1_17 ( payload_bytes = payload_bytes )
 print ( f"{tx_samples.samples4pluto.size=}, {len(payload_bytes)=}" )
+
 while tx_samples.samples4pluto.size < MAX_SAMPLES_SIZE :
     payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
-    total_bytes_len += len ( payload_bytes )
     tx_samples.add_frame ( payload_bytes = payload_bytes )
+timestamp = ops_os.milis_timestamp ()
+
+# Zapisanie wszystkich symboli z wszystich ramek do pliku npy
+#all_symbols = np.array ( [] , dtype = np.complex128 )
+#for frame in tx_samples.frames :
+#    all_symbols = np.concatenate ( ( all_symbols , frame.bpsk_symbols ) )
+#    print ( f"{frame.bpsk_symbols.size=}: {frame.bpsk_symbols[ : 8 ]=}" )
+dir_name = "np.tensors"
+#tensor_filename = f"{dir_name}/{timestamp}.npy"
+#from pathlib import Path
+#from modules import ops_file
+#Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+#if wrt :
+#    ops_file.save_complex_samples_2_npf ( tensor_filename , all_symbols )
+tx_samples.save_frames2tensor ( filename = timestamp , dir_name = dir_name )
+
+print ( f"Final payload bytes length: { total_bytes_len } bytes" )
+for frame in tx_samples.frames :
+    print ( f"{frame.bpsk_symbols.size=}: {frame.bpsk_symbols[ : 8 ]=}" )
 
 if plt :
     tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )

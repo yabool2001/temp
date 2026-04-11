@@ -1,4 +1,5 @@
 import csv
+from fileinput import filename
 import numpy as np
 import os
 import time as t
@@ -409,11 +410,6 @@ def pad_bits2bytes ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
 def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
     crc32 = zlib.crc32 ( bytes )
     return np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
-
-def add_timestamp_2_filename ( filename : str ) -> str :
-    timestamp = int ( t.time () * 1000 )
-    name, ext = os.path.splitext ( filename )
-    return f"{name}_{timestamp}{ext}"
 
 class PureComplexLSTMCell ( nn.Module ) :
     def __init__ ( self , input_size , hidden_size ) :
@@ -871,11 +867,11 @@ class RxSamples_v0_1_18 :
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def save_complex_samples_2_npf ( self , filename : str ) -> None :
-        filename_with_timestamp = add_timestamp_2_filename ( filename )
+        filename_with_timestamp = ops_file.add_timestamp_2_filename ( filename )
         ops_file.save_complex_samples_2_npf ( filename_with_timestamp , self.samples )
 
     def save_complex_samples_2_csv ( self , filename : str ) -> None :
-        filename_with_timestamp = add_timestamp_2_filename ( filename )
+        filename_with_timestamp = ops_file.add_timestamp_2_filename ( filename )
         ops_file.save_complex_samples_2_csv ( filename_with_timestamp , self.samples )
 
     def analyze ( self ) -> None :
@@ -1125,6 +1121,18 @@ class TxSamples_v0_1_17 :
 
     def plot_samples_spectrum ( self , title = "" ) -> None :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
+
+    def save_frames2tensor ( self , filename : str , dir_name : str ) -> None :
+        # It's not the actual y_train, but a reference truth for validating rx data (after receiving the frame).
+        # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania zamiast próbować tworzyć regularną macierz z ramek o różnych długościach.
+        tensor_filename = f"{dir_name}/{filename}.pt"
+        if self.frames :
+            all_symbols = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex64 , copy = False )
+        else :
+            all_symbols = np.array ( [] , dtype = np.complex64 )
+        frames_bpsk_symbols = torch.from_numpy ( all_symbols )
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        torch.save ( frames_bpsk_symbols , tensor_filename )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.bpsk_symbols.size= }, { self.samples4pluto.size= }" )
