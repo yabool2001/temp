@@ -39,7 +39,7 @@ np.set_printoptions ( threshold = np.inf , linewidth = np.inf )
 script_filename = os.path.basename ( __file__ )
 
 debug = True
-plt = True
+plt = False
 wrt = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
@@ -68,6 +68,7 @@ timestamp = ops_os.milis_timestamp ()
 
 if wrt :
     dir_name = "np.tensors"
+    if debug : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
     tx_samples.save_frames2flat_tensor ( filename = timestamp , dir_name = dir_name )
 
 print ( f"Final payload bytes length: { total_bytes_len } bytes" )
@@ -99,6 +100,27 @@ udp_sock.setblocking ( False )
 print ( "Czekam na komendy na porcie UDP 10001" )
 payload_udp = b""
 udp_sender_addr = ( UDP_DEST_IP , UDP_TARGET_PORT )
+
+
+
+
+
+
+
+# przekazanie timestampu do skryptu test125-save_series_raw_complex_samples.py, po otrzymaniu komendy ASCII_ENQ
+while True :
+    try :
+        payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 )
+    except BlockingIOError :
+        t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
+        continue
+    if payload_udp == ASCII_ENQ : # ENQUIRY (START OF TRANSMISSION)
+        if debug : print ( f"Received ASCII_ENQ {payload_udp=}, sending timestamp." )
+        payload_udp = b""
+        udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr )
+        if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
+        break
+    t.sleep ( 0.05 )  # odciążenie CPU
 
 try :
     while True :

@@ -30,7 +30,8 @@ ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
 ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
 end_rx = False
 
-filename = "np.samples_series_01/rx_samples.npy"
+dir_name = "np.samples_test127"
+filename = "rx_samples.npy"
 series_len = 10
 
 script_filename = os.path.basename ( __file__ )
@@ -45,7 +46,7 @@ if len ( sys.argv ) > 1 :
 else :
     n_o_bytes_uint16 = np.uint16 ( 4 )
     n_o_repeats_uint32 = np.uint32 ( 10 )
-    tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
+    tx_gain_float = float ( toml_settings[ "ADALM-Pluto" ][ "TX_GAIN" ] )
 
 if del_old :
     for file_path in Path ( "np.samples_series_01" ).glob ( "*" ) :
@@ -54,11 +55,23 @@ if del_old :
 
 rx_pluto = packet.RxPluto_v0_1_17 ( sn = sdr.PLUTO_RX_SN )
 rx_samples = packet.RxSamples_v0_1_18 ()
-if debug : print ( f"\n{ script_filename= } { rx_samples.samples.size= }" )
+if debug : print ( f"\n{script_filename=} {rx_samples.samples.size=}" )
 
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
 udp_sock.setblocking ( False )
 payload_udp = b""
+
+udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
+if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+while True :
+    try :
+        timestamp = udp_sock.recv ( 100 )
+    except BlockingIOError :
+        t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
+        continue
+    if debug : print ( f"\n\r[UDP] Received {len ( timestamp )=} {timestamp=}" )
+    break
 
 try :
     udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
@@ -67,7 +80,7 @@ try :
     while True :
         rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
         if wrt :
-            rx_samples.save_complex_samples_2_npf ( filename )
+            rx_samples.save_complex_samples_2_npf ( file_name = f"{timestamp.decode("utf-8")}_{filename}" , dir_name = dir_name )
         if end_rx :
             if debug : print ( f"End of reception, stopping { script_filename }!" )
             break

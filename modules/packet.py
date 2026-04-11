@@ -627,19 +627,19 @@ class RxFrame_v0_1_18 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         has_frame_header = True
-                        self.frame_start_idx = sync_sequence_start_idx
+                        self.frame_start_idx = self.sync_sequence_peak_idx + sync_sequence_start_idx
                         add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{has_frame_header=},{self.frame_start_idx=}")
                         if not self.packet_len_validation ( self.sync_sequence_peak_idx , packet_end_idx ) :
                             add2log_packet ( f"{t.time()},{has_frame_header=},{sync_sequence_start_idx=}")
                             if settings["log"]["verbose_2"] : print ( f"{self.sync_sequence_peak_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {has_frame_header=}" )
                             return
-                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = sync_sequence_start_idx + crc32_end_idx )
+                        packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] , packet_start_idx = self.sync_sequence_peak_idx + crc32_end_idx )
                         if packet.has_packet :
                             self.has_frame = True
                             #self.bpsk_symbols = np.concatenate ( [ sync_sequence_symbols , packet_len_symbols , crc32_symbols , packet.packet_symbols ] )
                             self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] ) , sps = self.SPS )
                             self.packet = packet
-                            self.frame_end_idx = sync_sequence_start_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
+                            self.frame_end_idx = self.sync_sequence_peak_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
                             if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.frame_start_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return
@@ -782,12 +782,13 @@ class RxSamples_v0_1_18 :
     def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
 
-    def save_complex_samples_2_npf ( self , filename : str ) -> None :
-        filename_with_timestamp = ops_file.add_timestamp_2_filename ( filename )
-        ops_file.save_complex_samples_2_npf ( filename_with_timestamp , self.samples )
+    def save_complex_samples_2_npf ( self , file_name : str , dir_name : str ) -> None :
+        filename_with_timestamp = ops_file.add_timestamp_2_filename ( file_name )
+        filename_with_timestamp_and_dir = f"{dir_name}/{filename_with_timestamp}"
+        ops_file.save_complex_samples_2_npf ( filename_with_timestamp_and_dir , self.samples )
 
-    def save_complex_samples_2_csv ( self , filename : str ) -> None :
-        filename_with_timestamp = ops_file.add_timestamp_2_filename ( filename )
+    def save_complex_samples_2_csv ( self , file_name : str ) -> None :
+        filename_with_timestamp = ops_file.add_timestamp_2_filename ( file_name )
         ops_file.save_complex_samples_2_csv ( filename_with_timestamp , self.samples )
 
     def analyze ( self ) -> None :
