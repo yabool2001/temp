@@ -53,7 +53,7 @@ if del_old :
             file_path.unlink ( missing_ok = True )
 
 rx_pluto = packet.RxPluto_v0_1_17 ( sn = sdr.PLUTO_RX_SN )
-rx_samples = packet.RxSamples_v0_1_17 ()
+rx_samples = packet.RxSamples_v0_1_18 ()
 if debug : print ( f"\n{ script_filename= } { rx_samples.samples.size= }" )
 
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )

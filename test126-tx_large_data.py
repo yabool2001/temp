@@ -66,18 +66,7 @@ while tx_samples.samples4pluto.size < MAX_SAMPLES_SIZE :
     tx_samples.add_frame ( payload_bytes = payload_bytes )
 timestamp = ops_os.milis_timestamp ()
 
-# Zapisanie wszystkich symboli z wszystich ramek do pliku npy
-#all_symbols = np.array ( [] , dtype = np.complex128 )
-#for frame in tx_samples.frames :
-#    all_symbols = np.concatenate ( ( all_symbols , frame.bpsk_symbols ) )
-#    print ( f"{frame.bpsk_symbols.size=}: {frame.bpsk_symbols[ : 8 ]=}" )
 dir_name = "np.tensors"
-#tensor_filename = f"{dir_name}/{timestamp}.npy"
-#from pathlib import Path
-#from modules import ops_file
-#Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
-#if wrt :
-#    ops_file.save_complex_samples_2_npf ( tensor_filename , all_symbols )
 tx_samples.save_frames2tensor ( filename = timestamp , dir_name = dir_name )
 
 print ( f"Final payload bytes length: { total_bytes_len } bytes" )

@@ -7,8 +7,8 @@ from modules import ops_file , plot
 
 
 #dir_name = Path ( "np.samples" )
-#dir_name = Path ( "np.samples_series_01" )
-dir_name = Path ( "np.simple-frames" )
+dir_name = Path ( "np.samples_series_01" )
+#dir_name = Path ( "np.simple-frames" )
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 
 if not samples_files :
