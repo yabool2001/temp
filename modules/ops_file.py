@@ -2,6 +2,7 @@ import csv , os , time as t
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import torch
 
 from modules import ops_os
 from numpy.typing import NDArray
@@ -39,6 +40,15 @@ def open_and_write_samples_2_csv ( name , samples ) :
     for sample in samples :
         csv_writer.writerow ( [ sample.real , sample.imag ] )
     return csv_file , csv_writer
+
+def open_flat_tensor ( file_name : str , dir_name : str | None = None ) -> torch.Tensor :
+    # Accept either a bare file name, a relative path, or a full path ending with .pt.
+    tensor_path = Path ( file_name )
+    if not tensor_path.suffix :
+        tensor_path = tensor_path.with_suffix ( ".pt" )
+    if not tensor_path.is_absolute () and dir_name is not None and tensor_path.parent == Path ( "." ) :
+        tensor_path = Path ( dir_name ) / tensor_path
+    return torch.load ( tensor_path )
 
 def save_complex_samples_2_csv ( filename , samples : NDArray[ np.complex128 ] ) :
     with open ( filename , mode = 'w' , newline = '') as file :

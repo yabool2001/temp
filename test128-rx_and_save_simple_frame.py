@@ -16,7 +16,7 @@ import socket
 import time as t
 import tomllib
 
-dir_name = "np.simple-frames"
+dir_name = "np.tensors"
 Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 
 debug = True

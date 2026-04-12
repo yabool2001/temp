@@ -101,12 +101,6 @@ print ( "Czekam na komendy na porcie UDP 10001" )
 payload_udp = b""
 udp_sender_addr = ( UDP_DEST_IP , UDP_TARGET_PORT )
 
-
-
-
-
-
-
 # przekazanie timestampu do skryptu test125-save_series_raw_complex_samples.py, po otrzymaniu komendy ASCII_ENQ
 while True :
     try :

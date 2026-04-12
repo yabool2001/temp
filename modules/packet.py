@@ -627,9 +627,9 @@ class RxFrame_v0_1_18 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         has_frame_header = True
                         self.frame_start_abs_idx = self.sync_sequence_peak_abs_idx + sync_sequence_start_idx
-                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{has_frame_header=},{self.frame_start_abs_idx=}")
+                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{has_frame_header=},{self.frame_start_abs_idx=}" )
                         if not self.packet_len_validation ( packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{has_frame_header=},{sync_sequence_start_idx=}")
+                            add2log_packet ( f"{t.time()},{has_frame_header=},{sync_sequence_start_idx=},{self.frame_start_abs_idx=}" )
                             if settings["log"]["verbose_2"] : print ( f"{self.sync_sequence_peak_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {has_frame_header=}" )
                             return
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
@@ -685,6 +685,7 @@ class RxSamples_v0_1_18 :
     # Pola uzupełnianie w __post_init__
     samples : NDArray[ np.complex128 ] = field ( init = False )
     tensor : torch.Tensor = field ( init = False )
+    y_train_tensor : torch.Tensor = field ( init = False )
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_corrected : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -704,7 +705,6 @@ class RxSamples_v0_1_18 :
             self.samples = np.array ( [] , dtype = np.complex128 )
             #self.samples_filtered = np.array ( [] , dtype = np.complex128 )
             #self.samples_corrected = np.array ( [] , dtype = np.complex128 )
-            #self.tensor = torch.tensor ( [] , dtype = torch.float32 )
 
     def rx ( self , sdr_ctx : Pluto  | None = None , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None , concatenate : bool = False ) -> None :
         '''
@@ -766,6 +766,7 @@ class RxSamples_v0_1_18 :
         if not self.has_leftovers :
             self.leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - self.SPAN * self.SPS // 2
         self.clip_samples_leftovers ()
+        self.y_train_tensor = self.y_train_tensor_from_frames ()
 
     def sample_initial_assesment (self) -> None :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
@@ -778,6 +779,11 @@ class RxSamples_v0_1_18 :
 
     def plot_tensor ( self , title : str = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None , frame_idx : int | None = None ) -> None :
         plot.tensor_waveform_v0_1_16 ( self.tensor , title = f"RxSamples tensor {title}" , marker_squares = marker , marker_peaks = peaks , frame_idx = frame_idx )
+
+    def plot_y_train_tensor ( self , title : str = "" ) -> None :
+        frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+        y_train_tensor_plot = torch.stack ( [ self.y_train_tensor.real , self.y_train_tensor.imag ] )
+        plot.tensor_waveform_v0_1_16 ( y_train_tensor_plot , title = f"RxSamples y_train_tensor {title}" , marker_peaks = frames_start_idx )
 
     def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
@@ -812,6 +818,38 @@ class RxSamples_v0_1_18 :
 
     def clip_samples_leftovers ( self ) -> None :
         self.leftovers = self.samples [ self.leftovers_start_idx : ]
+
+    def flat_tensor_from_frames ( self ) -> torch.Tensor :
+        # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania we flat tensor w celu porównania z tensorami zapisany podczas tx
+        if self.frames :
+            all_symbols = np.concatenate (
+                [
+                    symbols
+                    for frame in self.frames
+                    for symbols in ( frame.header_bpsk_symbols , frame.packet.bpsk_symbols )
+                ]
+            ).astype ( np.complex64 , copy = False )
+        else :
+            all_symbols = np.array ( [] , dtype = np.complex64 )
+        return torch.from_numpy ( all_symbols )
+
+    def y_train_tensor_from_frames ( self ) -> torch.Tensor :
+        y_train_symbols = np.zeros ( self.samples.size , dtype = np.complex64 )
+        for frame in self.frames :
+            frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] ).astype ( np.complex64 , copy = False )
+            frame_start_idx = int ( frame.frame_start_abs_idx )
+            if frame_start_idx >= y_train_symbols.size or frame_symbols.size == 0 :
+                continue
+            frame_end_idx = min ( frame_start_idx + frame_symbols.size , y_train_symbols.size )
+            y_train_symbols[ frame_start_idx : frame_end_idx ] = frame_symbols[ : frame_end_idx - frame_start_idx ]
+        return torch.from_numpy ( y_train_symbols )
+
+    def save_frames2y_train_tensor ( self , file_name : str , dir_name : str ) -> None :
+        if not isinstance ( self.y_train_tensor , torch.Tensor ) or self.y_train_tensor.dtype != torch.complex64 :
+            raise TypeError ( "y_train_tensor must be torch.Tensor with dtype=torch.complex64" )
+        tensor_filename = f"{dir_name}/{file_name}.pt"
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        torch.save ( self.y_train_tensor , tensor_filename )
 
     def __repr__ ( self ) -> str :
         return ( f"{self.samples.size=}, {self.samples.dtype=}")

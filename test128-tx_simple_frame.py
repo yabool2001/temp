@@ -22,7 +22,7 @@ import sys
 import time as t
 import tomllib
 
-from modules import packet , payload_test_data as ptd , sdr
+from modules import ops_os, packet , payload_test_data as ptd , sdr
 
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -39,6 +39,7 @@ script_filename = os.path.basename ( __file__ )
 
 debug = True
 plt = True
+wrt = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -53,22 +54,30 @@ tx_samples_4pluto = np.array ( [] , dtype = np.complex128 )
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 
-i = 2
+#i = 2
+i = 1
 total_bytes_len = 0
 tx_samples = packet.TxSamples_v0_1_18 ()
 while i :
-    payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
+    #payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
+    payload_bytes = ptd.PAYLOAD_1500BYTES_DEC
     total_bytes_len += len ( payload_bytes )
     tx_samples.add_frame ( payload_bytes = payload_bytes )
     i -= 1
 print ( f"{tx_samples.samples4pluto.size=}, {total_bytes_len=}" )
 print ( f"{tx_samples.frames=}" )
 
+timestamp = ops_os.milis_timestamp ()
 
 if plt :
     tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
     tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
     tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
+
+if wrt :
+    dir_name = "np.tensors"
+    if debug : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
+    tx_samples.save_frames2flat_tensor ( filename = timestamp , dir_name = dir_name )
 
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
