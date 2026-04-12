@@ -55,7 +55,7 @@ print ( f"\n{ script_filename= } { tx_pluto= }" )
 
 i = 2
 total_bytes_len = 0
-tx_samples = packet.TxSamples_v0_1_17 ()
+tx_samples = packet.TxSamples_v0_1_18 ()
 while i :
     payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
     total_bytes_len += len ( payload_bytes )

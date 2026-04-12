@@ -31,7 +31,7 @@ ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
 ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
 end_rx = False
 
-filename = f"{dir_name}/rx_samples.npy"
+filename = f"rx_samples.npy"
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
@@ -67,7 +67,7 @@ try :
     while True :
         rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
         if wrt :
-            rx_samples.save_complex_samples_2_npf ( filename )
+            rx_samples.save_complex_samples_2_npf ( filename , dir_name )
         if end_rx :
             if debug : print ( f"End of reception, stopping { script_filename }!" )
             break
