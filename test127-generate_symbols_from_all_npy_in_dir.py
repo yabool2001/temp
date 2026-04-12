@@ -21,6 +21,7 @@ samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 #dir_name = "np.tensors_001"
 #dir_name = "np.samples_test127"
 
+
 if not samples_files :
 	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
 
