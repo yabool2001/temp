@@ -730,7 +730,7 @@ class RxSamples_v0_1_18 :
         self.sample_initial_assesment ()
 
     def filter_samples ( self ) -> None :
-        self.samples_filtered = filters.apply_rrc_rx_filter_v0_1_6 ( self.samples )
+        self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples )
 
     def correct_samples ( self ) -> None :
         self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )

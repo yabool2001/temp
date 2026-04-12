@@ -8,7 +8,7 @@ from modules import modulation , plot
 from numba import njit  # Dodane dla przyspieszenia obliczeń
 from numpy.typing import NDArray
 from pathlib import Path
-from scipy.signal import lfilter , upfirdn , find_peaks
+from scipy.signal import lfilter , upfirdn , find_peaks , sosfilt , sosfiltfilt , tf2sos
 
 with open ( "settings.json" , "r" ) as settings_json_file :
     settings = json.load ( settings_json_file )
@@ -262,6 +262,48 @@ def apply_rrc_rx_filter_v0_1_6 ( rx_samples: NDArray[ np.complex128 ] ) -> NDArr
     filtered = lfilter ( rrc_taps , 1.0 , rx_samples )
     
     return filtered.astype ( np.complex128 )  # Gwarancja complex128
+
+def apply_rrc_rx_convolve_v0_1_18 ( rx_samples : NDArray [ np.complex128 ] ) -> NDArray[ np.complex128 ] :
+    """
+    Filtruje odebrane próbki filtrem RRC z wykorzystaniem splotu (convolution).
+    Splot automatycznie omija problemy ze stabilnością układów FIR 
+    oraz perfekcyjnie niweluje opóźnienie grupowe.
+
+    Parametry:
+        rx_samples: Odebrane próbki (complex128) z SDR.
+
+    Zwraca:
+        Przefiltrowane próbki (complex128) z wycentrowanymi pikami i zachowaną długością.
+    """
+    # 1. Pobieramy tapy z Twojej zoptymalizowanej funkcji rrc_filter_v4
+    rrc_taps = rrc_filter_v4 ( BETA , SPS , SPAN )
+    
+    # 2. Wykonujemy splot (Convolution) wektorów
+    # Parametr mode='same' realizuje dokładnie to, co wcześniej wyliczałeś ręcznie:
+    # nakłada filtr na sygnał, a następnie automatycznie i SYMETRYCZNIE odcina opóźnienie 
+    # z obu brzegów. Dzięki temu tablica wyjściowa ma DOKŁADNIE TEN SAM ROZMIAR co 
+    # rx_samples (równo 1228800 elementów), a piki pokryją się co do ułamka sekundy!
+    
+    aligned_samples = np.convolve ( rx_samples , rrc_taps , mode = 'same' )
+
+    return aligned_samples.astype ( np.complex128 )
+
+def apply_rrc_rx_sosfilt_v0_1_18 ( rx_samples: NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] :
+    """
+    Filtruje odebrane próbki z SDR filtrem RRC, używając reprezentacji
+    second-order sections, aby ograniczyć problemy numeryczne podczas filtracji.
+
+    Parametry:
+        rx_samples: Odebrane próbki (complex128) z SDR.
+
+    Zwraca:
+        Przefiltrowane próbki (complex128).
+    """
+    rrc_taps = rrc_filter_v4 ( BETA , SPS , SPAN )
+    rrc_sos = tf2sos ( rrc_taps , [ 1.0 ] )
+    filtered = sosfilt ( rrc_sos , rx_samples )
+
+    return filtered.astype ( np.complex128 )
 
 def apply_rrc_rx_filter_v0_1_3 ( rx_samples: NDArray[ np.complex128 ] , downsample: bool = True ) -> NDArray[ np.complex128 ] :
     """
