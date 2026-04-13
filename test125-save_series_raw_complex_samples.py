@@ -21,7 +21,7 @@ Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
 debug = True
 plt = True
 wrt = True
-del_old = True
+del_old = False
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -30,7 +30,7 @@ ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
 ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
 end_rx = False
 
-dir_name = "np.samples_test127"
+dir_name = "np.tensors"
 filename = "rx_samples.npy"
 series_len = 10
 

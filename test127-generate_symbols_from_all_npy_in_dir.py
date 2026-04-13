@@ -16,7 +16,8 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 
 #samples_dir = Path ( "np.simple-frames" )
 #samples_dir = Path ( "np.samples_test127" )
-samples_dir = Path ( "np.tensor_1x1500B" )
+#samples_dir = Path ( "np.tensor_1x1500B" )
+samples_dir = Path ( "np.tensors" )
 samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 #dir_name = "np.tensors_001"
 #dir_name = "np.samples_test127"
@@ -42,6 +43,6 @@ for frame in rx_pluto_samples.frames :
 	frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
 	print ( f"{ frame_symbols.size=}, {frame.frame_start_abs_idx=}, {frame_symbols[ : 5 ]=}" )
 flat_tensor_rx = rx_pluto_samples.flat_tensor_from_frames ( )
-flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = "1776029890813.pt" , dir_name = samples_dir.name )
+flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = "1776108195326.pt" , dir_name = samples_dir.name )
 #flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = "1776012846025.pt" , dir_name = dir_name )
 print ( f"{torch.equal ( flat_tensor_rx , flat_tensor_tx )=}" )
