@@ -27,10 +27,10 @@ if not samples_files :
 	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
 
 timestamps = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ]
-    for p in Path("np.tensors").glob("*_rx_samples_*.npy")
-})
+	for p in Path("np.tensors").glob("*_rx_samples_*.npy")
+} )
 
-print(timestamps)
+print ( timestamps )
 
 #samples_files : list = [ "np.samples/rx_samples_1776002831362.npy" ] # do testowania na jednym pliku, żeby szybciej iterować nad poprawkami
 #samples_files : list = [ "np.tensors_001/rx_samples_1776012929739.npy" ]
@@ -40,7 +40,9 @@ for timestamp in timestamps :
 	samples_files = sorted ( samples_dir.glob ( f"{timestamp}_rx_samples_*.npy" ) )
 	rx_pluto_samples = packet.RxSamples_v0_1_18 ()
 	for samples_file in samples_files :
+		timestamp2 = samples_file.stem.split ( "_rx_samples_" , 1 )[ 1 ]
 		rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
+	
 	rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
 	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
 	#rx_pluto_samples.plot_complex_samples ( title = f"{script_filename} {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )

@@ -1,74 +1,161 @@
 import numpy as np
-from numpy.typing import NDArray
-from modules import modulation
 import torch
 import torch.nn as nn
 
-import numpy as np
-import torch
 from numpy.typing import NDArray
+from modules import modulation
+from torch.utils.data import Dataset
 
-def iq_to_tensor_v2 (complex_samples: NDArray[np.complex128], seq_len: int = 4096) -> torch.Tensor:
-    """ Zamienia rwący wektor complex128 na okna Tensor AI """
-    
-    # 1. Pocięcie strumienia z radia na równe "klatki"
-    num_frames = len(complex_samples) // seq_len
-    if num_frames == 0:
-        raise ValueError(f"Bufor jest za mały nawet na 1 klatkę (wymaga {seq_len} sampli).")
+
+# ========================================================
+# NASZ AUTORSKI MODUŁ 1: ZESPOLONA KOMÓRKA BRAMKOWA
+# ========================================================
+class PureComplexLSTMCell(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.hidden_size = hidden_size
         
-    truncated = complex_samples[: num_frames * seq_len]
-    frames = truncated.reshape(num_frames, seq_len)
-    
-    # 2. Rozbicie na I (Real) oraz Q (Imag) i rzutowanie na float32 pod GPU
-    i_chan = np.real(frames).astype(np.float32)
-    q_chan = np.imag(frames).astype(np.float32)
-    
-    # 3. Złożenie w tensor. Kształt: [Ilość_Klatek, 2_Kanały, Czas]
-    # Dla Twojego bufora 614k sampli wynik to: [150, 2, 4096]
-    iq_tensor = np.stack((i_chan, q_chan), axis=1)
-    
-    # =========================================================
-    # 4. NORMALIZACJA LOKALNA (Cyfrowe AGC per-klatka)
-    # =========================================================
-    # Szukamy prawdziwej maksymalnej amplitudy zespolonej dla KAŻDEJ z 150 klatek osobno.
-    max_mags = np.max(np.abs(frames), axis=1) # Wynik: wektor 1D o dł. 150
-    
-    # Zmieniamy kształt wektora na [150, 1, 1], aby matematyka Pythona wiedziała,
-    # jak bezpiecznie rozciągnąć to i podzielić macierz 3D (tzw. Broadcasting).
-    max_mags = max_mags.reshape(num_frames, 1, 1)
-    
-    # Dzielenie. Klatka nr 5 dzieli się TYLKO przez max z klatki nr 5.
-    # Zabezpieczenie 1e-9 ratuje przed dzieleniem przez zero przy totalnej ciszy na wejściu.
-    iq_tensor = iq_tensor / (max_mags + 1e-9)
-    
-    tensor_out = torch.from_numpy(iq_tensor)
-    
-    # --- UWAGA ARCHITEKTONICZNA ---
-    # Jeśli wchodzisz z tym od razu do nn.LSTM (nie masz na początku nn.Conv1d), 
-    # musisz odkomentować poniższą linijkę, by przesunąć czas do środka:
-    # tensor_out = tensor_out.transpose(1, 2)  # Zmienia kształt na [150, 4096, 2]
-    
-    return tensor_out
+        # Prawdziwa zespolona warstwa liniowa. To tu sieć "zrozumie"
+        # obroty Eulera, mieszając osie Real i Imag na krzemie karty graficznej.
+        self.W = nn.Linear(input_size + hidden_size, 4 * hidden_size, dtype=torch.complex64)
 
-def iq_to_tensor_v1 ( complex_samples : NDArray[ np.complex128 ] , seq_len: int = 256 ) -> torch.Tensor :
-    """ Zamienia rwący wektor complex128 na okna Tensor AI: [Batch_Size, 2_Kanały, Długość_Ramki] """
-    # 1. Pocięcie strumienia z radia na równe "klatki"
-    num_frames = len ( complex_samples ) // seq_len
-    truncated = complex_samples[ : num_frames * seq_len ] # Ucinamy resztkę
-    frames = truncated.reshape ( num_frames , seq_len )
-    
-    # 2. Rozbicie na I (Real) oraz Q (Imag) i rzutowanie na wymuszone float32
-    i_chan = np.real ( frames ).astype ( np.float32 )
-    q_chan = np.imag ( frames ).astype ( np.float32 )
-    
-    # 3. Złożenie w tensor [Ilość_Klatek, 2_Kanały, Okno_Czasowe]
-    iq_tensor = np.stack ( (i_chan , q_chan ) , axis = 1 )
-    
-    # 4. Normalizacja (Krytyczne! AI nienawidzi dużych liczb, oczekuje ich w okolicach [-1.0, 1.0])
-    # Używamy małej stałej 1e-9 by uniknąć dzielenia przez zero przy pustym szumie
-    iq_tensor = iq_tensor / ( np.max ( np.abs ( iq_tensor ) ) + 1e-9 )
-    
-    return torch.from_numpy ( iq_tensor )
+    def forward(self, x, hx=None):
+        # x wchodzi jako pojedyncza próbka w czasie dla całego batcha
+        if hx is None:
+            # Natywna inicjalizacja pustej pamięci jako zera zespolone (0+0j)
+            h = torch.zeros(x.size(0), self.hidden_size, dtype=torch.complex64, device=x.device)
+            c = torch.zeros(x.size(0), self.hidden_size, dtype=torch.complex64, device=x.device)
+        else:
+            h, c = hx
+
+        combined = torch.cat([x, h], dim=1)
+        
+        # 🔥 Zespolone Mnożenie Macierzy (Tu pracują rdzenie Tensor Twojego RTXa!)
+        gates = self.W(combined)
+        i_gate, f_gate, c_gate, o_gate = gates.chunk(4, 1)
+
+        # SPLIT-ACTIVATION: 
+        # Rozszczepiamy sygnał tylko na ułamek sekundy by przepuścić przez nieliniowe 
+        # zawory trygonometryczne (sigmoid/tanh), chroniąc układ przed błędem NaN.
+        i = torch.complex(torch.sigmoid(i_gate.real), torch.sigmoid(i_gate.imag))
+        f = torch.complex(torch.sigmoid(f_gate.real), torch.sigmoid(f_gate.imag))
+        o = torch.complex(torch.sigmoid(o_gate.real), torch.sigmoid(o_gate.imag))
+        c_tilde = torch.complex(torch.tanh(c_gate.real), torch.tanh(c_gate.imag))
+
+        # Zespolona aktualizacja stanu fizycznego pamięci
+        c_next = f * c + i * c_tilde
+        h_next = o * torch.complex(torch.tanh(c_next.real), torch.tanh(c_next.imag))
+
+        return h_next, c_next
+
+
+# ========================================================
+# NASZ AUTORSKI MODUŁ 2: SILNIK CZASOWY (Zastępuje nn.LSTM)
+# ========================================================
+class PureComplexLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        # Powołujemy do życia pojedynczą bramkę (zdefiniowaną wyżej)
+        self.cell = PureComplexLSTMCell(input_size, hidden_size)
+
+    def forward(self, x):
+        # Wejście x: [Batch, Czas (np. 4096), Cechy_Zespolone]
+        outputs = []
+        hx = None
+        
+        # Iterujemy po osi czasu kroczek po kroczku.
+        # Właśnie po to w głównym skrypcie odpalamy kompilator (max-autotune),
+        # żeby sprzętowo zlepił tę pythonową pętlę w ultraszybki asembler!
+        for t in range(x.size(1)):
+            h, c = self.cell(x[:, t, :], hx)
+            hx = (h, c)
+            outputs.append(h)
+            
+        # Zwracamy posklejany, gotowy 3D tensor
+        return torch.stack(outputs, dim=1), hx
+
+# ========================================================
+# 1. KROJOWNIA DANYCH DLA TWOJEGO y_train (.pt)
+# ========================================================
+class BPSKDataset ( Dataset ) :
+
+    def __init__ ( self , X_file : str , y_file : str , chunk_samples : int = 4096 ) :
+        print ( "Ładuję wektory o idealnej symetrii 1:1 ( SPS = 4 ) ..." )
+        self.X_raw = np.load ( X_file ).astype ( np.complex64 )
+        
+        # Wczytujemy zrobiony przez Ciebie plik (jest to już gotowy torch.Tensor!)
+        self.Y_raw = torch.load ( y_file ).to ( torch.complex64 ) 
+        
+        self.chunk_samples = chunk_samples
+        self.num_chunks = len ( self.X_raw ) // self.chunk_samples
+
+    def __len__(self):
+        return self.num_chunks
+
+    def __getitem__(self, idx):
+        start = idx * self.chunk_samples
+        end = start + self.chunk_samples
+        
+        x_np = self.X_raw[start:end]
+        x_tensor = torch.from_numpy(x_np).unsqueeze(0) # Wejście: [1, 4096]
+        
+        # Twoje etykiety (SPS=4): idealnie ta sama długość co wejście!
+        y_tensor = self.Y_raw[start:end]               # Cel: [4096]
+        
+        # Obowiązkowe AGC na wejściu, żeby chronić przed pikami
+        max_val = torch.max(torch.abs(x_tensor)) + 1e-9
+        x_tensor = x_tensor / max_val
+        
+        return x_tensor, y_tensor
+
+
+# ========================================================
+# 2. ZESPOLONY POTWÓR BEZ DECYMACJI (FRACTIONALLY SPACED)
+# ========================================================
+class HardcoreComplexEqualizer ( nn.Module ) :
+
+    def __init__(self):
+
+        super().__init__()
+        
+        # UWAGA: stride=1 oraz padding='same'.
+        # Zrzucamy maski: z 4096 sampli wejściowych wyjdzie równe 4096 
+        # sampli po splotach. Brak utraty rozdzielczości czasu!
+        self.conv1 = nn.Conv1d ( in_channels = 1 , out_channels = 16 , kernel_size = 7 , stride = 1 , padding = 'same' , dtype = torch.complex64 )
+        
+        self.lstm = PureComplexLSTM ( input_size = 16 , hidden_size = 64 )
+        
+        self.fc = nn.Linear ( 64 , 1 , dtype = torch.complex64 )
+
+    def forward ( self , x ) :
+        # Wejście x: [Batch, 1, 4096]
+        x = self.conv1 ( x )     # Wyjście: [Batch, 16, 4096] (Brak decymacji!)
+        x = x.transpose ( 1 , 2 ) # Wyjście: [Batch, 4096, 16]
+        
+        # Tasiemiec na 4096 kroków wchodzi do LSTM
+        x_lstm, _ = self.lstm ( x ) # Wyjście: [Batch, 4096, 64]
+        out = self.fc ( x_lstm )    # Wyjście: [Batch, 4096, 1]
+        
+        # Wypluwamy goły wektor zespolony (zespolony squelch!). 
+        return out.squeeze ( -1 )   # Zwraca: [Batch, 4096] (dtype=torch.complex64)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Stare śmieci
 
 class AIDemodulator ( nn.Module ) :
     def __init__ ( self , sps = modulation.SPS ) :
