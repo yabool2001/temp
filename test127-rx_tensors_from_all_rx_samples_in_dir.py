@@ -14,8 +14,9 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
-plt : bool = False
+plt : bool = True
 wrt : bool = True
+dbg : bool = True
 del_files : bool = True
 
 samples_dir = Path ( "np.tensors" )
@@ -24,19 +25,17 @@ samples_dir = Path ( "np.tensors" )
 timestamp_groups = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ] for p in Path("np.tensors").glob("*_rx_samples_*.npy") } )
 
 for timestamp_group in timestamp_groups :
-	print ( f"\n{timestamp_group=}" )
 	samples_files = sorted ( samples_dir.glob ( f"{timestamp_group}_rx_samples_*.npy" ) )
+	timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in Path("np.tensors").glob(f"{timestamp_group}_rx_samples_*.npy") } )
+	if dbg : print ( f"\n{timestamp_group=} , {samples_files=} , {timestamps=}" )
 	if not samples_files :
 		raise FileNotFoundError ( f"Brak plikow {timestamp_group}_rx_samples_*.npy w katalogu {samples_dir}" )
 	rx_pluto_samples = packet.RxSamples_v0_1_18 ()
 	for samples_file in samples_files :
-		timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in Path("np.tensors").glob(f"{timestamp_group}_rx_samples_*.npy") } )
 		rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
-	
 	if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
 	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
 	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
-	if plt : rx_pluto_samples.plot_y_train_tensor ( title = f"{script_filename} y_train_tensor {rx_pluto_samples.y_train_tensor.size=}" )
 	#print ( f"{rx_pluto_samples.frames=}" )
 	#for frame in rx_pluto_samples.frames :
 	#	frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
