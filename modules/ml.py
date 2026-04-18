@@ -6,6 +6,8 @@ from numpy.typing import NDArray
 from modules import modulation
 from torch.utils.data import Dataset
 
+LEARNING_RATE = 3e-4
+EPOCHS = 15
 
 # ========================================================
 # NASZ AUTORSKI MODUŁ 1: ZESPOLONA KOMÓRKA BRAMKOWA
