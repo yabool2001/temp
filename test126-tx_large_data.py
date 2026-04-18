@@ -69,7 +69,7 @@ timestamp = ops_os.milis_timestamp ()
 if wrt :
     dir_name = "np.tensors"
     if debug : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
-    tx_samples.save_frames2flat_tensor ( filename = timestamp , dir_name = dir_name )
+    tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_flat_tensor" , dir_name = dir_name )
 
 print ( f"Final payload bytes length: { total_bytes_len } bytes" )
 for frame in tx_samples.frames :

@@ -1,18 +1,20 @@
 # issue #45 - dekodowanie symboli z wszystkich plików X-train npy zapisanych we wskazanym katalogu
 # i zapisywanie ich jako y_train w plikach odpowiadajacych X_train
 
-import os
+import numpy as np , os , tomllib , torch
 from pathlib import Path
 
-import numpy as np
 from numpy.typing import NDArray
-import torch
 
-from modules import ops_file, packet , plot
+from modules import ops_file, packet
 
 script_filename = os.path.basename ( __file__ )
-
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+
+plt = False
+wrt = True
 
 #samples_dir = Path ( "np.simple-frames" )
 #samples_dir = Path ( "np.samples_test127" )
@@ -26,33 +28,26 @@ samples_files = sorted ( samples_dir.glob ( "*.npy" ) )
 if not samples_files :
 	raise FileNotFoundError ( f"Brak plikow .npy w katalogu {samples_dir}" )
 
-timestamps = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ]
-	for p in Path("np.tensors").glob("*_rx_samples_*.npy")
-} )
-
-print ( timestamps )
-
-#samples_files : list = [ "np.samples/rx_samples_1776002831362.npy" ] # do testowania na jednym pliku, żeby szybciej iterować nad poprawkami
-#samples_files : list = [ "np.tensors_001/rx_samples_1776012929739.npy" ]
-
-for timestamp in timestamps :
-	print ( f"\n{timestamp=}" )
-	samples_files = sorted ( samples_dir.glob ( f"{timestamp}_rx_samples_*.npy" ) )
+timestamp_groups = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ] for p in Path("np.tensors").glob("*_rx_samples_*.npy") } )
+for timestamp_group in timestamp_groups :
+	print ( f"\n{timestamp_group=}" )
+	samples_files = sorted ( samples_dir.glob ( f"{timestamp_group}_rx_samples_*.npy" ) )
 	rx_pluto_samples = packet.RxSamples_v0_1_18 ()
 	for samples_file in samples_files :
-		timestamp2 = samples_file.stem.split ( "_rx_samples_" , 1 )[ 1 ]
+		timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in Path("np.tensors").glob(f"{timestamp_group}_rx_samples_*.npy") } )
 		rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 	
-	rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
+	if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
 	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
-	#rx_pluto_samples.plot_complex_samples ( title = f"{script_filename} {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
-	#rx_pluto_samples.plot_complex_samples_filtered ( title = f"{script_filename} {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
-	rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
-	rx_pluto_samples.plot_y_train_tensor ( title = f"{script_filename} y_train_tensor {rx_pluto_samples.y_train_tensor.size=}" )
-	print ( f"{rx_pluto_samples.frames=}" )
-	for frame in rx_pluto_samples.frames :
-		frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
-		print ( f"{ frame_symbols.size=}, {frame.frame_start_abs_idx=}, {frame_symbols[ : 5 ]=}" )
+	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.sync_sequence_peaks.size=}" , peaks = rx_pluto_samples.sync_sequence_peaks )
+	if plt : rx_pluto_samples.plot_y_train_tensor ( title = f"{script_filename} y_train_tensor {rx_pluto_samples.y_train_tensor.size=}" )
+	#print ( f"{rx_pluto_samples.frames=}" )
+	#for frame in rx_pluto_samples.frames :
+	#	frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
+	#	print ( f"{ frame_symbols.size=}, {frame.frame_start_abs_idx=}, {frame_symbols[ : 5 ]=}" )
 	flat_tensor_rx = rx_pluto_samples.flat_tensor_from_frames ( )
-	flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp}.pt" , dir_name = samples_dir.name )
-	print ( f"{torch.equal ( flat_tensor_rx , flat_tensor_tx )=}" )
+	flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_flat_tensor.pt" , dir_name = samples_dir.name )
+	if torch.equal ( flat_tensor_rx , flat_tensor_tx ) :
+		samples_buffers_count , remainder = divmod ( rx_pluto_samples.samples.size , int ( toml_settings[ "ADALM-Pluto" ][ "SAMPLES_BUFFER_SIZE" ] ) )
+		if remainder == 0 :
+			if wrt : rx_pluto_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
