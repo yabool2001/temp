@@ -78,16 +78,34 @@ class PureComplexLSTM(nn.Module):
 # 1. KROJOWNIA DANYCH DLA TWOJEGO y_train (.pt)
 # ========================================================
 class BPSKDataset ( Dataset ) :
-
-    def __init__ ( self , X_file : str , y_file : str , chunk_samples : int = 4096 ) :
-        print ( "Ładuję wektory o idealnej symetrii 1:1 ( SPS = 4 ) ..." )
-        self.X_raw = np.load ( X_file ).astype ( np.complex64 )
+    def __init__(self, X_files: list, y_files: list, chunk_samples: int = 8192):
         
-        # Wczytujemy zrobiony przez Ciebie plik (jest to już gotowy torch.Tensor!)
-        self.Y_raw = torch.load ( y_file ).to ( torch.complex64 ) 
+        assert len(X_files) == len(y_files), "BŁĄD: Liczba plików X i Y musi być taka sama!"
+        print(f"📡 Ładuję {len(X_files)} par plików sygnałowych z dysku do RAM...")
+        
+        x_buffers = []
+        y_buffers = []
+        
+        # Pętla ładująca wszystkie pary
+        for x_path, y_path in zip(X_files, y_files):
+            x_buffers.append(np.load(x_path).astype(np.complex64))
+            
+            # Parametr weights_only=True dla bezpieczeństwa w nowych wersjach PyTorcha
+            y_buffers.append(torch.load(y_path, weights_only=True).to(torch.complex64)) 
+            
+        # MAGIA WYDAJNOŚCI: Sklejamy wszystko w jeden nieprzerwany ciąg!
+        # Dziesiątki Twoich zrzutów z radia stają się nagle jedną potężną osią czasu.
+        self.X_raw = np.concatenate(x_buffers, axis=0)
+        self.Y_raw = torch.cat(y_buffers, dim=0)
+        
+        # Żelazna weryfikacja Gęstego Nadzoru (1:1) po spawaniu
+        assert len(self.X_raw) == len(self.Y_raw), "FATALNIE: Sklejona oś X i Y mają różną długość!"
         
         self.chunk_samples = chunk_samples
-        self.num_chunks = len ( self.X_raw ) // self.chunk_samples
+        
+        # Całkowita liczba klatek, które wyciśniemy z naszego "węża"
+        self.num_chunks = len(self.X_raw) // self.chunk_samples
+        print(f"✅ Połączono! Gotowy tasiemiec ma: {len(self.X_raw)} sampli. Klatek do nauki: {self.num_chunks}")
 
     def __len__(self):
         return self.num_chunks
@@ -96,18 +114,16 @@ class BPSKDataset ( Dataset ) :
         start = idx * self.chunk_samples
         end = start + self.chunk_samples
         
+        # Szybkie cięcie matrycy bez kopiowania fizycznych bitów (Zero-Copy slicing)
         x_np = self.X_raw[start:end]
-        x_tensor = torch.from_numpy(x_np).unsqueeze(0) # Wejście: [1, 4096]
+        X_tensor = torch.from_numpy(x_np).unsqueeze(0) # [1, 8192]
+        y_tensor = self.Y_raw[start:end]               # [8192]
         
-        # Twoje etykiety (SPS=4): idealnie ta sama długość co wejście!
-        y_tensor = self.Y_raw[start:end]               # Cel: [4096]
+        # Cyfrowe AGC chroniące wejście modelu przed skokami amplitudy
+        max_val = torch.max(torch.abs(X_tensor)) + 1e-9
+        X_tensor = X_tensor / max_val
         
-        # Obowiązkowe AGC na wejściu, żeby chronić przed pikami
-        max_val = torch.max(torch.abs(x_tensor)) + 1e-9
-        x_tensor = x_tensor / max_val
-        
-        return x_tensor, y_tensor
-
+        return X_tensor, y_tensor
 
 # ========================================================
 # 2. ZESPOLONY POTWÓR BEZ DECYMACJI (FRACTIONALLY SPACED)

@@ -606,6 +606,76 @@ def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex128 ] , title 
     )
     fig.show()
 
+
+def flat_tensor_v0_1_18 (
+    flat_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
+    title : str = "Flat tensor TxSamples" ,
+    marker_squares : bool = False ,
+    marker_peaks : Optional[ NDArray[ np.int_ ] ] = None
+) -> None :
+    """
+    Rysuje 1D flat tensor zapisany przez TxSamples_v0_1_18.save_frames2flat_tensor.
+
+    Obsługiwane wejścia:
+    - torch.Tensor o kształcie [seq_len] i dtype zespolonym
+    - np.ndarray o kształcie [seq_len] i dtype zespolonym
+    """
+    if isinstance ( flat_tensor , torch.Tensor ) :
+        tensor_np = flat_tensor.detach ().cpu ().numpy ()
+    else :
+        tensor_np = np.asarray ( flat_tensor )
+
+    if tensor_np.size == 0 :
+        raise ValueError ( "Wejściowy flat_tensor jest pusty." )
+    if tensor_np.ndim != 1 :
+        raise ValueError ( "flat_tensor musi być tensorem 1D o kształcie [seq_len]." )
+    if not np.iscomplexobj ( tensor_np ) :
+        raise ValueError ( "flat_tensor musi zawierać wartości zespolone." )
+
+    complex_waveform_v0_1_6 (
+        signal_complex = np.asarray ( tensor_np , dtype = np.complex64 ) ,
+        title = f"{title} shape={tuple(tensor_np.shape)}" ,
+        marker_squares = marker_squares ,
+        marker_peaks = marker_peaks
+    )
+
+
+def y_train_tensor_as_flat_tensor_v0_1_18 (
+    y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
+    title : str = "Flat tensor from y_train_tensor" ,
+    marker_squares : bool = False ,
+    marker_peaks : Optional[ NDArray[ np.int_ ] ] = None
+) -> None :
+    """
+    Zamienia zapisany y_train_tensor RxSamples_v0_1_18 na 1D flat tensor
+    bez zmiany długości sygnału, a następnie wyświetla go funkcją
+    flat_tensor_v0_1_18.
+
+    Obsługiwane wejścia:
+    - torch.Tensor o kształcie [seq_len] i dtype zespolonym
+    - np.ndarray o kształcie [seq_len] i dtype zespolonym
+    """
+    if isinstance ( y_train_tensor , torch.Tensor ) :
+        tensor = y_train_tensor.detach ().cpu ()
+    else :
+        tensor = torch.as_tensor ( np.asarray ( y_train_tensor ) )
+
+    if tensor.numel () == 0 :
+        raise ValueError ( "Wejściowy y_train_tensor jest pusty." )
+    if tensor.ndim != 1 :
+        raise ValueError ( "y_train_tensor musi być tensorem 1D o kształcie [seq_len]." )
+    if not torch.is_complex ( tensor ) :
+        raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
+
+    flat_tensor = tensor.to ( torch.complex64 )
+    flat_tensor_v0_1_18 (
+        flat_tensor = flat_tensor ,
+        title = title ,
+        marker_squares = marker_squares ,
+        marker_peaks = marker_peaks
+    )
+
+
 def tensor_waveform_v0_1_16 (
     signal_tensor : torch.Tensor | NDArray[ np.float32 ] ,
     title : str = "Tensor RxSamples" ,

@@ -684,7 +684,6 @@ class RxSamples_v0_1_18 :
 
     # Pola uzupełnianie w __post_init__
     samples : NDArray[ np.complex128 ] = field ( init = False )
-    tensor : torch.Tensor = field ( init = False )
     y_train_tensor : torch.Tensor = field ( init = False )
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -735,9 +734,6 @@ class RxSamples_v0_1_18 :
     def correct_samples ( self ) -> None :
         self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
-    def create_tensor ( self ) -> None :
-        self.tensor = ml.iq_to_tensor_v2 ( self.samples )
-
     def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False ) -> None :
         if filter :
             self.filter_samples ()
@@ -778,15 +774,20 @@ class RxSamples_v0_1_18 :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"RxSamples filtered {title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
     def plot_tensor ( self , title : str = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None , frame_idx : int | None = None ) -> None :
-        plot.tensor_waveform_v0_1_16 ( self.tensor , title = f"RxSamples tensor {title}" , marker_squares = marker , marker_peaks = peaks , frame_idx = frame_idx )
+        plot.tensor_waveform_v0_1_16 ( self.y_train_tensor , title = f"y_train_tensor {title}" , marker_squares = marker , marker_peaks = peaks , frame_idx = frame_idx )
 
-    def plot_y_train_tensor ( self , title : str = "" ) -> None :
+    def plot_flat_tensor ( self , title : str = "" ) -> None :
         frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
-        y_train_tensor_plot = torch.stack ( [ self.y_train_tensor.real , self.y_train_tensor.imag ] )
-        plot.tensor_waveform_v0_1_16 ( y_train_tensor_plot , title = f"RxSamples y_train_tensor {title}" , marker_peaks = frames_start_idx )
+        flat_tensor = self.flat_tensor_from_y_train ()
+        plot.tensor_waveform_v0_1_16 ( flat_tensor , title = f"RxSamples y_train_tensor {title}" , marker_peaks = frames_start_idx )
 
     def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
+
+    def save_complex_samples2npf_v0_1_18 ( self , file_name : str , dir_name : str , add_timestamp : bool = True ) -> None :
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
 
     def save_complex_samples_2_npf ( self , file_name : str , dir_name : str ) -> None :
         filename_with_timestamp = ops_file.add_timestamp_2_filename ( file_name )
@@ -821,6 +822,7 @@ class RxSamples_v0_1_18 :
 
     def flat_tensor_from_frames ( self ) -> torch.Tensor :
         # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania we flat tensor w celu porównania z tensorami zapisany podczas tx
+        # Tutaj są tylko tensory wszystkich ramek bez ich pozycji i bez tensorów 0+j0 dla sampli bez ramek.
         if self.frames :
             all_symbols = np.concatenate (
                 [
@@ -844,6 +846,11 @@ class RxSamples_v0_1_18 :
             y_train_symbols[ frame_start_idx : frame_end_idx ] = frame_symbols[ : frame_end_idx - frame_start_idx ]
         return torch.from_numpy ( y_train_symbols )
 
+    def flat_tensor_from_y_train ( self ) -> torch.Tensor :
+        if not isinstance ( self.y_train_tensor , torch.Tensor ) or not torch.is_complex ( self.y_train_tensor ) :
+            raise TypeError ( "y_train_tensor must be a complex torch.Tensor" )
+        return torch.stack ( [ self.y_train_tensor.real , self.y_train_tensor.imag ] )
+
     def save_frames2y_train_tensor ( self , file_name : str , dir_name : str ) -> None :
         if not isinstance ( self.y_train_tensor , torch.Tensor ) or self.y_train_tensor.dtype != torch.complex64 :
             raise TypeError ( "y_train_tensor must be torch.Tensor with dtype=torch.complex64" )
@@ -853,6 +860,8 @@ class RxSamples_v0_1_18 :
 
     def __repr__ ( self ) -> str :
         return ( f"{self.samples.size=}, {self.samples.dtype=}")
+
+
 
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_17 :
