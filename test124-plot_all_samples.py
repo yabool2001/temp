@@ -9,7 +9,8 @@ script_filename = os.path.basename ( __file__ )
 plt : bool = True
 obj : bool = True # obj=object czy chcesz to robic za pomoca klas w modules/packet.py czy tylko funkcji w modules/ops_file.py
 
-dir_name = Path ( "np.tensors" )
+#dir_name = Path ( "np.tensors" )
+dir_name = Path ( "np.tensors_002_inference" )
 
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 

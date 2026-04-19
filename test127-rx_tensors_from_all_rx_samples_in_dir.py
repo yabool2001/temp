@@ -14,10 +14,12 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
+clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
 plt : bool = False
 wrt : bool = True
 dbg : bool = True
 del_files : bool = True
+
 
 samples_dir = Path ( "np.tensors" )
 
@@ -37,10 +39,11 @@ for timestamp_group in timestamp_groups :
 	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
 	frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
 	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
-	rx_pluto_samples.clip_samples_for_training ()
-	frame_starts_idx = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
-	if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} {rx_pluto_samples.samples.size=}" , peaks = frame_starts_idx )
-	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
+	if clp :
+		rx_pluto_samples.clip_samples_for_training ()
+		frame_starts_idx = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
+		if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} {rx_pluto_samples.samples.size=}" , peaks = frame_starts_idx )
+		if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
 	#print ( f"{rx_pluto_samples.frames=}" )
 	#for frame in rx_pluto_samples.frames :
 	#	frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
