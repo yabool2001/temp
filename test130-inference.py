@@ -20,7 +20,7 @@ model.load_state_dict ( torch.load ( "bpsk_modem_002.pth" , map_location = devic
 model.eval ()
 
 # 2. ŁADUJEMY JEDNĄ PACZKĘ Z DYSKU (Twoja krojownia załatwi zrównanie ramki i AGC)
-dir_name = Path ( "np.tensors" )
+dir_name = Path ( "np.tensors_002_inference" )
 lista_X = [ sorted ( dir_name.glob ( "*_rx_samples.npy" ) )[ 0 ] ]
 lista_y = [ sorted ( dir_name.glob ( "*_y_train_tensor.pt" ) )[ 0 ] ]
 
@@ -29,6 +29,19 @@ dataset = ml.BPSKDataset ( X_files = lista_X , y_files = lista_y , chunk_samples
 # Bierzemy całkowicie losowy kawałek ze środka zbioru
 loader = DataLoader ( dataset , batch_size = 128 , shuffle = False )
 
+with torch.no_grad():
+    # Wyciągamy wszystko z ładowarki. Żadnych pętli `for`!
+    batch_x, batch_y = next(iter(loader))
+    
+    # Pchamy na kartę i robimy demodulację 
+    pred_y = model(batch_x.to(device))
+    
+    # Spłaszczamy zrzucone paczki od razu w 3 osobne, gigantyczne tasiemce
+    sig_raw = batch_x.cpu().numpy().flatten().astype(np.complex128)
+    sig_target = batch_y.cpu().numpy().flatten().astype(np.complex128)
+    sig_ai = pred_y.cpu().numpy().flatten().astype(np.complex128)
+
+'''
 sig_raw = []
 sig_ai = []
 sig_target = []
@@ -46,9 +59,12 @@ sig_target.append ( pred_y.cpu ().numpy ().flatten () )
 sig_raw_all = np.concatenate ( sig_raw )
 sig_target_all = np.concatenate ( sig_target )
 sig_ai_all = np.concatenate ( sig_ai )
-plot.complex_waveform_v0_1_6 ( sig_raw_all , f"{sig_raw_all.size=}" )
-plot.plot_symbols ( sig_ai_all , f"{sig_ai_all.size=}" )
-pass
+'''
+
+plot.complex_waveform_v0_1_6 ( sig_raw , f"{sig_raw.size=}" )
+plot.complex_waveform_v0_1_6 ( sig_target , f"{sig_target.size=}" )
+#plot.plot_symbols ( sig_ai , f"{sig_ai.size=}" )
+
 # --- WYKRES 1: SUROWE WEJŚCIE Z RADIA sig_raw
 # --- WYKRES 2: ODZYSKANA KONSTELACJA AI sig_ai
 # --- WYKRES 3: DOMENA CZASU sig_raw
