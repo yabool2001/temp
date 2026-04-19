@@ -8,6 +8,8 @@ from torch.utils.data import Dataset
 
 LEARNING_RATE = 3e-4
 EPOCHS = 15
+CHUNK_SAMPLES_LEN = 8192
+
 
 # ========================================================
 # NASZ AUTORSKI MODUŁ 1: ZESPOLONA KOMÓRKA BRAMKOWA
@@ -80,17 +82,17 @@ class PureComplexLSTM(nn.Module):
 # 1. KROJOWNIA DANYCH DLA TWOJEGO y_train (.pt)
 # ========================================================
 class BPSKDataset ( Dataset ) :
-    def __init__(self, X_files: list, y_files: list, chunk_samples: int = 8192):
+    def __init__( self , X_files : list , y_files : list , chunk_samples : int = CHUNK_SAMPLES_LEN ):
         
-        assert len(X_files) == len(y_files), "BŁĄD: Liczba plików X i Y musi być taka sama!"
-        print(f"📡 Ładuję {len(X_files)} par plików sygnałowych z dysku do RAM...")
+        assert len ( X_files ) == len ( y_files ) , "BŁĄD: Liczba plików X i Y musi być taka sama!"
+        print ( f"📡 Ładuję {len ( X_files )} par plików sygnałowych z dysku do RAM..." )
         
         x_buffers = []
         y_buffers = []
         
         # Pętla ładująca wszystkie pary
-        for x_path, y_path in zip(X_files, y_files):
-            x_buffers.append(np.load(x_path).astype(np.complex64))
+        for x_path, y_path in zip ( X_files , y_files ) :
+            x_buffers.append ( np.load ( x_path ).astype ( np.complex64 ) )
             
             # Parametr weights_only=True dla bezpieczeństwa w nowych wersjach PyTorcha
             y_buffers.append(torch.load(y_path, weights_only=True).to(torch.complex64)) 

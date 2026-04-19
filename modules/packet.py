@@ -411,98 +411,6 @@ def create_crc32_bytes ( bytes : NDArray[ np.uint8 ] ) -> NDArray[ np.uint8 ] :
     crc32 = zlib.crc32 ( bytes )
     return np.frombuffer ( crc32.to_bytes ( 4 , 'big' ) , dtype = np.uint8 )
 
-class PureComplexLSTMCell ( nn.Module ) :
-    def __init__ ( self , input_size , hidden_size ) :
-        super ().__init__ ()
-        self.hidden_size = hidden_size
-        
-        # Warstwa Linear w przeciwieństwie do wbudowanego LSTM działa 
-        # w 100% na liczbach zespolonych! To tu sieć robi obroty Eulera i chwyta CFO.
-        self.W = nn.Linear(input_size + hidden_size, 4 * hidden_size, dtype=torch.complex64)
-
-    def forward (self , x , hx = None ) :
-        if hx is None:
-            # Pusta pamięć jako natywne zera zespolone (complex64)
-            h = torch.zeros ( x.size ( 0 ) , self.hidden_size , dtype = torch.complex64 , device = x.device )
-            c = torch.zeros ( x.size ( 0 ) , self.hidden_size , dtype = torch.complex64 , device = x.device )
-        else:
-            h, c = hx
-
-        combined = torch.cat ( [ x , h ] , dim = 1 )
-        
-        # Prawdziwe Zespolone Mnożenie Macierzy (RTX łapie wiatr w żagle)
-        gates = self.W(combined)
-        i_gate, f_gate, c_gate, o_gate = gates.chunk(4, 1)
-
-        # SPLIT-ACTIVATION: Ratujemy sieć przed wybuchami NaN.
-        # Faza zostaje utrzymana w ryzach matematycznych!
-        i = torch.complex(torch.sigmoid(i_gate.real), torch.sigmoid(i_gate.imag))
-        f = torch.complex(torch.sigmoid(f_gate.real), torch.sigmoid(f_gate.imag))
-        o = torch.complex(torch.sigmoid(o_gate.real), torch.sigmoid(o_gate.imag))
-        c_tilde = torch.complex(torch.tanh(c_gate.real), torch.tanh(c_gate.imag))
-
-        # Zespolona aktualizacja pamięci komórki
-        c_next = f * c + i * c_tilde
-        h_next = o * torch.complex(torch.tanh(c_next.real), torch.tanh(c_next.imag))
-
-        return h_next, c_next
-
-class PureComplexLSTM ( nn.Module ) :
-    def __init__ ( self , input_size , hidden_size ) :
-        super ().__init__ ()
-        self.cell = PureComplexLSTMCell ( input_size , hidden_size )
-
-    def forward(self, x):
-        # x wchodzi jako: [Batch, Czas, Cechy_Zespolone]
-        outputs = []
-        hx = None
-        
-        # Musimy fizycznie przepętlić sygnał po czasie, bo ominęliśmy wbudowany silnik C++
-        for t in range(x.size(1)):
-            h, c = self.cell(x[:, t, :], hx)
-            hx = (h, c)
-            outputs.append(h)
-        
-        return torch.stack(outputs, dim=1), hx
-
-class HardcoreComplexEqualizer ( nn.Module ) :
-    def __init__ ( self ) :
-        super ().__init__ ()
-        
-        self.conv1 = nn.Conv1d ( in_channels = 1 , out_channels = 16 , kernel_size = 8 , stride = 4 , padding = 2 , dtype = torch.complex64)
-        
-        # WCHODZI NASZE PRAWDZIWE ZESPOLONE LSTM (żadnego dzielenia!)
-        self.lstm = PureComplexLSTM ( input_size = 16 , hidden_size = 64 )
-        
-        # Klasyfikator wypluwa urojone koordynaty
-        self.fc = nn.Linear ( 64 , 1 , dtype = torch.complex64 )
-
-    def forward(self, x):
-        # Wejście: [Batch, 1, 4096] na twardym complex64
-        x = self.conv1 ( x ) # -> [Batch, 16, 1024] 
-        x = x.transpose ( 1 , 2 ) # -> [Batch, 1024, 16]
-        
-        # Pełna faza wchodzi, pełna faza wychodzi
-        x_lstm, _ = self.lstm(x) # -> [Batch, 1024, 64] (complex64)
-        out = self.fc(x_lstm) # -> [Batch, 1024, 1] (complex64)
-        
-        # BPSK leży tylko na osi Real (-1, 1). Na samym końcu wyciągamy
-        # komponent rzeczywisty by obliczyć błąd (MSE Loss). Autograd PyTorcha
-        # prawidłowo przetransferuje tzw. gradienty Wirtingera przez całą sieć!
-        return out.squeeze(-1).real
-
-@dataclass ( slots = True , eq = False )
-class Rx_y_Train_v0_0_0 :
-    # na razie klasa do niczego nei potrzeba!
-    symbols : NDArray[ np.int8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.int8 ) , init = False )
-    
-    def __post_init__ ( self ) -> None :
-        #self.symbols = np.array ( [] , dtype = np.complex128 )
-        pass
-    
-    def __repr__ ( self ) -> str :
-        return ( f"{self.symbols.size=}, {self.symbols.dtype=} {self.symbols=}")
-
 @dataclass ( slots = True , eq = False )
 class RxPacket_v0_1_18 :
 
@@ -695,7 +603,7 @@ class RxSamples_v0_1_18 :
     frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     leftovers : NDArray[ np.complex128 ] | None = field ( default = None )
 
-    samples_filtered_len : np.uint32 = field ( init = False )
+    samples_corrected_len : np.uint32 = field ( init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     has_leftovers : bool = False
     leftovers_start_idx : np.uint32 = field ( init = False )
@@ -707,7 +615,10 @@ class RxSamples_v0_1_18 :
 
     def rx ( self , sdr_ctx : Pluto  | None = None , previous_samples_leftovers : NDArray[ np.complex128 ] | None = None , samples_filename : str | None = None , concatenate : bool = False ) -> None :
         '''
-        concatenated: powoduje nawarstwienie nowych sampli na stare. UWAGA! Nieostrożne stosowanie może spowodować zawieszenie komputera z powodu braku pamięci RAM, jeśli próbujemy nawarstwić zbyt dużo sampli. Używaj z rozwagą i monitoruj zużycie pamięci.
+        concatenated: powoduje nawarstwienie nowych sampli na stare.
+        UWAGA! Nieostrożne stosowanie może spowodować zawieszenie komputera z powodu braku pamięci RAM,
+        jeśli próbujemy nawarstwić zbyt dużo sampli.
+        Używaj z rozwagą i monitoruj zużycie pamięci.
         '''
         if sdr_ctx is not None :
             samples = sdr_ctx.rx ()
@@ -728,11 +639,8 @@ class RxSamples_v0_1_18 :
             self.samples = np.concatenate ( [ previous_samples_leftovers , self.samples ] )
         self.sample_initial_assesment ()
 
-    def filter_samples ( self ) -> None :
-        self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples )
-
-    def correct_samples ( self ) -> None :
-        self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+    def sample_initial_assesment (self) -> None :
+        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
     def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False ) -> None :
         if filter :
@@ -744,7 +652,7 @@ class RxSamples_v0_1_18 :
         else :
             self.samples_corrected = self.samples_filtered
         self.has_leftovers = False
-        self.samples_filtered_len = np.uint32 ( len ( self.samples_corrected ) )
+        self.samples_corrected_len = np.uint32 ( len ( self.samples_corrected ) )
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_corrected , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
@@ -760,12 +668,54 @@ class RxSamples_v0_1_18 :
                     self.leftovers_start_idx = frame.leftovers_start_abs_idx
                     break
         if not self.has_leftovers :
-            self.leftovers_start_idx = self.samples_filtered_len - SYNC_SEQUENCE_LEN_SAMPLES - self.SPAN * self.SPS // 2
+            self.leftovers_start_idx = self.samples_corrected_len - SYNC_SEQUENCE_LEN_SAMPLES - self.SPAN * self.SPS // 2
         self.clip_samples_leftovers ()
         self.y_train_tensor = self.y_train_tensor_from_frames ()
 
-    def sample_initial_assesment (self) -> None :
-        self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
+    def clip_samples_for_training ( self ) -> None :
+        '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.'''
+        i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
+        total_bpsk_symbols = 0
+        first_bpsk_symbol_idx = self.frames[ 0 ].frame_start_abs_idx
+        last_bpsk_symbol_idx = self.frames[ -1 ].frame_end_abs_idx
+        leftovers_start_idx = self.leftovers_start_idx
+        total_bpsk_symbols = sum ( frame.header_bpsk_symbols.size + frame.packet.bpsk_symbols.size for frame in self.frames )
+        ratio : float = total_bpsk_symbols / self.samples_corrected_len
+        clip1 = ( ( first_bpsk_symbol_idx - 1 ) // i ) * i
+        clip2 = ( last_bpsk_symbol_idx // i + 1) * i
+        # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
+        clip1 = np.maximum ( 0 , clip1 )
+        clip2 = np.minimum ( self.samples_corrected_len , clip2 )
+        ratio_clipped = total_bpsk_symbols / ( clip2 - clip1 )
+        print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
+        clipped_samples = self.clip_samples_corrected ( self.samples_corrected , clip1 , clip2 )
+        self.reset_frame_detection ()
+        self.samples = clipped_samples
+        self.sample_initial_assesment ()
+        # Poniższa konfiguracja argumentów ma zapewnić, że funkcja detect_frames () będzie działać poprawnie na przyciętych, filtrowanych i po korekcji samplach,
+        # bez ponownego filtrowania i korygowania.
+        self.detect_frames ( deep = False , filter = False , correct = False )
+
+    def reset_frame_detection ( self ) -> None :
+        self.samples = self.samples_filtered = self.samples_corrected = np.array ( [] , dtype = np.complex128 )
+        self.frames = []
+        self.leftovers = None
+        self.has_leftovers = False
+        self.leftovers_start_idx = np.uint32 ( 0 )
+        self.y_train_tensor = torch.tensor ( [] )
+        self.has_amp_greater_than_ths = False
+        self.samples_corrected_len = np.uint32 ( 0 )
+        self.sync_sequence_peaks = np.array ( [] , dtype = np.uint32 )
+        self.has_leftovers = False
+        self.leftovers_start_idx = np.uint32 ( 0 )
+
+    def filter_samples ( self ) -> None :
+        self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples )
+
+    def correct_samples ( self ) -> None :
+        self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
     def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples , f"RxSamples {title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
@@ -816,6 +766,13 @@ class RxSamples_v0_1_18 :
             raise ValueError ( "Start must be < end" )
         #self.samples_filtered = self.samples_filtered [ start : end + 1 ]
         self.samples_filtered = self.samples_filtered [ start : end ]
+
+    def clip_samples_corrected ( self , samples : NDArray[ np.complex128 ] , start : np.uint32 , end : np.uint32 ) -> NDArray[ np.complex128 ] :
+        if start < 0 or end > ( samples.size - 1 ) :
+            raise ValueError ( "Start must be >= 0 & end <= samples length" )
+        if start >= end :
+            raise ValueError ( "Start must be < end" )
+        return samples [ start : end ]
 
     def clip_samples_leftovers ( self ) -> None :
         self.leftovers = self.samples [ self.leftovers_start_idx : ]
