@@ -14,7 +14,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
-plt : bool = True
+plt : bool = False
 wrt : bool = True
 dbg : bool = True
 del_files : bool = True

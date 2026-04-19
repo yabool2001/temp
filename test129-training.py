@@ -59,9 +59,9 @@ if __name__ == "__main__":
     criterion = nn.MSELoss ()
 
     EPOCHS = ml.EPOCHS
-    print("\n🚀 Rozpoczynam trening CVNN (Minimalizacja EVM)...")
-    print("🚨 UWAGA: Przy pierwszej przetworzonej paczce ekran CAŁKOWICIE ZAMARZNIE.")
-    print("🚨 Karta testuje wtedy warianty asemblera w pamięci. Czekaj cierpliwie!\n")
+    print ( "\n🚀 Rozpoczynam trening CVNN (Minimalizacja EVM)..." )
+    print ( "🚨 UWAGA: Przy pierwszej przetworzonej paczce ekran CAŁKOWICIE ZAMARZNIE." )
+    print ( "🚨 Karta testuje wtedy warianty asemblera w pamięci. Czekaj cierpliwie!\n" )
     
     for epoch in range ( EPOCHS ) :
         model.train ()
@@ -70,11 +70,11 @@ if __name__ == "__main__":
         # Odpalamy stoper dla każdej epoki!
         start_time = time.time ()
         
-        for batch_idx, (batch_x, batch_y) in enumerate(loader):
-            batch_x = batch_x.to(device)
-            batch_y = batch_y.to(device)
+        for batch_idx , ( batch_x , batch_y ) in enumerate ( loader ) :
+            batch_x = batch_x.to ( device )
+            batch_y = batch_y.to ( device )
             
-            optimizer.zero_grad()
+            optimizer.zero_grad ()
             
             # Przewidywanie CVNN
             # W TYM MIEJSCU (przy pierwszej iteracji pierwszej epoki) wystąpi zawiecha!
@@ -98,10 +98,10 @@ if __name__ == "__main__":
         avg_loss = total_loss / len(loader)
         
         # Oczekiwany rezultat: Epoka 1 potrwa np. 40 sekund, od Epoki 2 czasy pikują na dno!
-        print(f"Epoka [{epoch+1:02d}/{EPOCHS}] | Błąd EVM (MSE): {avg_loss:.5f} | Czas epoki: {epoch_time:.2f} s")
-    print("\n✅ Trening zakończony! Zespolony potwór został wytrenowany.")
+        print ( f"Epoka [{epoch+1:02d}/{EPOCHS}] | Błąd EVM (MSE): {avg_loss:.5f} | Czas epoki: {epoch_time:.2f} s")
+    print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )
     
     # Zrzucamy wyuczoną fizykę na twardy dysk!
-    torch.save(model.state_dict(), "moj_zespolony_demodulator_SPS4.pth")
-    print("💾 Wagi zapisane do pliku. Gotowe do inferencji i testów!")
-    print("\n✅ Trening zakończony! Zespolony potwór został wytrenowany.")
+    torch.save ( model.state_dict () , "moj_zespolony_demodulator_SPS4.pth" )
+    print ( "💾 Wagi zapisane do pliku. Gotowe do inferencji i testów!" )
+    print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )
