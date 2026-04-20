@@ -47,7 +47,9 @@ UDP_TARGET_PORT = 10001
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
-MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * 0.8 # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
+#SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
+SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 3
+MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * SAMPLES_BUFFER_SIZE_MULTIPLICATOR # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
 
 tx_samples = []
 tx_samples_4pluto = np.array ( [] , dtype = np.complex128 )

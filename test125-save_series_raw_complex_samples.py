@@ -21,7 +21,7 @@ Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
 debug = True
 plt = True
 wrt = True
-del_old = False
+del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -49,7 +49,7 @@ else :
     tx_gain_float = float ( toml_settings[ "ADALM-Pluto" ][ "TX_GAIN" ] )
 
 if del_old :
-    for file_path in Path ( "np.samples_series_01" ).glob ( "*" ) :
+    for file_path in Path ( dir_name ).glob ( "*" ) :
         if file_path.is_file () :
             file_path.unlink ( missing_ok = True )
 
@@ -77,13 +77,12 @@ try :
     udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
     if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
     if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-    while True :
+    i = 2
+    while i :
+        if i == 1 : i -= 1
         rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
         if wrt :
             rx_samples.save_complex_samples_2_npf ( file_name = f"{timestamp.decode("utf-8")}_{filename}" , dir_name = dir_name )
-        if end_rx :
-            if debug : print ( f"End of reception, stopping { script_filename }!" )
-            break
         try :
             payload_udp = udp_sock.recv ( 1 )
             if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
@@ -96,9 +95,10 @@ try :
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
             if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-            end_rx = True
+            i -= 1
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
+    if debug : print ( f"End of reception, stopping { script_filename }!" )
     udp_sock.close ()
     exit ( 0 )
 
