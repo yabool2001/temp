@@ -46,6 +46,7 @@ UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
+ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 #SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
 SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 3

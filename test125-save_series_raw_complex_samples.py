@@ -8,7 +8,7 @@ source .venv/bin/activate
 python test126-tx_large_data.py -10.0
 
 '''
-from modules import packet , sdr
+from modules import ops_os , packet , sdr
 from pathlib import Path
 import numpy as np
 import os , sys , tomllib
@@ -27,12 +27,16 @@ UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
 ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
+ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
 end_rx = False
 
 dir_name = "np.tensors"
 filename = "rx_samples.npy"
 series_len = 10
+
+timestamp_min = ops_os.milis_timestamp ()
+timestamp_max = timestamp_min + 1000 * 365 * 60 * 60 * 24 # 1Y
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
@@ -61,9 +65,9 @@ udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
 udp_sock.setblocking ( False )
 payload_udp = b""
 
-udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
 if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
 while True :
     try :
         timestamp = udp_sock.recv ( 100 )
@@ -71,18 +75,21 @@ while True :
         t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
         continue
     if debug : print ( f"\n\r[UDP] Received {len ( timestamp )=} {timestamp=}" )
-    break
+    if timestamp > timestamp_min and timestamp < timestamp_max :
+        if debug : print ( f"Valid timestamp received: {timestamp=}" )
+        break
 
 try :
     udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
     if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
     if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-    i = 2
-    while i :
-        if i == 1 : i -= 1
-        rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
+    while True :
+        rx_samples.rx ()
         if wrt :
-            rx_samples.save_complex_samples_2_npf ( file_name = f"{timestamp.decode("utf-8")}_{filename}" , dir_name = dir_name )
+            rx_samples.save_complex_samples_2_npf ( filename )
+        if end_rx :
+            if debug : print ( f"End of reception, stopping { script_filename }!" )
+            break
         try :
             payload_udp = udp_sock.recv ( 1 )
             if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
@@ -95,7 +102,7 @@ try :
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
             if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-            i -= 1
+            end_rx = True
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
     if debug : print ( f"End of reception, stopping { script_filename }!" )
