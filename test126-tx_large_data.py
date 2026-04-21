@@ -48,8 +48,8 @@ ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
-#SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
-SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 3
+SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
+#SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 3
 MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * SAMPLES_BUFFER_SIZE_MULTIPLICATOR # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
 
 tx_samples = []
@@ -104,15 +104,15 @@ print ( "Czekam na komendy na porcie UDP 10001" )
 payload_udp = b""
 udp_sender_addr = ( UDP_DEST_IP , UDP_TARGET_PORT )
 
-# przekazanie timestampu do skryptu test125-save_series_raw_complex_samples.py, po otrzymaniu komendy ASCII_ENQ
+# przekazanie timestampu do skryptu test125-save_series_raw_complex_samples.py, po otrzymaniu komendy ASCII_FF
 while True :
     try :
         payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 )
     except BlockingIOError :
         t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
         continue
-    if payload_udp == ASCII_ENQ : # ENQUIRY (START OF TRANSMISSION)
-        if debug : print ( f"Received ASCII_ENQ {payload_udp=}, sending timestamp." )
+    if payload_udp == ASCII_FF : # ENQUIRY (START OF TRANSMISSION)
+        if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
         payload_udp = b""
         udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr )
         if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )

@@ -35,8 +35,8 @@ dir_name = "np.tensors"
 filename = "rx_samples.npy"
 series_len = 10
 
-timestamp_min = ops_os.milis_timestamp ()
-timestamp_max = timestamp_min + 1000 * 365 * 60 * 60 * 24 # 1Y
+timestamp_min = int ( ops_os.milis_timestamp () ) - 1000 * 365 * 60 * 60 * 24 # -1Y
+timestamp_max = int ( timestamp_min ) + 1000 * 365 * 60 * 60 * 24 # +1Y
 
 script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
@@ -74,19 +74,30 @@ while True :
     except BlockingIOError :
         t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
         continue
-    if debug : print ( f"\n\r[UDP] Received {len ( timestamp )=} {timestamp=}" )
-    if timestamp > timestamp_min and timestamp < timestamp_max :
+    if int ( timestamp ) > timestamp_min and int ( timestamp ) < timestamp_max :
         if debug : print ( f"Valid timestamp received: {timestamp=}" )
         break
+
+udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
+if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+while True :
+    try :
+        timestamp = udp_sock.recv ( 100 )
+    except BlockingIOError :
+        t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
+        continue
+    if debug : print ( f"\n\r[UDP] Received {len ( timestamp )=} {timestamp=}" )
+    break
 
 try :
     udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
     if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
     if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
     while True :
-        rx_samples.rx ()
+        rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
         if wrt :
-            rx_samples.save_complex_samples_2_npf ( filename )
+            rx_samples.save_complex_samples_2_npf ( file_name = f"{timestamp.decode("utf-8")}_{filename}" , dir_name = dir_name )
         if end_rx :
             if debug : print ( f"End of reception, stopping { script_filename }!" )
             break
@@ -105,8 +116,5 @@ try :
             end_rx = True
         t.sleep ( 0.05 )  # odciążenie CPU
 finally :
-    if debug : print ( f"End of reception, stopping { script_filename }!" )
     udp_sock.close ()
     exit ( 0 )
-
-        
