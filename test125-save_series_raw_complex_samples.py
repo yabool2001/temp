@@ -16,12 +16,14 @@ import socket
 import time as t
 import tomllib
 
+np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+
 Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
 
 debug = True
 plt = True
 wrt = True
-del_old = True
+del_old = False
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -77,18 +79,6 @@ while True :
     if int ( timestamp ) > timestamp_min and int ( timestamp ) < timestamp_max :
         if debug : print ( f"Valid timestamp received: {timestamp=}" )
         break
-
-udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
-if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-while True :
-    try :
-        timestamp = udp_sock.recv ( 100 )
-    except BlockingIOError :
-        t.sleep ( 0.05 )  # odciążenie CPU, gdy nie ma danych do odbioru
-        continue
-    if debug : print ( f"\n\r[UDP] Received {len ( timestamp )=} {timestamp=}" )
-    break
 
 try :
     udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
