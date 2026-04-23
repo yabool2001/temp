@@ -14,15 +14,8 @@ python test126-tx_large_data.py -10.0
 
 '''
 
-import curses # Moduł wbudowany w Python do obsługi terminala (obsługa klawiatury)
-import socket
-import select
-import numpy as np
-import os
-import sys
-import time as t
-import tomllib
-
+import numpy as np , os , socket , sys , time as t , tomllib
+from pathlib import Path
 from modules import ops_file, ops_os , packet , payload_test_data as ptd , sdr
 
 # Wczytaj plik TOML z konfiguracją
@@ -57,6 +50,7 @@ dir_name = "np.tensors"
 debug = True
 plt = False
 wrt = True
+del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
@@ -67,6 +61,11 @@ ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
 #SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 3
 MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * SAMPLES_BUFFER_SIZE_MULTIPLICATOR # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
+
+if del_old :
+    for file_path in Path ( dir_name ).glob ( "*" ) :
+        if file_path.is_file () :
+            file_path.unlink ( missing_ok = True )
 
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 if debug : print ( f"\n{ script_filename= } { tx_pluto= }" )

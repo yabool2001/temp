@@ -24,7 +24,7 @@ for samples_file in samples_files :
 		rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = False )
 		rx_pluto_samples.detect_frames ( deep = False , filter = False , correct = False )
 		frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
-		rx_pluto_samples.plot_complex_samples ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
+		rx_pluto_samples.plot_complex_samples ( title = f"{script_filename} {samples_file.name=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
 	else :
 		samples : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( str ( samples_file ) )
 		print ( f"\n{samples_file.name} samples.shape={samples.shape} samples.dtype={samples.dtype}" )
