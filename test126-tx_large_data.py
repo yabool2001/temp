@@ -23,22 +23,6 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
-
-def wrt_flat_tensor ( tx_samples : packet.TxSamples_v0_1_18 , timestamp : str ) -> None :
-    if debug : print ( f"Saving frames to flat tensor file in {dir_name=} {timestamp=}..." )
-    tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_flat_tensor" , dir_name = dir_name )
-
-def build_tx_samples_and_timestamp () -> tuple [ packet.TxSamples_v0_1_18 , str ] :
-    tx_samples = packet.TxSamples_v0_1_18 ()
-    ptd.fill_samples_up_to_max_length ( tx_samples = tx_samples , max_samples_size = MAX_SAMPLES_SIZE )
-    if debug : print ( f"{tx_samples.samples4pluto.size=}" )
-    timestamp = ops_os.milis_timestamp ()
-    if wrt : wrt_flat_tensor ( tx_samples = tx_samples , timestamp = timestamp )
-    if debug :
-        for frame in tx_samples.frames :
-            print ( f"{frame.bpsk_symbols.size=}: {frame.bpsk_symbols[ : 8 ]=}" )
-    return tx_samples , timestamp
-
 if len ( sys.argv ) > 1 :
     tx_gain_float = float ( sys.argv[ 1 ] )
 else :
@@ -59,8 +43,23 @@ ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
-#SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 3
-MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * SAMPLES_BUFFER_SIZE_MULTIPLICATOR # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
+SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
+
+def wrt_flat_tensor ( tx_samples : packet.TxSamples_v0_1_18 , timestamp : str ) -> None :
+    if debug : print ( f"Saving frames to flat tensor file in {dir_name=} {timestamp=}..." )
+    tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_flat_tensor" , dir_name = dir_name )
+
+def build_tx_samples_and_timestamp ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) -> tuple [ packet.TxSamples_v0_1_18 , str ] :
+    max_samples_size = int ( SAMPLES_BUFFER_SIZE * multiplicator ) # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
+    tx_samples = packet.TxSamples_v0_1_18 ()
+    ptd.fill_samples_up_to_max_length ( tx_samples = tx_samples , max_samples_size = max_samples_size )
+    if debug : print ( f"{tx_samples.samples4pluto.size=}" )
+    timestamp = ops_os.milis_timestamp ()
+    if wrt : wrt_flat_tensor ( tx_samples = tx_samples , timestamp = timestamp )
+    if debug :
+        for frame in tx_samples.frames :
+            print ( f"{frame.bpsk_symbols.size=}: {frame.bpsk_symbols[ : 8 ]=}" )
+    return tx_samples , timestamp
 
 if del_old :
     for file_path in Path ( dir_name ).glob ( "*" ) :
@@ -71,14 +70,7 @@ tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gai
 if debug : print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_samples = None
 timestamp = ""
-'''
-tx_samples , timestamp = build_tx_samples_and_timestamp ()
 
-if plt :
-    tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
-    tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
-    tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
-'''
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
 # Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
@@ -98,18 +90,7 @@ udp_sock.bind ( ( local_ip , 10001 ) )
 #udp_sock.setblocking ( False )
 print ( "Czekam na komendy na porcie UDP 10001" )
 udp_sender_addr = ( UDP_DEST_IP , UDP_TARGET_PORT )
-'''
-# przekazanie timestampu do skryptu test125-save_series_raw_complex_samples.py, po otrzymaniu requestu ASCII_FF
-payload_udp = b""
-while True :
-    payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 )
-    if payload_udp == ASCII_FF : # ENQUIRY (START OF TRANSMISSION)
-        if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
-        payload_udp = b""
-        udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr )
-        if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
-        break
-'''
+
 payload_udp = b""
 try :
     while True :
@@ -122,19 +103,15 @@ try :
             payload_udp = b""
             break
 
-        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE A NEW PACKET AND SEND TIMESTAMP
+        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE and send A NEW PACKET AND SEND TIMESTAMP
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
-            tx_samples , timestamp = build_tx_samples_and_timestamp ()
+            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 2 )
+            if plt :
+                tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
+                tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
+                tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
             udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
-            payload_udp = b""
-
-        elif payload_udp == ASCII_ENQ : # ENQUIRY TO TRANSMIT DATA
-            if tx_samples is None :
-                if debug : print ( f"Received ASCII_ENQ {payload_udp=}, but there is no prepared packet yet. Send ASCII_FF first." )
-                payload_udp = b""
-                continue
-            if debug : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
             tx_samples.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
             if debug : print ( f"All {tx_samples.samples4pluto.size=} samples transmitted." )
             tx_samples = None
