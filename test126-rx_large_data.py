@@ -26,7 +26,7 @@ wrt = True
 del_old = False
 
 Nof_ATTEMPTS = int ( 3 )
-Nof_WRTS = int ( 6 )
+Nof_WRTS = int ( 7 )
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 #UDP_DEST_IP = "192.168.1.60" # fedora
 UDP_TARGET_PORT = 10001
