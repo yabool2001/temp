@@ -25,9 +25,10 @@ plt = True
 wrt = True
 del_old = False
 
-Nof_ATTEMPTS = int ( 2 )
-Nof_WRTS = int ( 4 )
+Nof_ATTEMPTS = int ( 3 )
+Nof_WRTS = int ( 6 )
 UDP_DEST_IP = "192.168.1.50" # ubuntu
+#UDP_DEST_IP = "192.168.1.60" # fedora
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
 ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
@@ -82,10 +83,12 @@ try :
         
         if len ( payload_udp ) >= 13 and int ( payload_udp ) > timestamp_min and int ( payload_udp ) < timestamp_max : # Received a valid timestamp to name the file with received samples
             if debug : print ( f"Valid timestamp received: {payload_udp=}" )
-            rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
+            #rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx ) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
+            #if j < Nof_ATTEMPTS :
+            #    rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx ) # Po pierwszym odbiorze próbek trzeba bardziej czyścić bufor
             i = Nof_WRTS
             while i :
-                rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
+                rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
                 if wrt :
                     rx_samples.save_complex_samples_2_npf ( file_name = f"{payload_udp.decode("utf-8")}_{filename}" , dir_name = dir_name )
                 i -= 1
@@ -95,7 +98,9 @@ try :
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
             if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-            if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )        
+            if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+            rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
+            #rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
         
         t.sleep ( 0.05 )  # odciążenie CPU
         payload_udp = b""

@@ -2,7 +2,7 @@
 '''
 Skrypt do generowania losowej transmisji dużych liczby danych przez ADALM-Pluto.
 Odbiera komendę "ASCII ENQ" (0x05) przez UDP, która jest sygnałem do wysłania wcześniej przygotowanych danych testowych.
-Komendę wysyła skrypt test125-save_series_raw_complex_samples.py po tym jak jest gotowy do odbioru danych.
+Komendę wysyła skrypt test125-rx_large_data.py po tym jak jest gotowy do odbioru danych.
 Wysłane dane są zapisywane do pliku w katalogu ...... dla późniejszej analizy.
 Po zakończeniu wysyłania danych skrypt wysyła komendę "ASCII EOT" (0x04), że zakończył wysyłanie danych.
 
@@ -16,7 +16,7 @@ python test126-tx_large_data.py -10.0
 
 import numpy as np , os , socket , sys , time as t , tomllib
 from pathlib import Path
-from modules import ops_file, ops_os , packet , payload_test_data as ptd , sdr
+from modules import ops_os , packet , payload_test_data as ptd , sdr
 
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -38,7 +38,7 @@ del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
-ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
+#ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
@@ -105,7 +105,7 @@ try :
 
         elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE and send A NEW PACKET AND SEND TIMESTAMP
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
-            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 2 )
+            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 3 )
             if plt :
                 tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
                 tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
