@@ -113,18 +113,22 @@ while True :
 payload_udp = b""
 try :
     while True :
-        payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 )
+
+        payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 ) # Odbieramy dane z bufora UDP, oczekując na komendy od skryptu test125-save_series_raw_complex_samples.py
         if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
-        if payload_udp == ASCII_CAN : # ESCAPE
+
+        if payload_udp == ASCII_CAN : # ESCAPE - polecenie zamknięcia skryptu
             if debug : print ( f"Received ASCII_CAN {payload_udp=}, stopping transmission & ending script!" )
             payload_udp = b""
             break
-        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE A NEW PACKET AND SEND TIMESTAMP)
+
+        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE A NEW PACKET AND SEND TIMESTAMP
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
             tx_samples , timestamp = build_tx_samples_and_timestamp ()
-            udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr )
+            udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             payload_udp = b""
+
         elif payload_udp == ASCII_ENQ : # ENQUIRY TO TRANSMIT DATA
             if tx_samples is None :
                 if debug : print ( f"Received ASCII_ENQ {payload_udp=}, but there is no prepared packet yet. Send ASCII_FF first." )
@@ -137,7 +141,9 @@ try :
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if debug : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             payload_udp = b""
+
         payload_udp = b""
         t.sleep ( 0.05 )  # odciążenie CPU
+
 finally :
     udp_sock.close ()

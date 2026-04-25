@@ -25,8 +25,8 @@ plt = True
 wrt = True
 del_old = False
 
-NO_ATTEMPTS = int ( 2 )
-NO_WRTS = int ( 3 )
+Nof_ATTEMPTS = int ( 2 )
+Nof_WRTS = int ( 3 )
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
@@ -74,29 +74,34 @@ if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
 
 payload_udp = b""
 try :
-    j = NO_ATTEMPTS
+    j = Nof_ATTEMPTS
     while j :
+        
         payload_udp , udp_sender_addr = udp_sock.recvfrom ( 20 )
         if debug : print ( f"\n\r[UDP] Received {len ( payload_udp )=} byte(s): {payload_udp=}" )
+        
         if len ( payload_udp ) >= 13 and int ( payload_udp ) > timestamp_min and int ( payload_udp ) < timestamp_max :
             if debug : print ( f"Valid timestamp received: {payload_udp=}" )
             udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
             if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
             if debug : print ( f"Sent ASCII_ENQ to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
-            i = NO_WRTS
+            i = Nof_WRTS
             while i :
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx)
                 if wrt :
                     rx_samples.save_complex_samples_2_npf ( file_name = f"{payload_udp.decode("utf-8")}_{filename}" , dir_name = dir_name )
                 i -= 1
             j -= 1
+        
         elif payload_udp == ASCII_EOT : # END OF TRANSMISSION
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
             if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
             if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )        
+        
         t.sleep ( 0.05 )  # odciążenie CPU
         payload_udp = b""
+
 finally :
     udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
     if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
