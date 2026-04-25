@@ -105,7 +105,7 @@ try :
 
         elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE and send A NEW PACKET AND SEND TIMESTAMP
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
-            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 1 )
+            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 3 )
             if plt :
                 tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
                 tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
