@@ -18,7 +18,7 @@ clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do tre
 plt : bool = False
 wrt : bool = True
 dbg : bool = True
-del_files : bool = True
+del_files : bool = False
 
 
 samples_dir = Path ( "np.tensors" )
@@ -44,17 +44,9 @@ for timestamp_group in timestamp_groups :
 		frame_starts_idx = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
 		if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} {rx_pluto_samples.samples.size=}" , peaks = frame_starts_idx )
 		if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
-	#print ( f"{rx_pluto_samples.frames=}" )
-	#for frame in rx_pluto_samples.frames :
-	#	frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] )
-	#	print ( f"{ frame_symbols.size=}, {frame.frame_start_abs_idx=}, {frame_symbols[ : 5 ]=}" )
-	flat_tensor_rx = rx_pluto_samples.symbols_2_flat_tensor ()
-	flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_flat_tensor.pt" , dir_name = samples_dir.name )
-	if torch.equal ( flat_tensor_rx , flat_tensor_tx ) :
-		if wrt :
-			rx_pluto_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
-			rx_pluto_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
-			if del_files :
-				for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
-					if file_path.is_file () :
-						file_path.unlink ( missing_ok = True )
+	if wrt :
+		rx_pluto_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
+	if del_files :
+		for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
+			if file_path.is_file () :
+				file_path.unlink ( missing_ok = True )

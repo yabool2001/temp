@@ -68,7 +68,8 @@ def demoduluj_na_zywo ( sciezka_do_pliku_npy: str ) -> np.ndarray :
 if __name__ == "__main__":
     
     # Bierzemy obojętnie który plik z radia, byle bez odpowiedzi!
-    PLIK_RX = "np.tensors_002_inference/1776615893939_rx_samples.npy"
+    #PLIK_RX = "np.tensors_002_inference/1776615893939_rx_samples.npy"
+    PLIK_RX = "np.tensors_003_inference/1777129609728_rx_samples.npy"
     
     # Magia dzieje się w 1 linijce:
     odzyskane_symbole = demoduluj_na_zywo(PLIK_RX)

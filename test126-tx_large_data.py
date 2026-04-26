@@ -107,8 +107,8 @@ try :
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
             tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 3 )
             if plt :
-                tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
-                tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
+                #tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
+                #tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
                 tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
             udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )

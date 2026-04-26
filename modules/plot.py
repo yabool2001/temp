@@ -553,7 +553,7 @@ def complex_symbols_v0_1_6 ( complex_symbols : np.ndarray , title : str = "Konst
 
     fig.show()
 
-def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex128 ] , title : str = "Sygnał zespolony", marker_squares : bool = False , marker_peaks : Optional[ NDArray[ np.int_ ] ] = None ) -> None :
+def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex128 ] , title : str = "Sygnał zespolony", marker_squares : bool = False , marker_peaks : Optional[ NDArray[ np.uint32 ] ] = None ) -> None :
     """
     Rozszerzona wersja funkcji complex_waveform z dodatkowym parametrem marker_peaks.
     Jeśli marker_peaks zostanie przekazany (np.ndarray z indeksami), peaks zostaną zaznaczone trójkątami na wykresie.
@@ -611,7 +611,7 @@ def flat_tensor_v0_1_18 (
     flat_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
     title : str = "Flat tensor TxSamples" ,
     marker_squares : bool = False ,
-    marker_peaks : Optional[ NDArray[ np.int_ ] ] = None
+    marker_peaks : Optional[ NDArray[ np.uint32 ] ] = None
 ) -> None :
     """
     Rysuje 1D flat tensor zapisany przez TxSamples_v0_1_18.save_frames2flat_tensor.

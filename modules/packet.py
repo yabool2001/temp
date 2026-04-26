@@ -777,7 +777,7 @@ class RxSamples_v0_1_18 :
     def clip_samples_leftovers ( self ) -> None :
         self.leftovers = self.samples [ self.leftovers_start_idx : ]
 
-    def flat_tensor_from_frames ( self ) -> torch.Tensor :
+    def symbols_2_flat_tensor ( self ) -> torch.Tensor :
         # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania we flat tensor w celu porównania z tensorami zapisany podczas tx
         # Tutaj są tylko tensory wszystkich ramek bez ich pozycji i bez tensorów 0+j0 dla sampli bez ramek.
         if self.frames :
@@ -817,8 +817,6 @@ class RxSamples_v0_1_18 :
 
     def __repr__ ( self ) -> str :
         return ( f"{self.samples.size=}, {self.samples.dtype=}")
-
-
 
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_17 :
@@ -868,6 +866,7 @@ class TxFrame_v0_1_18 :
     tx_packet : TxPacket_v0_1_18
         
     # Pola uzupełnianie w __post_init__
+    frame_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
     header_bytes : NDArray[ np.uint8 ] = field ( init = False )
     bytes : NDArray[ np.uint8 ] = field ( init = False )
     bits : NDArray[ np.uint8 ] = field ( init = False )
@@ -960,10 +959,12 @@ class TxSamples_v0_1_18 :
             payload_bytes_arr = pad_bits2bytes ( payload_bits_arr )
         else :
             raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
-        self.frames.append ( self.create_tx_frame ( payload_bytes = payload_bytes_arr ) )
-        self.add_bytes ( self.frames[-1].bytes ) # Nie powinno być payload_bytes_arr bo wtedy w bytes będzie tylko payload bez sync sequence i packet len.
-        self.add_symbols ( self.frames[-1].bpsk_symbols )
-        self.add_samples4pluto ( self.frames[-1].samples4pluto )
+        tx_frame = self.create_tx_frame ( payload_bytes = payload_bytes_arr )
+        tx_frame.frame_start_abs_idx = np.uint32 ( self.samples4pluto.size + ( filters.SPAN * self.SPS // 2 ) )
+        self.frames.append ( tx_frame )
+        self.add_bytes ( tx_frame.bytes ) # Nie powinno być payload_bytes_arr bo wtedy w bytes będzie tylko payload bez sync sequence i packet len.
+        self.add_symbols ( tx_frame.bpsk_symbols )
+        self.add_samples4pluto ( tx_frame.samples4pluto )
 
     def add_bytes ( self , payload_bytes_arr : NDArray[ np.uint8 ] ) -> None :
         if payload_bytes_arr.size < 1 :
@@ -1037,8 +1038,12 @@ class TxSamples_v0_1_18 :
         if constellation :
             plot.complex_symbols_v0_1_6 ( self.bpsk_symbols , f"{title}" )
 
-    def plot_complex_samples4pluto ( self , title = "" ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title} {self.samples4pluto.size=}" , marker_squares = False )
+    def plot_complex_samples4pluto ( self , title = "" , marker_peaks : bool = False ) -> None :
+        if marker_peaks :
+            frames_start_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+        else :
+            frames_start_idx : NDArray [ np.uint32 ] = np.array ( [] , dtype = np.uint32 )
+        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title} {self.samples4pluto.size=}" , marker_squares = False , marker_peaks = frames_start_idx )
 
     def plot_samples_spectrum ( self , title = "" ) -> None :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
@@ -1055,6 +1060,23 @@ class TxSamples_v0_1_18 :
         frames_bpsk_symbols = torch.from_numpy ( all_symbols )
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         torch.save ( frames_bpsk_symbols , tensor_filename )
+
+    def save_samples_2_flat_tensor ( self , filename : str , dir_name : str ) -> None :
+        '''Stworzenie symboli bpsk reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
+        oraz wstawienie 0+0j wszędzie tam gdzie w przebiegu samples4pluto nie ma symboli wynikajacych z ramek.'''
+        tensor_filename = f"{dir_name}/{filename}.pt"
+        frame_symbols = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
+        for frame in self.frames :
+            frame_start_idx = np.uint32 ( frame.frame_start_abs_idx )
+            frame_end_idx = frame_start_idx + frame.bpsk_symbols.size * self.SPS
+            if frame_start_idx >= frame_symbols.size or frame.bpsk_symbols.size == 0 :
+                continue
+            if frame_end_idx > frame_symbols.size :
+                frame_end_idx = frame_symbols.size
+            symbols_repeated = np.repeat ( frame.bpsk_symbols , self.SPS )[:frame_end_idx - frame_start_idx]
+            frame_symbols [ frame_start_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex64 , copy = False )
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        torch.save ( torch.from_numpy ( frame_symbols ) , tensor_filename )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.bpsk_symbols.size= }, { self.samples4pluto.size= }" )
