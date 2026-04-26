@@ -20,10 +20,10 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 
 debug = True
 plt = True
-wrt = True
+wrt = False
 del_old = True
 
-Nof_ATTEMPTS = int ( 3 )
+Nof_ATTEMPTS = int ( 1 )
 Nof_WRTS = int ( 1 )
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001

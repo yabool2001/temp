@@ -46,8 +46,10 @@ SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples_v0_1_18 , timestamp : str ) -> None :
-    if debug : print ( f"Saving frames to flat tensor file in {dir_name=} {timestamp=}..." )
-    tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_flat_tensor" , dir_name = dir_name )
+    tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_symbols_flat_tensor" , dir_name = dir_name )
+    tx_samples.save_samples_2_flat_tensor ( filename = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name )
+    tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
+    if debug : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp=}..." )
 
 def build_tx_samples_and_timestamp ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) -> tuple [ packet.TxSamples_v0_1_18 , str ] :
     max_samples_size = int ( SAMPLES_BUFFER_SIZE * multiplicator ) # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)

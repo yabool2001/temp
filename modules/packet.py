@@ -1078,6 +1078,11 @@ class TxSamples_v0_1_18 :
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         torch.save ( torch.from_numpy ( frame_symbols ) , tensor_filename )
 
+    def save_complex_samples4pluto_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = True ) -> None :
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples4pluto )
+
     def __repr__ ( self ) -> str :
         return ( f"{ self.bpsk_symbols.size= }, { self.samples4pluto.size= }" )
 
