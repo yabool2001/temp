@@ -2,7 +2,7 @@
 
 ## 2026.04.26
 
-*   **`np.tensors_004`** zawiera 3 oryginalne ramki wygenerowane przez `test128-tx_simple_frame.py` i zapisanych przez `test128-rx_simple_frane.py`. Rami były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z `gain = -10.0`, a rx odbierał w trybie `slow_attack`.
+*   **`np.tensors_004`** zawiera 3 oryginalne ramki wygenerowane przez `test128-tx_simple_frame.py` i zapisane przez `test128-rx_simple_frane.py`. Rami były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z `gain = -10.0`, a rx odbierał w trybie `slow_attack`.
 
 
 ## 2026.04.25
