@@ -111,7 +111,7 @@ try :
             if debug : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
             tx_samples.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
             if debug : print ( f"All {tx_samples.samples4pluto.size=} samples transmitted." )
-            tx_samples = None # Zwolnienie pamięci zajmowanej przez próbki po transmisji, aby nie trzymać w pamięci dużej tablicy próbek, która już została wysłana
+            #tx_samples = None # Zwolnienie pamięci zajmowanej przez próbki po transmisji, aby nie trzymać w pamięci dużej tablicy próbek, która już została wysłana
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if debug : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
 

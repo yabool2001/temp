@@ -23,8 +23,8 @@ plt = True
 wrt = True
 del_old = True
 
-Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 7 )
+Nof_ATTEMPTS = int ( 3 )
+Nof_WRTS = int ( 1 )
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
@@ -98,9 +98,10 @@ try :
                 if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }. Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
             
-            t.sleep ( 0.1 )  # odciążenie CPU
-            rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
-            payload_udp = b""
+        t.sleep ( 0.1 )  # odciążenie CPU
+        rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
+        payload_udp = b""
+        print ( f"Waiting for next transmission... {j=}" )
 
 finally :
     udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
