@@ -38,7 +38,7 @@ del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_TARGET_PORT = 10001
-#ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
+ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
@@ -95,6 +95,7 @@ payload_udp = b""
 try :
     while True :
 
+        payload_udp = b""
         payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 ) # Odbieramy dane z bufora UDP, oczekując na komendy od skryptu test125-save_series_raw_complex_samples.py
         if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
 
@@ -103,15 +104,8 @@ try :
             payload_udp = b""
             break
 
-        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE and send A NEW PACKET AND SEND TIMESTAMP
-            if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
-            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 3 )
-            if plt :
-                #tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
-                #tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
-                tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
-            udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
-            if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
+        elif payload_udp == ASCII_ENQ : # ENQUIRY TO send A NEW PACKET
+            if debug : print ( f"Received ASCII_ENQ {payload_udp=}, sending timestamp." )
             tx_samples.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
             if debug : print ( f"All {tx_samples.samples4pluto.size=} samples transmitted." )
             tx_samples = None
@@ -119,7 +113,17 @@ try :
             if debug : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             payload_udp = b""
 
-        payload_udp = b""
+
+        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE A NEW PACKET AND TIMESTAMP and send TIMESTAMP
+            if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
+            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 1 )
+            if plt :
+                #tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
+                #tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
+                tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
+            udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
+            if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
+
         t.sleep ( 0.05 )  # odciążenie CPU
 
 finally :
