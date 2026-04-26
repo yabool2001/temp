@@ -42,7 +42,7 @@ ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
-SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 0.8
+SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples_v0_1_18 , timestamp : str ) -> None :
@@ -118,7 +118,7 @@ try :
 
         elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE A NEW PACKET AND TIMESTAMP and send TIMESTAMP
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp." )
-            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = 1 )
+            tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR )
             if plt :
                 #tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
                 #tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )

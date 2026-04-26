@@ -35,10 +35,10 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
 
 debug = True
-plt = True
+plt = False
 wrt = True
 del_old = True
-fedora_tx = False
+fedora_tx = True
 
 Nof_ATTEMPTS = int ( 2 )
 Nof_WRTS = int ( 7 )
