@@ -41,7 +41,7 @@ del_old = True
 fedora_tx = True
 
 Nof_ATTEMPTS = int ( 20 )
-Nof_WRTS = int ( 7 )
+Nof_WRTS = int ( 8 )
 if fedora_tx :
     UDP_DEST_IP = "192.168.1.60" # fedora
 else :

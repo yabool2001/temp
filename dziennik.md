@@ -1,8 +1,20 @@
 # Dziennik projektu
 
+## 2026.04.28
+
+W katalogach może być czasami 7 lub 8 plików z samplami per ramka
+
+*   **`np.tensors_009`** zawiera 20 oryginalnych sampli wygenerowane przez `test126-tx_large_data.py` i zapisanych przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = -6.0`, a rx odbierał w trybie `slow_attack`.
+
+*   **`np.tensors_008`** zawiera ~30 oryginalnych sampli wygenerowane przez `test126-tx_large_data.py` i zapisanych przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = -5.0`, a rx odbierał w trybie `slow_attack`.
+
+*   **`np.tensors_007`** zawiera 40 oryginalnych sampli wygenerowane przez `test126-tx_large_data.py` i zapisanych przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = -4.0`, a rx odbierał w trybie `slow_attack`.
+
+*   **`np.tensors_006`** zawiera 40 oryginalnych sampli wygenerowane przez `test126-tx_large_data.py` i zapisanych przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = -3.0`, a rx odbierał w trybie `slow_attack`.
+
 ## 2026.04.26
 
-*   **`np.tensors_005`** zawiera 5 oryginalnych sampli z wieloma ramkami wygenerowanych przez `test126-tx_large_data.py` i zapisane przez `test126-rx_large_data.py`. Ramki były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = 0.0`, a rx odbierał w trybie `slow_attack`.
+*   **`np.tensors_005`** zawiera 5 oryginalnych sampli z wieloma ramkami wygenerowanych przez `test126-tx_large_data.py` i zapisane przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = 0.0`, a rx odbierał w trybie `slow_attack`.
 
 *   **`np.tensors_004`** zawiera 3 oryginalne ramki wygenerowane przez `test128-tx_simple_frame.py` i zapisane przez `test128-rx_simple_frane.py`. Ramki były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z `gain = -10.0`, a rx odbierał w trybie `slow_attack`.
 
