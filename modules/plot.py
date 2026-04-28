@@ -3,10 +3,13 @@ import pandas as pd
 import plotly.express as px
 import torch
 from scipy import signal
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from modules import sdr
+from modules import modulation, sdr
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from modules import packet
 
 def plot_complex_waveform_v2 (samples: np.ndarray, title: str = "Samples") -> None:
     if not np.iscomplexobj ( samples ) :
@@ -731,3 +734,8 @@ def tensor_waveform_v0_1_16 (
         marker_squares = marker_squares ,
         marker_peaks = marker_peaks
     )
+
+def prt_frames ( frames : list[ "packet.RxFrame_v0_1_18" ] , limit : int = len ( "packet.BARKER13_BITS" ) ,  ) -> None :
+    for frame in frames :
+        frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ frame.header_bpsk_symbols[ : : modulation.SPS ] , frame.packet.bpsk_symbols[ : : modulation.SPS ] ] ) )
+        print ( f"{ frame_bits.size=}, {frame.frame_start_abs_idx=}, {frame_bits[ : limit ]=}" )
