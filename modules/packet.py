@@ -642,7 +642,7 @@ class RxSamples_v0_1_18 :
     def sample_initial_assesment (self) -> None :
         self.has_amp_greater_than_ths = np.any ( np.abs ( self.samples ) > self.ths )
 
-    def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False ) -> None :
+    def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False , add_peak_at_0 : bool = False ) -> None :
         if filter :
             self.filter_samples ()
         else :
@@ -654,6 +654,7 @@ class RxSamples_v0_1_18 :
         self.has_leftovers = False
         self.samples_corrected_len = np.uint32 ( len ( self.samples_corrected ) )
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples_corrected , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
+        if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx :

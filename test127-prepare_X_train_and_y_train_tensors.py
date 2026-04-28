@@ -57,7 +57,7 @@ for timestamp_group in timestamp_groups :
 		if rx_pluto_samples.frames is not None :
 			tx_pluto_samples = packet.RxSamples_v0_1_18 ()
 			tx_pluto_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
-			tx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
+			tx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True , add_peak_at_0 = True )
 			if plt : tx_pluto_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" )
 			'''
 			W rx_pluto_samples znajdź frame, która jest identyczna jak pierwsza frame w tx_pluto_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
