@@ -4,7 +4,7 @@
 import numpy as np , os , tomllib , torch
 from pathlib import Path
 from numpy.typing import NDArray
-from modules import ops_file, packet , plot
+from modules import modulation, ops_file, packet , plot
 
 script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -56,8 +56,9 @@ for timestamp_group in timestamp_groups :
 	else :
 		if rx_pluto_samples.frames is not None :
 			tx_pluto_samples = packet.RxSamples_v0_1_18 ()
-			rx_pluto_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
-			rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
+			tx_pluto_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
+			tx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
+			if plt : tx_pluto_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" )
 			'''
 			W rx_pluto_samples znajdź frame, która jest identyczna jak pierwsza frame w tx_pluto_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
 			i zapisz jej pozycję początkową frame_starts_idx jako tx_rx_frame_start_abs_idx.
@@ -65,10 +66,10 @@ for timestamp_group in timestamp_groups :
 			tx_frame_start_abs_idx = None
 			if tx_pluto_samples.frames is not None and len ( tx_pluto_samples.frames ) > 0 :
 				tx_first_frame = tx_pluto_samples.frames[0]
-				tx_first_frame_symbols = np.concatenate ( [ tx_first_frame.header_bpsk_symbols , tx_first_frame.packet.bpsk_symbols ] )
+				tx_first_frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ tx_first_frame.header_bpsk_symbols , tx_first_frame.packet.bpsk_symbols ] ) )
 				for rx_frame in rx_pluto_samples.frames :
-					rx_frame_symbols = np.concatenate ( [ rx_frame.header_bpsk_symbols , rx_frame.packet.bpsk_symbols ] )
-					if np.array_equal ( rx_frame_symbols , tx_first_frame_symbols ) :
+					rx_frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ rx_frame.header_bpsk_symbols , rx_frame.packet.bpsk_symbols ] ) )
+					if np.array_equal ( rx_frame_bits , tx_first_frame_bits ) :
 						tx_frame_start_abs_idx = rx_frame.frame_start_abs_idx
 						break
 			if tx_frame_start_abs_idx is not None :
