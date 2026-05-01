@@ -34,7 +34,7 @@ for timestamp_group in timestamp_groups :
 	for samples_file in samples_files :
 		rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 	if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
-	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
+	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
 	frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
 	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
 	if clp :
@@ -57,7 +57,7 @@ for timestamp_group in timestamp_groups :
 		if rx_pluto_samples.frames is not None :
 			tx_pluto_samples = packet.RxSamples_v0_1_18 ()
 			tx_pluto_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
-			tx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True , add_peak_at_0 = True )
+			tx_pluto_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = True )
 			if plt : tx_pluto_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" )
 			'''
 			W rx_pluto_samples znajdź frame, która jest identyczna jak pierwsza frame w tx_pluto_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
@@ -66,9 +66,9 @@ for timestamp_group in timestamp_groups :
 			tx_frame_start_abs_idx = None
 			if tx_pluto_samples.frames is not None and len ( tx_pluto_samples.frames ) > 0 :
 				tx_first_frame = tx_pluto_samples.frames[0]
-				tx_first_frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ tx_first_frame.header_bpsk_symbols , tx_first_frame.packet.bpsk_symbols ] ) )
+				tx_first_frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ tx_first_frame.header_bpsk_symbols[ : : tx_first_frame.SPS ] , tx_first_frame.packet.bpsk_symbols[ : : tx_first_frame.SPS ] ] ) )
 				for rx_frame in rx_pluto_samples.frames :
-					rx_frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ rx_frame.header_bpsk_symbols , rx_frame.packet.bpsk_symbols ] ) )
+					rx_frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ rx_frame.header_bpsk_symbols[ : : rx_frame.SPS ] , rx_frame.packet.bpsk_symbols[ : : rx_frame.SPS ] ] ) )
 					if np.array_equal ( rx_frame_bits , tx_first_frame_bits ) :
 						tx_frame_start_abs_idx = rx_frame.frame_start_abs_idx
 						break

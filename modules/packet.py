@@ -657,7 +657,7 @@ class RxSamples_v0_1_18 :
         if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
-            if idx > previous_processed_idx :
+            if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
                 frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx : ] , sync_sequence_peak_abs_idx = idx )
                 if frame.has_frame :
                     self.frames.append ( frame )
