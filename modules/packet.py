@@ -442,7 +442,7 @@ class RxPacket_v0_1_18 :
             if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                 self.has_packet = True
                 self.bits = np.concatenate ( [ payload_bits , crc32_bits ] )
-                self.bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.bits , sps = sps )
+                self.bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.bits )
                 self.bytes = np.concatenate ( [ payload_bytes , crc32_bytes_read ] )
                 self.payload_bytes = payload_bytes
                 if settings["log"]["verbose_2"] : print ( samples_name )
@@ -463,7 +463,7 @@ class RxPacket_v0_1_18 :
         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
             self.has_packet = True
             self.bits = np.concatenate ( [ payload_bits , crc32_bits ] )
-            self.bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.bits , sps = sps )
+            self.bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.bits )
             self.bytes = np.concatenate ( [ payload_bytes , crc32_bytes_read ] )
             self.payload_bytes = payload_bytes
             return
@@ -493,11 +493,13 @@ class RxFrame_v0_1_18 :
     SPS = modulation.SPS
     SPAN = filters.SPAN
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    header_bits : NDArray[ np.uint8 ] = field ( init = False )
     frame_start_abs_idx : np.uint32 = field ( init = False )
     frame_end_abs_idx : np.uint32 = field ( init = False )
     packet_start_abs_idx : NDArray[ np.uint32 ] = field ( init = False )
     leftovers_start_abs_idx : np.uint32 = field ( init = False )
-    has_frame : bool = False # ustawiany dopiero po walidacji pakietu, wcześniej używamy tylko lokalnego has_frame_header
+    has_header : bool = False # przydate jeśli nie wykryje pakietu/payload
+    has_frame : bool = False # ustawiany dopiero po walidacji pakietu, wcześniej używamy tylko lokalnego has_header
     has_leftovers : bool = False
     # do zapamiętania jako tip przed skasowaniem payload_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint8 ) , init = False )
     packet : RxPacket_v0_1_18 = field ( init = False )
@@ -533,21 +535,23 @@ class RxFrame_v0_1_18 :
                     crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
-                        has_frame_header = True
+                        self.has_header = True
                         self.frame_start_abs_idx = self.sync_sequence_peak_abs_idx + sync_sequence_start_idx
-                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{has_frame_header=},{self.frame_start_abs_idx=}" )
+                        self.packet_start_abs_idx = self.sync_sequence_peak_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.frame_end_abs_idx = self.sync_sequence_peak_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.header_bits = np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] )
+                        self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.header_bits )
+                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{self.has_header=},{self.frame_start_abs_idx=}" )
                         if not self.packet_len_validation ( packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{has_frame_header=},{sync_sequence_start_idx=},{self.frame_start_abs_idx=}" )
-                            if settings["log"]["verbose_2"] : print ( f"{self.sync_sequence_peak_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {has_frame_header=}" )
+                            add2log_packet ( f"{t.time()},{self.has_header=},{sync_sequence_start_idx=},{self.frame_start_abs_idx=}" )
+                            if settings["log"]["verbose_2"] : print ( f"{self.sync_sequence_peak_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {self.has_header=}" )
                             return
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
-                            self.has_frame = True
+                            self.has_frame = True # has_frame jeśli ma header i pakiet, inaczej nie ma całej ramki
                             #self.bpsk_symbols = np.concatenate ( [ sync_sequence_symbols , packet_len_symbols , crc32_symbols , packet.packet_symbols ] )
-                            self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] ) , sps = self.SPS )
+                            #self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] ) , sps = self.SPS )
                             self.packet = packet
-                            self.packet_start_abs_idx = self.sync_sequence_peak_abs_idx + crc32_end_idx
-                            self.frame_end_abs_idx = self.sync_sequence_peak_abs_idx + packet_end_idx # to może być tylko wtedy kiedy mamy poprawny pakiet, bo inaczej nie wiemy, czy i gdzie się kończy ramka, a bez tego nie możemy poprawnie ustawić leftoversów
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
                             if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.frame_start_abs_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return
@@ -659,7 +663,7 @@ class RxSamples_v0_1_18 :
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
                 frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx : ] , sync_sequence_peak_abs_idx = idx )
-                if frame.has_frame :
+                if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
                 else :
@@ -785,11 +789,12 @@ class RxSamples_v0_1_18 :
     def symbols_2_flat_tensor ( self ) -> torch.Tensor :
         # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania we flat tensor w celu porównania z tensorami zapisany podczas tx
         # Tutaj są tylko tensory wszystkich ramek bez ich pozycji i bez tensorów 0+j0 dla sampli bez ramek.
-        if self.frames :
+        frames_with_packet = [ frame for frame in self.frames if frame.has_frame ]
+        if frames_with_packet :
             all_symbols = np.concatenate (
                 [
                     symbols
-                    for frame in self.frames
+                    for frame in frames_with_packet
                     for symbols in ( frame.header_bpsk_symbols , frame.packet.bpsk_symbols )
                 ]
             ).astype ( np.complex64 , copy = False )
@@ -800,12 +805,13 @@ class RxSamples_v0_1_18 :
     def y_train_tensor_from_frames ( self ) -> torch.Tensor :
         y_train_symbols = np.zeros ( self.samples.size , dtype = np.complex64 )
         for frame in self.frames :
-            frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] ).astype ( np.complex64 , copy = False )
-            frame_start_idx = int ( frame.frame_start_abs_idx )
-            if frame_start_idx >= y_train_symbols.size or frame_symbols.size == 0 :
-                continue
-            frame_end_idx = min ( frame_start_idx + frame_symbols.size , y_train_symbols.size )
-            y_train_symbols[ frame_start_idx : frame_end_idx ] = frame_symbols[ : frame_end_idx - frame_start_idx ]
+            if frame.has_frame :
+                frame_symbols = np.concatenate ( [ frame.header_bpsk_symbols , frame.packet.bpsk_symbols ] ).astype ( np.complex64 , copy = False )
+                frame_start_idx = int ( frame.frame_start_abs_idx )
+                if frame_start_idx >= y_train_symbols.size or frame_symbols.size == 0 :
+                    continue
+                frame_end_idx = min ( frame_start_idx + frame_symbols.size , y_train_symbols.size )
+                y_train_symbols[ frame_start_idx : frame_end_idx ] = frame_symbols[ : frame_end_idx - frame_start_idx ]
         return torch.from_numpy ( y_train_symbols )
 
     def flat_tensor_from_y_train ( self ) -> torch.Tensor :
@@ -822,8 +828,9 @@ class RxSamples_v0_1_18 :
 
     def __repr__ ( self ) -> str :
         for frame in self.frames :
-            frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ frame.header_bpsk_symbols[ : : self.SPS ] , frame.packet.bpsk_symbols[ : : self.SPS ] ] ) )
-            print ( f"{ frame_bits.size=}, {frame.frame_start_abs_idx=}, {frame_bits[ : 10 ]}" )
+            if frame.has_frame :
+                frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ frame.header_bpsk_symbols[ : : self.SPS ] , frame.packet.bpsk_symbols[ : : self.SPS ] ] ) )
+                print ( f"{ frame_bits.size=}, {frame.frame_start_abs_idx=}, {frame_bits[ : 10 ]}" )
         return ( f"{self.samples.size=}, {self.samples.dtype=}")
 
 @dataclass ( slots = True , eq = False )
