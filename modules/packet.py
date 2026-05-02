@@ -830,7 +830,7 @@ class RxSamples_v0_1_18 :
         for frame in self.frames :
             if frame.has_frame :
                 frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ frame.header_bpsk_symbols[ : : self.SPS ] , frame.packet.bpsk_symbols[ : : self.SPS ] ] ) )
-                print ( f"{ frame_bits.size=}, {frame.frame_start_abs_idx=}, {frame_bits[ : 10 ]}" )
+                #print ( f"{ frame_bits.size=}, {frame.frame_start_abs_idx=}, {frame_bits[ : 10 ]}" )
         return ( f"{self.samples.size=}, {self.samples.dtype=}")
 
 @dataclass ( slots = True , eq = False )

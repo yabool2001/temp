@@ -13,7 +13,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
@@ -57,8 +57,10 @@ for timestamp_group in timestamp_groups :
 		if rx_samples.frames is not None :
 			tx_samples = packet.RxSamples_v0_1_18 ()
 			tx_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
-			tx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
+			tx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = True )
+			tx_frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in tx_samples.frames ] , dtype = np.uint32 )
 			if plt : tx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_samples.samples.size=} {frame_starts_idx.size=}" )
+			if plt : plot.flat_tensor_v0_1_18 ( flat_tensor_tx , title = f"{script_filename} {timestamp_group} tx flat tensor" , marker_peaks = tx_frames_start_idx )
 			'''
 			W rx_samples znajdź frame, która jest identyczna jak pierwsza frame w tx_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
 			i zapisz jej pozycję początkową frame_starts_idx jako tx_rx_frame_start_abs_idx.
