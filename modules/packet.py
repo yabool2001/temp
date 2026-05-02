@@ -936,6 +936,7 @@ class TxSamples_v0_1_18 :
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     samples : NDArray[ np.complex128 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
+    flat_tensor : NDArray[ np.complex128 ] = field ( init = False )
     frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     SPS = modulation.SPS
 
@@ -951,7 +952,7 @@ class TxSamples_v0_1_18 :
         self.bpsk_symbols = np.array ( [] , dtype = np.complex128 )
         self.samples = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
-
+        self.flat_tensor = np.array ( [] , dtype = np.complex128 )
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
         tx_packet = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_packet )
@@ -1062,6 +1063,23 @@ class TxSamples_v0_1_18 :
 
     def plot_samples_spectrum ( self , title = "" ) -> None :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
+
+    def plot_flat_tensor ( self , title : str = "tx flat tensor" , marker_peaks : np.uint32 = None ) -> None :
+        plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title , marker_peaks = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 ) )
+
+    def samples4pluto_2_flat_tensor ( self ) -> None :
+        '''Stworzenie flat_tensor w self.flat_tensor reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
+        oraz wstawienie 0+0j wszędzie tam gdzie w przebiegu samples4pluto nie ma symboli wynikajacych z ramek.'''
+        self.flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex128 )
+        for frame in self.frames :
+            frame_start_idx = np.uint32 ( frame.frame_start_abs_idx )
+            frame_end_idx = frame_start_idx + frame.bpsk_symbols.size * self.SPS
+            if frame_start_idx >= self.flat_tensor.size or frame.bpsk_symbols.size == 0 :
+                continue
+            if frame_end_idx > self.flat_tensor.size :
+                frame_end_idx = self.flat_tensor.size
+            symbols_repeated = np.repeat ( frame.bpsk_symbols , self.SPS )[:frame_end_idx - frame_start_idx]
+            self.flat_tensor [ frame_start_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex128 , copy = False )
 
     def save_frames2flat_tensor ( self , filename : str , dir_name : str ) -> None :
         # It's not the actual y_train, but a reference truth for validating rx data (after receiving the frame).

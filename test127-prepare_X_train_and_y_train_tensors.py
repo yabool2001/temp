@@ -1,6 +1,8 @@
 # issue #45 - dekodowanie symboli z wszystkich plików X-train npy zapisanych we wskazanym katalogu
 # i zapisywanie ich jako y_train w plikach odpowiadajacych X_train
 
+# dobra grupa do testów: 1777232234209_rx_samples_1777232234490.npy w np.tensors_005
+
 import numpy as np , os , tomllib , torch
 from pathlib import Path
 from numpy.typing import NDArray
