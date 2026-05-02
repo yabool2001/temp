@@ -93,9 +93,18 @@ for timestamp_group in timestamp_groups :
 							break
 			if rx_frames_start_abs_idx is not None :
 				print ( f"Znaleziono dopasowanie ramki: {timestamp_group} rx_frames_start_abs_idx={rx_frames_start_abs_idx}" )
+				'''Znalazłem dopasowanie ramki w jednym z punktów SPS, ale nie wiem czy pierwszy. A chciałbym precyzyjnie znaleźć pierwszy, żeby mieć pewność,
+				że plik y_train będzie idealnie dopasowany względem X_train. I nie będzie przesunięty ani o 1 sample.
+				Będę szukał dopasowania frame header w 4 punktach, które są oddalone o 1 sample od siebie, czyli
+				znaleźć precyzyjnie pierwszy sample a nie któryś z 4, który rozpoczyna frame
+				Zacznę od cofania o 1 sample od znalezionego dopasowania, żeby znaleć ten pierwszy sample, a póżniej będę szedł do przodu o 1 sample,
+				żeby znaleźć ostatni i czy wychodzi liczba sampli z dostposowaniem= SPS,
+				'''
+
+
+
 				'''Stworzenie symboli bpsk reprezentujacych cały przebieg rx_samples.samples:
-				1. ...
-				2. Na początku tworzymy rx_tensor i na całej długości wszędzie wstawiamy 0+j0
+				1. Na początku tworzymy rx_tensor i na całej długości wszędzie wstawiamy 0+j0
 				2. Od pozycji rx_frames_start_abs_idx w rx_tensor podstawiamy odpowiednie symbole BPSK z tx_samples_flat_tensor.
 				'''
 				rx_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
