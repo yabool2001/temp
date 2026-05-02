@@ -37,17 +37,19 @@ for timestamp_group in timestamp_groups :
 		rx_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 	if plt : rx_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_samples.samples.size=}" )
 	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
-	frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
-	if plt : rx_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
+	rx_samples_frame_start_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
+	if plt : rx_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_samples.samples.size=} {rx_samples_frame_start_idx.size=}" , peaks = rx_samples_frame_start_idx )
 	if clp :
 		rx_samples.clip_samples_for_training ()
-		frame_starts_idx = np.array ( [ frame.frame_start_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
-		if plt : rx_samples.plot_complex_samples ( f"{script_filename} {rx_samples.samples.size=}" , peaks = frame_starts_idx )
-		if plt : rx_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
+		#rx_samples_frame_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
+		if plt : rx_samples.plot_complex_samples ( f"{script_filename} {rx_samples.samples.size=}" , peaks = rx_samples_frame_start_idx )
+		if plt : rx_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_samples.samples.size=} {rx_samples_frame_start_idx.size=}" , peaks = rx_samples_frame_start_idx )
 	print ( f"{rx_samples=}" )
-	flat_tensor_rx = rx_samples.symbols_2_flat_tensor ()
-	flat_tensor_tx : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_symbols_flat_tensor.pt" , dir_name = samples_dir.name )
-	if torch.equal ( flat_tensor_rx , flat_tensor_tx ) :
+	rx_symbols_flat_tensor = rx_samples.symbols_2_flat_tensor ()
+	tx_symbols_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_symbols_flat_tensor.pt" , dir_name = samples_dir.name )
+	tx_samples_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_samples_flat_tensor.pt" , dir_name = samples_dir.name )
+	# Wariant 1. Sprawdzenie pełnej zgodności tensorów rx i tx. Jeśli są identyczne, to można bezpiecznie zapisać y_train i usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
+	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor ) :
 		if wrt :
 			rx_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
 			rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
@@ -61,8 +63,10 @@ for timestamp_group in timestamp_groups :
 			tx_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
 			tx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = True )
 			tx_frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in tx_samples.frames ] , dtype = np.uint32 )
-			if plt : tx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_samples.samples.size=} {frame_starts_idx.size=}" )
-			if plt : plot.flat_tensor_v0_1_18 ( flat_tensor_tx , title = f"{script_filename} {timestamp_group} tx flat tensor" , marker_peaks = tx_frames_start_idx )
+			if plt : tx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_samples.samples.size=} {rx_samples_frame_start_idx.size=}" )
+			if plt : plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" , marker_idx = tx_frames_start_idx )
+			if plt : plot.flat_tensor_v0_1_18 ( tx_samples_flat_tensor , title = f"{script_filename} {timestamp_group} tx samples flat tensor" , marker_idx = tx_frames_start_idx )
+
 			'''
 			W rx_samples znajdź frame, która jest identyczna jak pierwsza frame w tx_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
 			i zapisz jej pozycję początkową frame_starts_idx jako tx_rx_frame_start_abs_idx.
@@ -70,24 +74,41 @@ for timestamp_group in timestamp_groups :
 			rx_frames_start_abs_idx = None
 			if tx_samples.frames is not None and len ( tx_samples.frames ) > 0 :
 				for tx_unique_frame in tx_samples.frames :
-					if dbg : print ( f"\n\r{tx_unique_frame.frame_start_abs_idx=}" )
+					#if dbg : print ( f"\n\r{tx_unique_frame.frame_start_abs_idx=}" )
 					tx_first_unique_frame = None
 					is_unique = True
 					for tx_frame in tx_samples.frames :
-						if dbg : print ( f",{tx_frame.frame_start_abs_idx=}" )
+						#if dbg : print ( f",{tx_frame.frame_start_abs_idx=}" )
 						if np.array_equal ( tx_unique_frame.header_bits , tx_frame.header_bits ) and ( tx_unique_frame.frame_start_abs_idx != tx_frame.frame_start_abs_idx ) :
 							is_unique = False
-							if dbg : print ( f"{is_unique=}" )
+							#if dbg : print ( f"{is_unique=}" )
 					if is_unique :
 						tx_first_unique_frame = tx_unique_frame
 						for rx_frame in rx_samples.frames :
 							if np.array_equal ( rx_frame.header_bits , tx_first_unique_frame.header_bits ) :
-								rx_frames_start_abs_idx = rx_frame.frame_start_abs_idx - ( tx_first_unique_frame.frame_start_abs_idx - filters.SPAN * modulation.SPS // 2 )
+								#rx_frames_start_abs_idx = rx_frame.frame_start_abs_idx - ( tx_first_unique_frame.frame_start_abs_idx - filters.SPAN * modulation.SPS // 2 )
+								rx_frames_start_abs_idx = rx_frame.frame_start_abs_idx - tx_first_unique_frame.frame_start_abs_idx
 								break
 						if rx_frames_start_abs_idx is not None :
 							break
 			if rx_frames_start_abs_idx is not None :
 				print ( f"Znaleziono dopasowanie ramki: {timestamp_group} rx_frames_start_abs_idx={rx_frames_start_abs_idx}" )
+				'''Stworzenie symboli bpsk reprezentujacych cały przebieg rx_samples.samples:
+				1. ...
+				2. Na początku tworzymy rx_tensor i na całej długości wszędzie wstawiamy 0+j0
+				2. Od pozycji rx_frames_start_abs_idx w rx_tensor podstawiamy odpowiednie symbole BPSK z tx_samples_flat_tensor.
+				'''
+				rx_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
+				rx_tensor [ rx_frames_start_abs_idx : rx_frames_start_abs_idx + tx_samples_flat_tensor.size(0) ] = tx_samples_flat_tensor
+				if plt : plot.flat_tensor_v0_1_18 ( rx_tensor , title = f"{script_filename} {timestamp_group} rx tensor aligned to tx symbols" , marker_idx = rx_samples_frame_start_idx )
+				# Teraz można bezpiecznie zapisać y_train, bo jest pewność, że jest poprawnie dopasowane do X_train, a także można usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
+				if wrt :
+					rx_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
+					rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
+					if del_files :
+						for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
+							if file_path.is_file () :
+								file_path.unlink ( missing_ok = True )
 			else :
 				print ( f"Nie znaleziono dopasowania ramki: {timestamp_group}" )
 			pass

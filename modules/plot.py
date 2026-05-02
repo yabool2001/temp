@@ -614,7 +614,7 @@ def flat_tensor_v0_1_18 (
     flat_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
     title : str = "Flat tensor TxSamples" ,
     marker_squares : bool = False ,
-    marker_peaks : Optional[ NDArray[ np.uint32 ] ] = None
+    marker_idx : Optional[ NDArray[ np.uint32 ] ] = None
 ) -> None :
     """
     Rysuje 1D flat tensor zapisany przez TxSamples_v0_1_18.save_frames2flat_tensor.
@@ -639,7 +639,7 @@ def flat_tensor_v0_1_18 (
         signal_complex = np.asarray ( tensor_np , dtype = np.complex64 ) ,
         title = f"{title} shape={tuple(tensor_np.shape)}" ,
         marker_squares = marker_squares ,
-        marker_peaks = marker_peaks
+        marker_peaks = marker_idx
     )
 
 

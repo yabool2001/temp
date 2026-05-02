@@ -44,4 +44,4 @@ timestamp = ops_os.milis_timestamp ()
 
 if plt :
     tx_samples.plot_complex_samples4pluto ( f"{script_filename} tx samples4pluto" , marker_peaks = True )
-    tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_peaks = True )
+    tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_idx = True )
