@@ -1021,10 +1021,11 @@ class TxFrame_v0_1_18 :
 
     def samples4pluto_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
         samples_flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
-        frame_start_first_idx = np.uint32 ( ( filters.SPAN * self.SPS // 2 ) - ( modulation.SPS//2 ) )
-        frame_end_idx = frame_start_first_idx + self.bpsk_symbols.size
-        symbols_repeated = np.repeat ( self.bpsk_symbols , self.SPS )[:frame_end_idx - frame_start_first_idx]
-        samples_flat_tensor [ frame_start_first_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex64 , copy = False )
+        frame_start_first_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
+        if frame_start_first_idx >= samples_flat_tensor.size or self.symbols_flat_tensor.size == 0 :
+            return samples_flat_tensor
+        frame_end_idx = min ( frame_start_first_idx + self.symbols_flat_tensor.size , samples_flat_tensor.size )
+        samples_flat_tensor[ frame_start_first_idx : frame_end_idx ] = self.symbols_flat_tensor[ : frame_end_idx - frame_start_first_idx ].astype ( np.complex64 , copy = False )
         return samples_flat_tensor
 
     def __repr__ ( self ) -> str :
