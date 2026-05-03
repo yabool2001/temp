@@ -19,9 +19,6 @@ plt = True
 wrt = False
 del_old = True
 
-tx_samples = []
-tx_samples_4pluto = np.array ( [] , dtype = np.complex128 )
-
 dir_name = "np.tensors"
 
 if del_old :
@@ -29,7 +26,7 @@ if del_old :
         if file_path.is_file () :
             file_path.unlink ( missing_ok = True )
 
-i = 1 # Liczba ramek
+i = 2 # Liczba ramek
 tx_samples = packet.TxSamples_v0_1_18 ()
 while i :
     payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
@@ -55,3 +52,8 @@ if plt :
     plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].bpsk_symbols_flat_tensor , title = "symbols flat tensors stworzony w RxFrames" )
     tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_idx = True )
     plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].samples_flat_tensor , title = "samples flat tensors stworzony w RxFrames" )
+
+tx_samples.create_samples4pluto_wo_muting_and_flat_tensor ()
+if plt :
+    plot.complex_waveform_v0_1_6 ( tx_samples.samples4pluto_wo_mute , f"{script_filename} {tx_samples.samples4pluto_wo_mute.size=}" , marker_squares = False )
+    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.samples_wo_mute_flat_tensor , title = f"RxFrames.create_samples4pluto_wo_muting_and_flat_tensor {tx_samples.samples_wo_mute_flat_tensor.size=}" )
