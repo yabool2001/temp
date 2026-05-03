@@ -971,7 +971,7 @@ class TxFrame_v0_1_18 :
     bits : NDArray[ np.uint8 ] = field ( init = False )
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
-    symbols_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
+    bpsk_symbols_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
     samples_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
 
@@ -983,7 +983,7 @@ class TxFrame_v0_1_18 :
         self.bytes = np.concatenate ( [ self.header_bytes , crc32_bytes , self.tx_packet.bytes ] )
         self.bits = self.create_frame_bits ()
         self.bpsk_symbols = self.create_frame_bpsk_symbols ()
-        self.symbols_flat_tensor = self.bpsk_symbols_2_flat_tensor ()
+        self.bpsk_symbols_flat_tensor = self.bpsk_symbols_2_flat_tensor ()
         self.samples4pluto = self.create_samples4pluto ()
         self.samples_flat_tensor = self.samples4pluto_2_flat_tensor ()
 
@@ -1007,13 +1007,13 @@ class TxFrame_v0_1_18 :
         Wstawienie -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
         oraz zastąpienie wartością 0+0j skrajnych symboli wszędzie tam gdzie jest przejście z -1+j0 na 1+j0 lub z 1+j0 na -1+j0, czyli tam gdzie jest zmiana symbolu.
         '''
-        symbols_flat_tensor = np.repeat ( self.bpsk_symbols , modulation.SPS ).astype ( np.complex64 , copy = False )
+        bpsk_symbols_flat_tensor = np.repeat ( self.bpsk_symbols , modulation.SPS ).astype ( np.complex64 , copy = False )
         transitions = np.where ( np.diff ( self.bpsk_symbols ) != 0 )[ 0 ]
         idx_last_old = ( transitions + 1 ) * modulation.SPS - 1  # Ostatnia próbka starego bitu
         idx_first_new = ( transitions + 1 ) * modulation.SPS     # Pierwsza próbka nowego bitu
-        symbols_flat_tensor[ idx_last_old ] = 0.0 + 0.0j
-        symbols_flat_tensor[ idx_first_new ] = 0.0 + 0.0j
-        return symbols_flat_tensor
+        bpsk_symbols_flat_tensor[ idx_last_old ] = 0.0 + 0.0j
+        bpsk_symbols_flat_tensor[ idx_first_new ] = 0.0 + 0.0j
+        return bpsk_symbols_flat_tensor
 
     def create_samples4pluto ( self ) -> NDArray[ np.complex128 ] :
         samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.bpsk_symbols ) ).astype ( np.complex128 , copy = False )
@@ -1022,22 +1022,24 @@ class TxFrame_v0_1_18 :
     def samples4pluto_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
         samples_flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
         frame_start_first_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
-        if frame_start_first_idx >= samples_flat_tensor.size or self.symbols_flat_tensor.size == 0 :
+        if frame_start_first_idx >= samples_flat_tensor.size or self.bpsk_symbols_flat_tensor.size == 0 :
             return samples_flat_tensor
-        frame_end_idx = min ( frame_start_first_idx + self.symbols_flat_tensor.size , samples_flat_tensor.size )
-        samples_flat_tensor[ frame_start_first_idx : frame_end_idx ] = self.symbols_flat_tensor[ : frame_end_idx - frame_start_first_idx ].astype ( np.complex64 , copy = False )
+        frame_end_idx = min ( frame_start_first_idx + self.bpsk_symbols_flat_tensor.size , samples_flat_tensor.size )
+        samples_flat_tensor[ frame_start_first_idx : frame_end_idx ] = self.bpsk_symbols_flat_tensor[ : frame_end_idx - frame_start_first_idx ].astype ( np.complex64 , copy = False )
         return samples_flat_tensor
 
     def __repr__ ( self ) -> str :
         return (
-            f"{self.bytes=}, {self.bytes.size=}, {self.bpsk_symbols.size=}" )
+            f"{self.bytes.size=}, {self.bpsk_symbols.size=}, {self.bpsk_symbols_flat_tensor.size=}, {self.samples4pluto.size=}, {self.samples_flat_tensor.size=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples_v0_1_18 :
     '''Są 2 tryby tworzenia tx_samples. 
-    1. Concatenując sample utworzone w tx_frames. Wtedy mamy ładne przerwy między ramkami,
+    1. samples_w_muting:
+        Concatenując sample utworzone w tx_frames. Wtedy mamy ładne przerwy między ramkami,
         bo każda ramka jest filtrowana osobno i pomiędzy ramkami są przerwy bez sygnału z symbolami.
-    2. Tworząc ciągłe samples w tx_samples na podstawie symboli bpsk z tx_frames.
+    2. samples_wo_muting:
+        Tworząc ciągłe samples w tx_samples na podstawie symboli bpsk z tx_frames.
         Wtedy nie ma przerw między ramkami, bo tworzymy ciągły strumień symboli bpsk z ramek i filtrujemy go jako całość.'''
     payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
     payload_bits : list | tuple | np.ndarray[ np.uint8 ] | None = None
@@ -1069,7 +1071,6 @@ class TxSamples_v0_1_18 :
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
         tx_packet = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_packet )
-        #tx_frame.create_samples4pluto ()
         return tx_frame
 
     def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
