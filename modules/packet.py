@@ -965,12 +965,15 @@ class TxFrame_v0_1_18 :
         
     # Pola uzupełnianie w __post_init__
     frame_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
+    frame_start_abs_first_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
     header_bytes : NDArray[ np.uint8 ] = field ( init = False )
     bytes : NDArray[ np.uint8 ] = field ( init = False )
     bits : NDArray[ np.uint8 ] = field ( init = False )
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    symbols_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
+    samples_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         sync_sequence_bits : NDArray[ np.uint8 ] = self.create_sync_sequence_bits ()
@@ -980,6 +983,9 @@ class TxFrame_v0_1_18 :
         self.bytes = np.concatenate ( [ self.header_bytes , crc32_bytes , self.tx_packet.bytes ] )
         self.bits = self.create_frame_bits ()
         self.bpsk_symbols = self.create_frame_bpsk_symbols ()
+        self.symbols_flat_tensor = self.bpsk_symbols_2_flat_tensor ()
+        self.samples4pluto = self.create_samples4pluto ()
+        self.samples_flat_tensor = self.samples4pluto_2_flat_tensor ()
 
     def create_sync_sequence_bits ( self ) -> NDArray[ np.uint8 ] :
         return BARKER13_BITS
@@ -996,9 +1002,30 @@ class TxFrame_v0_1_18 :
     def create_frame_bpsk_symbols ( self ) -> NDArray[ np.complex128 ] :
         return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.bits )
 
-    def create_samples4pluto ( self ) -> None :
+    def bpsk_symbols_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
+        '''Stworzenie flat_tensor reprezentujacego cały przebieg bpsk_symbols.
+        Wstawienie -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
+        oraz zastąpienie wartością 0+0j skrajnych symboli wszędzie tam gdzie jest przejście z -1+j0 na 1+j0 lub z 1+j0 na -1+j0, czyli tam gdzie jest zmiana symbolu.
+        '''
+        symbols_flat_tensor = np.repeat ( self.bpsk_symbols , modulation.SPS ).astype ( np.complex64 , copy = False )
+        transitions = np.where ( np.diff ( self.bpsk_symbols ) != 0 )[ 0 ]
+        idx_last_old = ( transitions + 1 ) * modulation.SPS - 1  # Ostatnia próbka starego bitu
+        idx_first_new = ( transitions + 1 ) * modulation.SPS     # Pierwsza próbka nowego bitu
+        symbols_flat_tensor[ idx_last_old ] = 0.0 + 0.0j
+        symbols_flat_tensor[ idx_first_new ] = 0.0 + 0.0j
+        return symbols_flat_tensor
+
+    def create_samples4pluto ( self ) -> NDArray[ np.complex128 ] :
         samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-        self.samples4pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
+        return sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
+
+    def samples4pluto_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
+        samples_flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
+        frame_start_first_idx = np.uint32 ( ( filters.SPAN * self.SPS // 2 ) - ( modulation.SPS//2 ) )
+        frame_end_idx = frame_start_first_idx + self.bpsk_symbols.size
+        symbols_repeated = np.repeat ( self.bpsk_symbols , self.SPS )[:frame_end_idx - frame_start_first_idx]
+        samples_flat_tensor [ frame_start_first_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex64 , copy = False )
+        return samples_flat_tensor
 
     def __repr__ ( self ) -> str :
         return (
@@ -1021,6 +1048,7 @@ class TxSamples_v0_1_18 :
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
     flat_tensor : NDArray[ np.complex128 ] = field ( init = False )
     frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
+
     SPS = modulation.SPS
 
     def __post_init__ ( self ) -> None :
@@ -1033,13 +1061,14 @@ class TxSamples_v0_1_18 :
     def create_empty_complex_samples ( self ) -> None :
         self.bytes = np.array ( [] , dtype = np.uint8 )
         self.bpsk_symbols = np.array ( [] , dtype = np.complex128 )
+        self.flat_tensor = np.array ( [] , dtype = np.complex128 )
         self.samples = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
-        self.flat_tensor = np.array ( [] , dtype = np.complex128 )
+
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
         tx_packet = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_packet )
-        tx_frame.create_samples4pluto ()
+        #tx_frame.create_samples4pluto ()
         return tx_frame
 
     def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
@@ -1060,6 +1089,7 @@ class TxSamples_v0_1_18 :
             raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
         tx_frame = self.create_tx_frame ( payload_bytes = payload_bytes_arr )
         tx_frame.frame_start_abs_idx = np.uint32 ( self.samples4pluto.size + ( filters.SPAN * self.SPS // 2 ) )
+        tx_frame.frame_start_abs_first_idx = np.uint32 ( self.samples4pluto.size + ( ( filters.SPAN * self.SPS // 2 ) - ( modulation.SPS//2 ) ) )
         self.frames.append ( tx_frame )
         self.add_bytes ( tx_frame.bytes ) # Nie powinno być payload_bytes_arr bo wtedy w bytes będzie tylko payload bez sync sequence i packet len.
         self.add_symbols ( tx_frame.bpsk_symbols )
@@ -1149,17 +1179,18 @@ class TxSamples_v0_1_18 :
 
     def plot_flat_tensor ( self , title : str = "tx flat tensor" , marker_idx : bool = False ) -> None :
         if marker_idx :
-            frames_start_abs_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title , marker_idx = frames_start_abs_idx )
+            frames_start_abs_first_idx = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title , marker_idx = frames_start_abs_first_idx )
         else :
             plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title )
 
     def samples4pluto_2_flat_tensor ( self ) -> None :
         '''Stworzenie flat_tensor w self.flat_tensor reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
-        oraz wstawienie 0+0j wszędzie tam gdzie w przebiegu samples4pluto nie ma symboli wynikajacych z ramek.'''
+        oraz wstawienie 0+0j wszędzie tam gdzie w przebiegu samples4pluto nie ma symboli wynikajacych z ramek. Dodatkowo wstawiam 0+j0 wszędzie tam gdzie jest przejście z -1+j0 na 1+j0 lub z 1+j0 na -1+j0, czyli tam gdzie jest zmiana symbolu.
+        '''
         self.flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
         for frame in self.frames :
-            frame_start_idx = np.uint32 ( frame.frame_start_abs_idx )
+            frame_start_idx = np.uint32 ( frame.frame_start_abs_first_idx )
             frame_end_idx = frame_start_idx + frame.bpsk_symbols.size * self.SPS
             if frame_start_idx >= self.flat_tensor.size or frame.bpsk_symbols.size == 0 :
                 continue

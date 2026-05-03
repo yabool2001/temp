@@ -1,0 +1,167 @@
+coś mi nie gra w mojej funkcji filtrującej symbole BPSK. Kod wywołujący filtrowanie symboli bpsk w skrypcie to:
+
+samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+
+A poniżej funkcje filtrujące :
+
+def apply_tx_rrc_filter_v0_1_6 ( symbols: NDArray[ np.complex128 ] , upsample: bool = True , ) -> NDArray[ np.complex128 ] :
+
+    """
+
+    Stosuje filtr Root Raised Cosine (RRC) z opcjonalnym upsamplingiem.
+
+    Zawsze zwraca sygnał zespolony (complex128).
+
+
+
+    Parametry:
+
+        symbols: Sygnał wejściowy (real lub complex).
+
+        beta: Współczynnik roll-off (0.0-1.0).
+
+        sps: Próbek na symbol (samples per symbol).
+
+        span: Długość filtra w symbolach.
+
+        upsample: Czy wykonać upsampling (True) czy tylko filtrować (False).
+
+
+
+    Zwraca:
+
+        Przefiltrowany sygnał zespolony (complex128).
+
+    """
+
+    rrc_taps = rrc_filter_v4 ( BETA , modulation.SPS , SPAN )
+
+    
+
+    if upsample:
+
+        filtered = upfirdn ( rrc_taps , symbols , modulation.SPS )  # Auto-upsampling + filtracja
+
+    else:
+
+        filtered = lfilter ( rrc_taps , 1.0 , symbols )     # Tylko filtracja
+
+    
+
+    return ( filtered + 0j ) .astype ( np.complex128 )
+
+@njit ( cache = True , fastmath = True )  # Kompilacja Just-In-Time z optymalizacjami
+
+def rrc_filter_v4 ( beta , sps , span ) :
+
+    """
+
+    DeepSeek -V3 R1 (Zoptymalizowana)
+
+    Filtruje dane wejściowe za pomocą filtra RRC.
+
+    """
+
+    N = span * sps
+
+    t = np.arange ( -N / 2 , N / 2 + 1 , dtype = np.float64 ) / sps
+
+
+
+    # Obsługa beta = 0 (filtr sinc)
+
+    if beta == 0 :
+
+        h = np.sinc ( t )
+
+        h = h / np.sqrt ( np.sum ( h ** 2 ) )  # Normalizacja
+
+        return h
+
+    
+
+    h = np.zeros_like ( t )
+
+
+
+    # Stałe pre-kalkulowane dla wydajności
+
+    beta_pi = np.pi * beta
+
+    inv_4beta = 1 / ( 4 * beta )
+
+    sqrt2 = np.sqrt ( 2 )
+
+    special_val = ( beta / sqrt2 ) * \
+
+                ( ( 1 + 2 / np.pi ) * np.sin ( np.pi / ( 4 * beta ) ) + 
+
+                ( 1 - 2 / np.pi ) * np.cos ( np.pi / ( 4 * beta ) ) )
+
+
+
+    # Obliczenia z maskami (zoptymalizowane)
+
+    for i in range ( len ( t ) ) :
+
+        ti = t[i]
+
+        if ti == 0.0 :
+
+            h[i] = 1.0 - beta + ( 4 * beta / np.pi )
+
+        elif np.abs ( np.abs ( ti ) - inv_4beta ) < 1e-10 :  # Tolerancja numeryczna
+
+            h[i] = special_val
+
+        else :
+
+            numerator = np.sin ( np.pi * ti * ( 1 - beta ) ) + \
+
+                      4 * beta * ti * np.cos ( np.pi * ti * ( 1 + beta ) )
+
+            denominator = np.pi * ti * ( 1 - ( 4 * beta * ti ) ** 2 )
+
+            h[i] = numerator / denominator
+
+
+
+    # Bezpieczna obsługa NaN/Inf i normalizacja
+
+    h[ np.isnan ( h ) | np.isinf ( h ) ] = 0
+
+    h = h / np.sqrt ( np.sum ( h ** 2 ) )  # Normalizacja
+
+
+
+    return h
+
+Efekt jest taki, że dla dwóch bitów "11", przy SPS=4 powstaje grzbiet, który nie ma 8 symboli powyżej 0.Zobacz załączony rysnek przebiegu i sprawdź kod i zarekomenduj zmiany.
+
+Dziękuję za analizę. Zobacz jeszcze proszę i oceń filtrowanie sampli po stronie rx. Komenda wywyołująca w skrypcie:
+self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples )
+A funkcja jest tutaj:
+def apply_rrc_rx_convolve_v0_1_18 ( rx_samples : NDArray [ np.complex128 ] ) -> NDArray[ np.complex128 ] :
+    """
+    Filtruje odebrane próbki filtrem RRC z wykorzystaniem splotu (convolution).
+    Splot automatycznie omija problemy ze stabilnością układów FIR 
+    oraz perfekcyjnie niweluje opóźnienie grupowe.
+
+    Parametry:
+        rx_samples: Odebrane próbki (complex128) z SDR.
+
+    Zwraca:
+        Przefiltrowane próbki (complex128) z wycentrowanymi pikami i zachowaną długością.
+    """
+    # 1. Pobieramy tapy z Twojej zoptymalizowanej funkcji rrc_filter_v4
+    rrc_taps = rrc_filter_v4 ( BETA , SPS , SPAN )
+    
+    # 2. Wykonujemy splot (Convolution) wektorów
+    # Parametr mode='same' realizuje dokładnie to, co wcześniej wyliczałeś ręcznie:
+    # nakłada filtr na sygnał, a następnie automatycznie i SYMETRYCZNIE odcina opóźnienie 
+    # z obu brzegów. Dzięki temu tablica wyjściowa ma DOKŁADNIE TEN SAM ROZMIAR co 
+    # rx_samples (równo 1228800 elementów), a piki pokryją się co do ułamka sekundy!
+    
+    aligned_samples = np.convolve ( rx_samples , rrc_taps , mode = 'same' )
+
+    return aligned_samples.astype ( np.complex128 )

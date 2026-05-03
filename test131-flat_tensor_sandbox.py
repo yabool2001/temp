@@ -4,7 +4,7 @@ Dane będą odczytywane w celu weryfikacji poprawności i gotowosci do wykorzyst
 '''
 
 import socket, numpy as np , os , sys , time as t , tomllib
-from modules import ops_os, packet , payload_test_data as ptd , sdr
+from modules import filters, modulation, ops_os, packet , payload_test_data as ptd , plot
 from pathlib import Path
 
 # Wczytaj plik TOML z konfiguracją
@@ -40,8 +40,18 @@ tx_samples.samples4pluto_2_flat_tensor ()
 print ( f"{tx_samples.samples4pluto.size=}" )
 print ( f"{tx_samples.frames=}" )
 
+ # Środek ramki
+frame_middle = filters.SPAN * modulation.SPS // 2
+print (f"{frame_middle=}")
+
+# Początek ramki
+frame_beggining = ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS//2 )
+print (f"{frame_beggining=}")
+
 timestamp = ops_os.milis_timestamp ()
 
 if plt :
     tx_samples.plot_complex_samples4pluto ( f"{script_filename} tx samples4pluto" , marker_peaks = True )
+    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].symbols_flat_tensor , title = "symbols flat tensors stworzony w RxFrames" )
     tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_idx = True )
+    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].samples_flat_tensor , title = "samples flat tensors stworzony w RxFrames" )

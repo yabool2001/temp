@@ -112,7 +112,14 @@ def rrc_filter_v4 ( beta , sps , span ) :
     Filtruje dane wejściowe za pomocą filtra RRC.
     """
     N = span * sps
-    t = np.arange ( -N / 2 , N / 2 + 1 , dtype = np.float64 ) / sps
+    
+    #t = np.arange ( -N / 2 , N / 2 + 1 , dtype = np.float64 ) / sps
+    '''Funkcja np.arange dla liczb float (np. wyliczanych z dzielenia -N / 2) bywa zdradliwa
+    ze względu na błędy precyzji zaokrągleń (floating-point precision). Dlatego zakomentowałem
+    ww. linię, bo mogła to losowo sprawić, że wygeneruje się tablica z 1 elementem więcej lub mniej niż bym chciał.
+    Bezpieczniej oprzeć się o dzielenie całkowite:'''
+    N_half = N // 2
+    t = np.arange ( -N_half , N_half + 1 , dtype = np.float64 ) / sps
 
     # Obsługa beta = 0 (filtr sinc)
     if beta == 0 :
