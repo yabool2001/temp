@@ -51,7 +51,7 @@ if plt :
     tx_samples.plot_complex_samples4pluto ( f"{script_filename} tx samples4pluto" , marker_peaks = True )
     plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].bpsk_symbols_flat_tensor , title = "symbols flat tensors stworzony w RxFrames" )
     tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_idx = True )
-    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].samples_flat_tensor , title = "samples flat tensors stworzony w RxFrames" )
+    #plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].samples_flat_tensor , title = "samples flat tensors stworzony w RxFrames" )
 
 tx_samples.create_samples4pluto_wo_muting_and_flat_tensor ()
 if plt :

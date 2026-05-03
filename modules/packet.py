@@ -973,7 +973,6 @@ class TxFrame_v0_1_18 :
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bpsk_symbols_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
     samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
-    samples_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         sync_sequence_bits : NDArray[ np.uint8 ] = self.create_sync_sequence_bits ()
@@ -985,7 +984,6 @@ class TxFrame_v0_1_18 :
         self.bpsk_symbols = self.create_frame_bpsk_symbols ()
         self.bpsk_symbols_flat_tensor = self.bpsk_symbols_2_flat_tensor ()
         self.samples4pluto = self.create_samples4pluto ()
-        self.samples_flat_tensor = self.samples4pluto_2_flat_tensor ()
 
     def create_sync_sequence_bits ( self ) -> NDArray[ np.uint8 ] :
         return BARKER13_BITS
@@ -1005,32 +1003,17 @@ class TxFrame_v0_1_18 :
     def bpsk_symbols_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
         '''Stworzenie flat_tensor reprezentujacego cały przebieg bpsk_symbols.
         Wstawienie -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
-        oraz zastąpienie wartością 0+0j skrajnych symboli wszędzie tam gdzie jest przejście z -1+j0 na 1+j0 lub z 1+j0 na -1+j0, czyli tam gdzie jest zmiana symbolu.
         '''
         bpsk_symbols_flat_tensor = np.repeat ( self.bpsk_symbols , modulation.SPS ).astype ( np.complex64 , copy = False )
-        transitions = np.where ( np.diff ( self.bpsk_symbols ) != 0 )[ 0 ]
-        idx_last_old = ( transitions + 1 ) * modulation.SPS - 1  # Ostatnia próbka starego bitu
-        idx_first_new = ( transitions + 1 ) * modulation.SPS     # Pierwsza próbka nowego bitu
-        bpsk_symbols_flat_tensor[ idx_last_old ] = 0.0 + 0.0j
-        bpsk_symbols_flat_tensor[ idx_first_new ] = 0.0 + 0.0j
         return bpsk_symbols_flat_tensor
 
     def create_samples4pluto ( self ) -> NDArray[ np.complex128 ] :
         samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.bpsk_symbols ) ).astype ( np.complex128 , copy = False )
         return sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
 
-    def samples4pluto_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
-        samples_flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
-        frame_start_first_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
-        if frame_start_first_idx >= samples_flat_tensor.size or self.bpsk_symbols_flat_tensor.size == 0 :
-            return samples_flat_tensor
-        frame_end_idx = min ( frame_start_first_idx + self.bpsk_symbols_flat_tensor.size , samples_flat_tensor.size )
-        samples_flat_tensor[ frame_start_first_idx : frame_end_idx ] = self.bpsk_symbols_flat_tensor[ : frame_end_idx - frame_start_first_idx ].astype ( np.complex64 , copy = False )
-        return samples_flat_tensor
-
     def __repr__ ( self ) -> str :
         return (
-            f"{self.bytes.size=}, {self.bpsk_symbols.size=}, {self.bpsk_symbols_flat_tensor.size=}, {self.samples4pluto.size=}, {self.samples_flat_tensor.size=}" )
+            f"{self.bytes.size=}, {self.bpsk_symbols.size=}, {self.bpsk_symbols_flat_tensor.size=}, {self.samples4pluto.size=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples_v0_1_18 :
@@ -1123,25 +1106,26 @@ class TxSamples_v0_1_18 :
         self.add_frame ( payload_bytes = payload_bytes , payload_bits = payload_bits )
 
     def create_samples4pluto_wo_muting_and_flat_tensor ( self ) -> None :
-        #self.create_empty_complex_samples ()
+
         self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
         self.samples_wo_mute_flat_tensor = np.array ( [] , dtype = np.complex64 )
-        if not self.frames :
-            return
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
-        symbols_flat_tensor : NDArray [ np.complex64 ] = np.concatenate ( [ frame.bpsk_symbols_flat_tensor for frame in self.frames ] ).astype ( np.complex64 , copy = False )
         if frames_bpsk_symbols.size > 0 :
 
             samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
             self.samples4pluto_wo_mute = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
 
             self.samples_wo_mute_flat_tensor = np.zeros ( self.samples4pluto_wo_mute.size , dtype = np.complex64 )
-            frame_start_first_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
-            if frame_start_first_idx >= self.samples_wo_mute_flat_tensor.size or symbols_flat_tensor.size == 0 :
+            first_frame_first_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
+            active_samples_len = frames_bpsk_symbols.size * modulation.SPS
+            if first_frame_first_idx >= self.samples_wo_mute_flat_tensor.size or active_samples_len == 0 :
                 return
-            frame_end_idx = min ( frame_start_first_idx + symbols_flat_tensor.size , self.samples_wo_mute_flat_tensor.size )
-            self.samples_wo_mute_flat_tensor[ frame_start_first_idx : frame_end_idx ] = symbols_flat_tensor[ : frame_end_idx - frame_start_first_idx ]
-        
+            last_frame_last_idx = min ( first_frame_first_idx + active_samples_len , self.samples_wo_mute_flat_tensor.size )
+            active_samples = self.samples4pluto_wo_mute.real[ first_frame_first_idx : last_frame_last_idx ]
+            active_symbols = np.where ( active_samples < 0.0 , -1.0 + 0.0j , 1.0 + 0.0j ).astype ( np.complex64 , copy = False )
+            self.samples_wo_mute_flat_tensor[ first_frame_first_idx : last_frame_last_idx ] = active_symbols
+
+
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()
