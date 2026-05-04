@@ -26,13 +26,14 @@ if del_old :
         if file_path.is_file () :
             file_path.unlink ( missing_ok = True )
 
-i = 1 # Liczba ramek
+liczba_ramek = 2
 tx_samples = packet.TxSamples_v0_1_18 ()
-while i :
-    payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
+while liczba_ramek :
+    payload_bytes = ptd.PAYLOAD_8BYTES_DEC_15
     tx_samples.add_frame ( payload_bytes = payload_bytes )
-    i -= 1
+    liczba_ramek -= 1
 tx_samples.samples4pluto_2_flat_tensor ()
+tx_samples.create_samples4pluto_wo_muting_and_flat_tensor ()
 
 print ( f"{tx_samples.samples4pluto.size=}" )
 print ( f"{tx_samples.frames=}" )
@@ -53,4 +54,4 @@ if plt :
     plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].bpsk_symbols_flat_tensor , title = f"symbols flat tensors stworzony w TxFrames {tx_samples.frames[0].bpsk_symbols_flat_tensor.size=}" )
     tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_idx = True )
     #plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].samples_flat_tensor , title = "samples flat tensors stworzony w RxFrames" )
-    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.samples_wo_mute_flat_tensor , title = f"RxFrames.create_samples4pluto_wo_muting_and_flat_tensor {tx_samples.samples_wo_mute_flat_tensor.size=}" )
+    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.samples_flat_tensor_wo_mute , title = f"RxFrames.create_samples4pluto_wo_muting_and_flat_tensor {tx_samples.samples_flat_tensor_wo_mute.size=}" )

@@ -1036,7 +1036,7 @@ class TxSamples_v0_1_18 :
     frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
 
     samples4pluto_wo_mute : NDArray[ np.complex128 ] = field ( init = False )
-    samples_wo_mute_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )    
+    samples_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False )    
 
     SPS = modulation.SPS
 
@@ -1054,7 +1054,7 @@ class TxSamples_v0_1_18 :
         self.samples = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
-        self.samples_wo_mute_flat_tensor = np.array ( [] , dtype = np.complex64 )
+        self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 )
 
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
         tx_packet = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
@@ -1108,14 +1108,14 @@ class TxSamples_v0_1_18 :
     def create_samples4pluto_wo_muting_and_flat_tensor ( self ) -> None :
 
         self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
-        self.samples_wo_mute_flat_tensor = np.array ( [] , dtype = np.complex64 )
+        self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 )
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
 
             samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
             self.samples4pluto_wo_mute = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
 
-            self.samples_wo_mute_flat_tensor = np.zeros ( self.samples4pluto_wo_mute.size , dtype = np.complex64 )
+            self.samples_flat_tensor_wo_mute = np.zeros ( self.samples4pluto_wo_mute.size , dtype = np.complex64 )
             first_frame_start_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
             last_frame_end_idx = first_frame_start_idx + frames_bpsk_symbols.size * modulation.SPS
             active_samples = self.samples4pluto_wo_mute.real[ first_frame_start_idx : last_frame_end_idx ]
@@ -1126,9 +1126,7 @@ class TxSamples_v0_1_18 :
             purystycznego maksimum (czyli dosłownie zera zbędnych alokacji i konwersji pamięciowych na procesorze), możesz przekazać mniejszy typ rzutowany bezpośrednio
             do wnętrza funkcji np.where. Wtedy dodawanie metody .astype(...) na końcu nie będzie w ogóle potrzebne.'''
             active_symbols = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
-            self.samples_wo_mute_flat_tensor[ first_frame_start_idx : last_frame_end_idx ] = active_symbols
-
-
+            self.samples_flat_tensor_wo_mute[ first_frame_start_idx : last_frame_end_idx ] = active_symbols
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()
