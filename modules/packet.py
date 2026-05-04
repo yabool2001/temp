@@ -1116,14 +1116,17 @@ class TxSamples_v0_1_18 :
             self.samples4pluto_wo_mute = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
 
             self.samples_wo_mute_flat_tensor = np.zeros ( self.samples4pluto_wo_mute.size , dtype = np.complex64 )
-            first_frame_first_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
-            active_samples_len = frames_bpsk_symbols.size * modulation.SPS
-            if first_frame_first_idx >= self.samples_wo_mute_flat_tensor.size or active_samples_len == 0 :
-                return
-            last_frame_last_idx = min ( first_frame_first_idx + active_samples_len , self.samples_wo_mute_flat_tensor.size )
-            active_samples = self.samples4pluto_wo_mute.real[ first_frame_first_idx : last_frame_last_idx ]
-            active_symbols = np.where ( active_samples < 0.0 , -1.0 + 0.0j , 1.0 + 0.0j ).astype ( np.complex64 , copy = False )
-            self.samples_wo_mute_flat_tensor[ first_frame_first_idx : last_frame_last_idx ] = active_symbols
+            first_frame_start_idx = np.uint32 ( ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS // 2 ) )
+            last_frame_end_idx = first_frame_start_idx + frames_bpsk_symbols.size * modulation.SPS
+            active_samples = self.samples4pluto_wo_mute.real[ first_frame_start_idx : last_frame_end_idx ]
+            #active_symbols = np.where ( active_samples < 0.0 , -1.0 + 0.0j , 1.0 + 0.0j ).astype ( np.complex64 , copy = False )
+            '''Ponieważ język Python domyślnie traktuje zadeklarowane z klawiatury wartości -1.0+0.0j jako 128-bitowe, funkcja np.where pod spodem uformuje tymczasową tablicę
+            complex128. Kiedy następnie nałożysz .astype(np.complex64), biblioteka NumPy, by uniknąć uszkodzeń pamięci, i tak stworzy nową, pomniejszoną w bajtach tablicę w tle,
+            całkowicie ignorując dopisek copy = False (zgodnie zresztą ze swoją oficjalną dokumentacją dla zmiany rozmiaru bloku pamięci).Aby zoptymalizować to do absolutnego,
+            purystycznego maksimum (czyli dosłownie zera zbędnych alokacji i konwersji pamięciowych na procesorze), możesz przekazać mniejszy typ rzutowany bezpośrednio
+            do wnętrza funkcji np.where. Wtedy dodawanie metody .astype(...) na końcu nie będzie w ogóle potrzebne.'''
+            active_symbols = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
+            self.samples_wo_mute_flat_tensor[ first_frame_start_idx : last_frame_end_idx ] = active_symbols
 
 
 
