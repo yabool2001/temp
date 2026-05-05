@@ -4,4 +4,4 @@
 *.pyc
 *.nbc
 *.nbi
-.vscode/settings.json
+*.json
