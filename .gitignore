@@ -1,6 +1,7 @@
 *.npy
 *.pt
 *.csv
+__pycache__/
 *.pyc
 *.nbc
 *.nbi

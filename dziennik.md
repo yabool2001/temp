@@ -1,10 +1,13 @@
 # Dziennik projektu
 
+## 2026.05.05
+
+*   **`np.tensors_009`** zawiera 8 oryginalnych sampli wygenerowane przez `test132-tx_large_data.py` i zapisanych przez `test132-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z defult z vscode bez argumentów, a rx odbierał w trybie `slow_attack`.
+
+
 ## 2026.04.28
 
 W katalogach może być czasami 7 lub 8 plików z samplami per ramka
-
-*   **`np.tensors_009`** zawiera 20 oryginalnych sampli wygenerowane przez `test126-tx_large_data.py` i zapisanych przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = -6.0`, a rx odbierał w trybie `slow_attack`.
 
 *   **`np.tensors_008`** zawiera ~30 oryginalnych sampli wygenerowane przez `test126-tx_large_data.py` i zapisanych przez `test126-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w oddzielnych pokojach. tx transmitował z `gain = -5.0`, a rx odbierał w trybie `slow_attack`.
 

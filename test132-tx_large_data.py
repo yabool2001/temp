@@ -53,7 +53,7 @@ SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples_v0_1_18 , timestamp : str ) -> None :
     tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_symbols_flat_tensor" , dir_name = dir_name )
     #tx_samples.save_samples_2_flat_tensor ( filename = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name ) # wersja z rozbiegówką i wygaszeniem (41 sampli) jako  0+j0
-    tx_samples.save_samples_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
+    tx_samples.save_symbols_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
     tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
     if debug : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp=}..." )
 

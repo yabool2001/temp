@@ -15,8 +15,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False
-wrt : bool = True
+plt : bool = True
+wrt : bool = False
 dbg : bool = True
 del_files : bool = False
 

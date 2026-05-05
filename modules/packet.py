@@ -535,7 +535,7 @@ class RxFrame_v0_1_18 :
                     crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                     crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                        self.frame_start_abs_first_idx ()
+                        #self.frame_start_abs_first_idx ()
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
                         self.frame_start_abs_idx = self.sync_sequence_peak_abs_idx + sync_sequence_start_idx
@@ -582,7 +582,7 @@ class RxFrame_v0_1_18 :
                 sync_sequence_symbols = samples_component [ sync_sequence_start_idx : sync_sequence_end_idx : self.SPS ]
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                    print ( f"{sync_sequence_start_idx=} , {offset=} sync_sequence ok" )
+                    #print ( f"{sync_sequence_start_idx=} , {offset=} sync_sequence ok" )
                     has_sync_sequence = True
                     packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.SPS ]
                     packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
@@ -595,7 +595,7 @@ class RxFrame_v0_1_18 :
                         crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                             frame_start_abs_idxs.append ( sync_sequence_start_idx )
-                            print ( f"{sync_sequence_start_idx=} , {offset=} crc32 ok" )
+                            #print ( f"{sync_sequence_start_idx=} , {offset=} crc32 ok" )
         
         for offset in range ( 1 , self.SPS ) :
             sync_sequence_start_idx = ( self.sync_sequence_peak_abs_idx + self.SPAN * self.SPS // 2 ) + offset
@@ -610,7 +610,7 @@ class RxFrame_v0_1_18 :
                 sync_sequence_symbols = samples_component [ sync_sequence_start_idx : sync_sequence_end_idx : self.SPS ]
                 sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
                 if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                    print ( f"{sync_sequence_start_idx=} , {offset=} sync_sequence ok" )
+                    #print ( f"{sync_sequence_start_idx=} , {offset=} sync_sequence ok" )
                     has_sync_sequence = True
                     packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.SPS ]
                     packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
@@ -623,7 +623,7 @@ class RxFrame_v0_1_18 :
                         crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
                         if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                             frame_start_abs_idxs.append ( sync_sequence_start_idx )
-                            print ( f"{sync_sequence_start_idx=} , {offset=} crc32 ok" )
+                            #print ( f"{sync_sequence_start_idx=} , {offset=} crc32 ok" )
         return sync_sequence_start_idx
 
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
@@ -744,7 +744,7 @@ class RxSamples_v0_1_18 :
         if not self.has_leftovers :
             self.leftovers_start_idx = self.samples_corrected_len - SYNC_SEQUENCE_LEN_SAMPLES - self.SPAN * self.SPS // 2
         self.clip_samples_leftovers ()
-        self.y_train_tensor = self.y_train_tensor_from_frames ()
+        #self.y_train_tensor = self.y_train_tensor_from_frames () # To musi zostać zmienione i zastępowane plikiem z tx
 
     def clip_samples_for_training ( self ) -> None :
         '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
@@ -1269,10 +1269,10 @@ class TxSamples_v0_1_18 :
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         torch.save ( torch.from_numpy ( frame_symbols ) , tensor_filename )
 
-    def save_samples_flat_tensor_wo_mute_2_pt ( self , file_name : str , dir_name : str ) -> None :
+    def save_symbols_flat_tensor_wo_mute_2_pt ( self , file_name : str , dir_name : str ) -> None :
         tensor_filename = f"{dir_name}/{file_name}.pt"
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
-        torch.save ( self.samples_flat_tensor_wo_mute , tensor_filename )
+        torch.save ( self.symbols_flat_tensor_wo_mute , tensor_filename )
 
     def save_complex_samples4pluto_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = True ) -> None :
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
