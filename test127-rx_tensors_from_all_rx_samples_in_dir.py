@@ -18,7 +18,7 @@ clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do tren
 plt : bool = False
 wrt : bool = True
 dbg : bool = True
-del_files : bool = True
+del_files : bool = False
 
 
 samples_dir = Path ( "np.tensors" )
