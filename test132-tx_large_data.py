@@ -33,7 +33,7 @@ dir_name = "np.tensors"
 
 debug = True
 plt = False
-wrt = False
+wrt = True
 del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
@@ -74,7 +74,7 @@ if del_old :
         if file_path.is_file () :
             file_path.unlink ( missing_ok = True )
 
-tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) #usuunąć
+#tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) #usuunąć
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 if debug : print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_samples = None
