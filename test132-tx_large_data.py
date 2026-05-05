@@ -103,7 +103,7 @@ try :
     while True :
 
         payload_udp = b""
-        payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 ) # Odbieramy dane z bufora UDP, oczekując na komendy od skryptu test125-save_series_raw_complex_samples.py
+        payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 ) # Odbieramy dane z bufora UDP, oczekując na komendy od skryptu test132-rx_large_data.py
         if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
 
         if payload_udp == ASCII_CAN : # ESCAPE - polecenie zamknięcia skryptu
