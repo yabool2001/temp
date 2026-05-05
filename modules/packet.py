@@ -1037,7 +1037,8 @@ class TxSamples_v0_1_18 :
 
     samples4pluto_wo_mute : NDArray[ np.complex128 ] = field ( init = False )
     samples_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False )
-    symbols_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False ) 
+    symbols_flat_tensor_wo_mute : torch.Tensor = field ( init = False )
+    #symbols_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False )
 
     SPS = modulation.SPS
 
@@ -1056,6 +1057,7 @@ class TxSamples_v0_1_18 :
         self.samples4pluto = np.array ( [] , dtype = np.complex128 )
         self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
         self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 )
+        self.symbols_flat_tensor_wo_mute = torch.empty ( 0 , dtype = torch.complex64 )
 
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
         tx_frame_payload = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
@@ -1111,7 +1113,7 @@ class TxSamples_v0_1_18 :
 
         self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
         self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 ) # razem z rozbiegówką i wygaszeniem filtra, czyli z 0+j0 na początku i na końcu, ale bez przerw między ramkami, bo tworzymy ciągły strumień symboli bpsk z ramek i filtrujemy go jako całość.
-        self.symbols_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 ) # to co w self.samples_flat_tensor_wo_mute tylko bez 0+j0
+        self.symbols_flat_tensor_wo_mute = torch.empty ( 0 , dtype = torch.complex64 ) # to co w self.samples_flat_tensor_wo_mute tylko bez 0+j0
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
 
@@ -1130,7 +1132,7 @@ class TxSamples_v0_1_18 :
             do wnętrza funkcji np.where. Wtedy dodawanie metody .astype(...) na końcu nie będzie w ogóle potrzebne.'''
             active_symbols = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
             self.samples_flat_tensor_wo_mute[ first_frame_start_idx : last_frame_end_idx ] = active_symbols
-            self.symbols_flat_tensor_wo_mute = active_symbols
+            self.symbols_flat_tensor_wo_mute =  torch.from_numpy ( active_symbols )
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()
@@ -1266,6 +1268,11 @@ class TxSamples_v0_1_18 :
             frame_symbols [ frame_start_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex64 , copy = False )
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         torch.save ( torch.from_numpy ( frame_symbols ) , tensor_filename )
+
+    def save_samples_flat_tensor_wo_mute_2_pt ( self , file_name : str , dir_name : str ) -> None :
+        tensor_filename = f"{dir_name}/{file_name}.pt"
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        torch.save ( self.samples_flat_tensor_wo_mute , tensor_filename )
 
     def save_complex_samples4pluto_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = True ) -> None :
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
