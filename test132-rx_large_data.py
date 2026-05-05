@@ -44,9 +44,10 @@ Nof_ATTEMPTS = int ( 20 )
 Nof_WRTS = int ( 8 )
 if fedora_tx :
     UDP_DEST_IP = "192.168.1.60" # fedora
+    UDP_DEST_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
 else :
     UDP_DEST_IP = "192.168.1.50" # ubuntu
-    UDP_DEST_IP_V6 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
 ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
@@ -84,12 +85,11 @@ rx_pluto = packet.RxPluto_v0_1_17 ( sn = sdr.PLUTO_RX_SN )
 rx_samples = packet.RxSamples_v0_1_18 ()
 if debug : print ( f"\n{script_filename=} {rx_samples.samples.size=}" )
 
-udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-#udp_sock.setblocking ( False )
+udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 
-udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT ) )
 if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
 
 payload_udp = b""
 try :
@@ -102,7 +102,7 @@ try :
         
         if len ( payload_udp ) >= 13 and int ( payload_udp ) > timestamp_min and int ( payload_udp ) < timestamp_max : # Received a valid timestamp to name the file with received samples
             if debug : print ( f"Valid timestamp received: {payload_udp=}" )
-            udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
+            udp_sock.sendto ( ASCII_ENQ , ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT ) )
             #rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx ) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
             #if j < Nof_ATTEMPTS :
             #    rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx ) # Po pierwszym odbiorze próbek trzeba bardziej czyścić bufor
@@ -117,8 +117,8 @@ try :
         elif payload_udp == ASCII_EOT : # Received END OF TRANSMISSION
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             if j > 0 :
-                udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
-                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] } Sent ASCII_FF to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+                udp_sock.sendto ( ASCII_FF , ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT ) )
+                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] } Sent ASCII_FF to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
         
         t.sleep ( 0.1 )  # odciążenie CPU
@@ -126,7 +126,7 @@ try :
         print ( f"Waiting for next transmission... {j=}" )
 
 finally :
-    udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP , UDP_TARGET_PORT ) )
-    if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP }:{ UDP_TARGET_PORT }" )
+    udp_sock.sendto ( ASCII_CAN , ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT ) )
+    if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
     udp_sock.close ()
     exit ( 0 )
