@@ -79,10 +79,10 @@ tx_samples = None
 timestamp = ""
 
 # Setup UDP Socket
-udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-sock_v6 = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
+#udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
+#sock_v6 = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 # Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
-local_ip = "0.0.0.0" # Domyślny fallback
+#local_ip = "0.0.0.0" # Domyślny fallback
 #try:
     # Tworzymy tymczasowy socket żeby sprawdzić routing do sieci 192.168.1.x
     # Łączymy się z przykładowym adresem (np. bramą) w tej sieci aby system wskazał właściwy interfejs
