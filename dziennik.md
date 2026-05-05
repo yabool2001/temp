@@ -2,8 +2,9 @@
 
 ## 2026.05.05
 
-*   **`np.tensors_009`** zawiera 8 oryginalnych sampli wygenerowane przez `test132-tx_large_data.py` i zapisanych przez `test132-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z defult z vscode bez argumentów, a rx odbierał w trybie `slow_attack`.
+*   **`np.tensors_010`** zawiera 2 oryginalne sample wygenerowane przez `test128-tx_simple_frame.py` i zapisanych przez `test128-rx_simple_frame.py`. Sample były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z defult z vscode bez argumentów, a rx odbierał w trybie `slow_attack`.
 
+*   **`np.tensors_009`** zawiera 8 oryginalnych sampli wygenerowane przez `test132-tx_large_data.py` i zapisanych przez `test132-rx_large_data.py`. Sample były transmitowane przez radia umieszczone w tym samym pokoju. tx transmitował z defult z vscode bez argumentów, a rx odbierał w trybie `slow_attack`.
 
 ## 2026.04.28
 

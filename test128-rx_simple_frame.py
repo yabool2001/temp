@@ -19,12 +19,12 @@ import tomllib
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 debug = True
-plt = True
-wrt = False
+plt = False
+wrt = True
 del_old = True
 
 Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 1 )
+Nof_WRTS = int ( 2 )
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 UDP_DEST_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
 INTERFACE = 'wlp1s0'
