@@ -37,8 +37,11 @@ wrt = False
 del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
-#UDP_DEST_IP_MY_AP = "192.168.1.50" # ubuntu
+LOCAL_IP_v6_ADDR = "fe80::339e:6cea:f65b:ee40" 
 UDP_DEST_IP_V6 = "fe80::508d:aae1:d391:439a" # fedora Pro9
+UDP_PORT = 10001
+INTERFACE = 'wlp1s0'
+
 UDP_PORT = 10001
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
@@ -80,21 +83,20 @@ udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
 sock_v6 = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 # Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
 local_ip = "0.0.0.0" # Domyślny fallback
-try:
+#try:
     # Tworzymy tymczasowy socket żeby sprawdzić routing do sieci 192.168.1.x
     # Łączymy się z przykładowym adresem (np. bramą) w tej sieci aby system wskazał właściwy interfejs
-    temp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-    temp_sock.connect ( ( "192.168.1.1" , 1 ) )
-    local_ip = temp_sock.getsockname ()[0]
-    temp_sock.close()
-except Exception:
-    pass
+#    temp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
+#    temp_sock.connect ( ( "192.168.1.1" , 1 ) )
+#    local_ip = temp_sock.getsockname ()[0]
+#    temp_sock.close()
+#except Exception:
+#    pass
 
-print(f"Binding UDP to {local_ip}:10001")
-udp_sock.bind ( ( local_ip , 10001 ) )
-#udp_sock.setblocking ( False )
-print ( "Czekam na komendy na porcie UDP 10001" )
-udp_sender_addr = ( UDP_DEST_IP , UDP_PORT )
+sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
+scope_id = socket.if_nametoindex ( INTERFACE )
+# Bindowanie gniazda do naszego adresu IPv6 i portu 10001
+sock.bind ( (LOCAL_IP_v6_ADDR , UDP_PORT , 0 , scope_id ) )
 
 payload_udp = b""
 try :
