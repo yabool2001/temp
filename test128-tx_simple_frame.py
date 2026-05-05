@@ -112,7 +112,7 @@ try :
             if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             if wrt :
                 tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_symbols_flat_tensor" , dir_name = dir_name )
-                tx_samples.save_symbols_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp}_tx_samples_flat_tensor_" , dir_name = dir_name )
+                tx_samples.save_symbols_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name )
                 tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
                 if debug : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp=}..." )
         
