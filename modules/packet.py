@@ -1036,7 +1036,8 @@ class TxSamples_v0_1_18 :
     frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
 
     samples4pluto_wo_mute : NDArray[ np.complex128 ] = field ( init = False )
-    samples_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False )    
+    samples_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False )
+    symbols_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False ) 
 
     SPS = modulation.SPS
 
@@ -1109,7 +1110,8 @@ class TxSamples_v0_1_18 :
     def create_samples4pluto_wo_muting_and_flat_tensor ( self ) -> None :
 
         self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
-        self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 )
+        self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 ) # razem z rozbiegówką i wygaszeniem filtra, czyli z 0+j0 na początku i na końcu, ale bez przerw między ramkami, bo tworzymy ciągły strumień symboli bpsk z ramek i filtrujemy go jako całość.
+        self.symbols_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 ) # to co w self.samples_flat_tensor_wo_mute tylko bez 0+j0
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
 
@@ -1128,6 +1130,7 @@ class TxSamples_v0_1_18 :
             do wnętrza funkcji np.where. Wtedy dodawanie metody .astype(...) na końcu nie będzie w ogóle potrzebne.'''
             active_symbols = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
             self.samples_flat_tensor_wo_mute[ first_frame_start_idx : last_frame_end_idx ] = active_symbols
+            self.symbols_flat_tensor_wo_mute = active_symbols
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()
@@ -1211,6 +1214,13 @@ class TxSamples_v0_1_18 :
             plot.flat_tensor_v0_1_18 ( flat_tensor = self.samples_flat_tensor_wo_mute , title = f"{title} {self.samples_flat_tensor_wo_mute.size=}" , marker_idx = idx )
         else :
             plot.flat_tensor_v0_1_18 ( flat_tensor = self.samples_flat_tensor_wo_mute , title = f"{title} {self.samples_flat_tensor_wo_mute.size=}" )
+
+    def plot_symbols_flat_tensor_wo_mute ( self , title : str = "" , mark_frames_first_sample : bool = False ) -> None :
+        if mark_frames_first_sample :
+            idx : NDArray [ np.uint32 ] = np.array ( [ ( frame.frame_start_abs_first_idx - ( filters.SPAN * self.SPS // 2 ) + ( modulation.SPS//2 ) ) for frame in self.frames ] , dtype = np.uint32 )
+            plot.flat_tensor_v0_1_18 ( flat_tensor = self.symbols_flat_tensor_wo_mute , title = f"{title} {self.symbols_flat_tensor_wo_mute.size=}" , marker_idx = idx )
+        else :
+            plot.flat_tensor_v0_1_18 ( flat_tensor = self.symbols_flat_tensor_wo_mute , title = f"{title} {self.symbols_flat_tensor_wo_mute.size=}" )
 
     def samples4pluto_2_flat_tensor ( self ) -> None :
         '''Stworzenie flat_tensor w self.flat_tensor reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce

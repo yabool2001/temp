@@ -53,3 +53,4 @@ if plt :
     tx_samples.plot_complex_samples4pluto ( f"{script_filename}" , marker_peaks = True )
     tx_samples.plot_complex_samples4pluto_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )
     tx_samples.plot_samples_flat_tensor_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )
+    tx_samples.plot_symbols_flat_tensor_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )
