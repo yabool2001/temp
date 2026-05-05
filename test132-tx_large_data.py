@@ -38,6 +38,7 @@ del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 #UDP_DEST_IP_MY_AP = "192.168.1.50" # ubuntu
+UDP_DEST_IP_V6 = "fe80::508d:aae1:d391:439a" # fedora Pro9
 UDP_PORT = 10001
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
