@@ -93,10 +93,10 @@ local_ip = "0.0.0.0" # Domyślny fallback
 #except Exception:
 #    pass
 
-sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
+udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 scope_id = socket.if_nametoindex ( INTERFACE )
 # Bindowanie gniazda do naszego adresu IPv6 i portu 10001
-sock.bind ( (LOCAL_IP_v6_ADDR , UDP_PORT , 0 , scope_id ) )
+udp_sock.bind ( (LOCAL_IP_v6_ADDR , UDP_PORT , 0 , scope_id ) )
 
 payload_udp = b""
 try :
