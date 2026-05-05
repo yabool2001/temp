@@ -29,29 +29,27 @@ if del_old :
 liczba_ramek = 2
 tx_samples = packet.TxSamples_v0_1_18 ()
 while liczba_ramek :
-    payload_bytes = ptd.PAYLOAD_8BYTES_DEC_15
+    payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
     tx_samples.add_frame ( payload_bytes = payload_bytes )
     liczba_ramek -= 1
-tx_samples.samples4pluto_2_flat_tensor ()
-tx_samples.create_samples4pluto_wo_muting_and_flat_tensor ()
+#tx_samples.samples4pluto_2_flat_tensor ()
+#tx_samples.create_samples4pluto_wo_muting_and_flat_tensor ()
 
 print ( f"{tx_samples.samples4pluto.size=}" )
-print ( f"{tx_samples.frames=}" )
+print ( f"{tx_samples.samples4pluto_wo_mute.size=}, {tx_samples.samples_flat_tensor_wo_mute.size=}" )
+#print ( f"{tx_samples.frames=}" )
 
  # Środek ramki
-frame_middle = filters.SPAN * modulation.SPS // 2
-print (f"{frame_middle=}")
+#frame_middle = filters.SPAN * modulation.SPS // 2
+#print (f"{frame_middle=}")
 
 # Początek ramki
-frame_beggining = ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS//2 )
-print (f"{frame_beggining=}")
-print ( f"{tx_samples.frames[0]=}" )
-timestamp = ops_os.milis_timestamp ()
+#frame_beggining = ( filters.SPAN * modulation.SPS // 2 ) - ( modulation.SPS//2 )
+#print (f"{frame_beggining=}")
+#print ( f"{tx_samples.frames[0]=}" )
+#timestamp = ops_os.milis_timestamp ()
 
 if plt :
-    tx_samples.plot_complex_samples4pluto ( f"{script_filename} tx samples4pluto" , marker_peaks = True )
-    plot.complex_waveform_v0_1_6 ( tx_samples.samples4pluto_wo_mute , f"{script_filename} {tx_samples.samples4pluto_wo_mute.size=}" , marker_squares = False )    
-    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].bpsk_symbols_flat_tensor , title = f"symbols flat tensors stworzony w TxFrames {tx_samples.frames[0].bpsk_symbols_flat_tensor.size=}" )
-    tx_samples.plot_flat_tensor ( f"{script_filename} tx flat tensor" , marker_idx = True )
-    #plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.frames[0].samples_flat_tensor , title = "samples flat tensors stworzony w RxFrames" )
-    plot.flat_tensor_v0_1_18 ( flat_tensor = tx_samples.samples_flat_tensor_wo_mute , title = f"RxFrames.create_samples4pluto_wo_muting_and_flat_tensor {tx_samples.samples_flat_tensor_wo_mute.size=}" )
+    tx_samples.plot_complex_samples4pluto ( f"{script_filename}" , marker_peaks = True )
+    tx_samples.plot_complex_samples4pluto_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )
+    tx_samples.plot_samples_flat_tensor_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )

@@ -38,7 +38,7 @@ del_old = True
 
 UDP_DEST_IP = "192.168.1.50" # ubuntu
 #UDP_DEST_IP_MY_AP = "192.168.1.50" # ubuntu
-UDP_TARGET_PORT = 10001
+UDP_PORT = 10001
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
@@ -76,6 +76,7 @@ timestamp = ""
 
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
+sock_v6 = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 # Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
 local_ip = "0.0.0.0" # Domyślny fallback
 try:
@@ -92,7 +93,7 @@ print(f"Binding UDP to {local_ip}:10001")
 udp_sock.bind ( ( local_ip , 10001 ) )
 #udp_sock.setblocking ( False )
 print ( "Czekam na komendy na porcie UDP 10001" )
-udp_sender_addr = ( UDP_DEST_IP , UDP_TARGET_PORT )
+udp_sender_addr = ( UDP_DEST_IP , UDP_PORT )
 
 payload_udp = b""
 try :

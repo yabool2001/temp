@@ -1057,8 +1057,8 @@ class TxSamples_v0_1_18 :
         self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 )
 
     def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
-        tx_packet = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
-        tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_packet )
+        tx_frame_payload = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
+        tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
         return tx_frame
 
     def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
@@ -1084,6 +1084,7 @@ class TxSamples_v0_1_18 :
         self.add_bytes ( tx_frame.bytes ) # Nie powinno być payload_bytes_arr bo wtedy w bytes będzie tylko payload bez sync sequence i packet len.
         self.add_symbols ( tx_frame.bpsk_symbols )
         self.add_samples4pluto ( tx_frame.samples4pluto )
+        self.create_samples4pluto_wo_muting_and_flat_tensor ()
 
     def add_bytes ( self , payload_bytes_arr : NDArray[ np.uint8 ] ) -> None :
         if payload_bytes_arr.size < 1 :
@@ -1187,15 +1188,29 @@ class TxSamples_v0_1_18 :
             frames_start_idx : NDArray [ np.uint32 ] = np.array ( [] , dtype = np.uint32 )
         plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title} {self.samples4pluto.size=}" , marker_squares = False , marker_peaks = frames_start_idx )
 
+    def plot_complex_samples4pluto_wo_mute ( self , title = "" , mark_frames_first_sample : bool = False ) -> None :
+        if mark_frames_first_sample :
+            idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples4pluto_wo_mute , f"{title} {self.samples4pluto_wo_mute.size=}" , marker_squares = False , marker_peaks = idx )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples4pluto_wo_mute , f"{title} {self.samples4pluto_wo_mute.size=}" )
+
     def plot_samples_spectrum ( self , title = "" ) -> None :
         plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
 
     def plot_flat_tensor ( self , title : str = "tx flat tensor" , marker_idx : bool = False ) -> None :
         if marker_idx :
-            frames_start_abs_first_idx = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
+            frames_start_abs_first_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
             plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title , marker_idx = frames_start_abs_first_idx )
         else :
             plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title )
+
+    def plot_samples_flat_tensor_wo_mute ( self , title : str = "" , mark_frames_first_sample : bool = False ) -> None :
+        if mark_frames_first_sample :
+            idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.flat_tensor_v0_1_18 ( flat_tensor = self.samples_flat_tensor_wo_mute , title = f"{title} {self.samples_flat_tensor_wo_mute.size=}" , marker_idx = idx )
+        else :
+            plot.flat_tensor_v0_1_18 ( flat_tensor = self.samples_flat_tensor_wo_mute , title = f"{title} {self.samples_flat_tensor_wo_mute.size=}" )
 
     def samples4pluto_2_flat_tensor ( self ) -> None :
         '''Stworzenie flat_tensor w self.flat_tensor reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
