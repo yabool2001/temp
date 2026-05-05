@@ -38,7 +38,7 @@ debug = True
 plt = False
 wrt = True
 del_old = True
-fedora_tx = True
+fedora_tx = False
 
 Nof_ATTEMPTS = int ( 20 )
 Nof_WRTS = int ( 8 )
@@ -46,6 +46,7 @@ if fedora_tx :
     UDP_DEST_IP = "192.168.1.60" # fedora
 else :
     UDP_DEST_IP = "192.168.1.50" # ubuntu
+    UDP_DEST_IP_V6 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
 ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
