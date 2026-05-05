@@ -64,6 +64,17 @@ timestamp_min = int ( ops_os.milis_timestamp () ) - 1000 * 365 * 60 * 60 * 24 # 
 timestamp_max = int ( ops_os.milis_timestamp () ) + 1000 * 365 * 60 * 60 * 24 # +1Y
 
 script_filename = os.path.basename ( __file__ )
+
+def resolve_interface_name ( preferred_interface : str ) -> str :
+    available_interfaces = [ name for _ , name in socket.if_nameindex () ]
+    if preferred_interface in available_interfaces :
+        return preferred_interface
+    for interface_name in available_interfaces :
+        if interface_name != "lo" :
+            if debug : print ( f"Configured {preferred_interface=} not found, using {interface_name=} for IPv6 UDP." )
+            return interface_name
+    raise OSError ( "No non-loopback network interface available for IPv6 UDP" )
+
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
@@ -87,6 +98,7 @@ rx_samples = packet.RxSamples_v0_1_18 ()
 if debug : print ( f"\n{script_filename=} {rx_samples.samples.size=}" )
 
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
+INTERFACE = resolve_interface_name ( INTERFACE )
 scope_id = socket.if_nametoindex ( INTERFACE )
 udp_target_addr = ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT , 0 , scope_id )
 
