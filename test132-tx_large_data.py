@@ -78,21 +78,6 @@ if debug : print ( f"\n{ script_filename= } { tx_pluto= }" )
 tx_samples = None
 timestamp = ""
 
-# Setup UDP Socket
-#udp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-#sock_v6 = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
-# Automatyczne wykrywanie adresu IP z sieci 192.168.1.x
-#local_ip = "0.0.0.0" # Domyślny fallback
-#try:
-    # Tworzymy tymczasowy socket żeby sprawdzić routing do sieci 192.168.1.x
-    # Łączymy się z przykładowym adresem (np. bramą) w tej sieci aby system wskazał właściwy interfejs
-#    temp_sock = socket.socket ( socket.AF_INET , socket.SOCK_DGRAM )
-#    temp_sock.connect ( ( "192.168.1.1" , 1 ) )
-#    local_ip = temp_sock.getsockname ()[0]
-#    temp_sock.close()
-#except Exception:
-#    pass
-
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 scope_id = socket.if_nametoindex ( INTERFACE )
 # Bindowanie gniazda do naszego adresu IPv6 i portu 10001
