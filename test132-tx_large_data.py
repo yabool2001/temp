@@ -72,6 +72,7 @@ if del_old :
     for file_path in Path ( dir_name ).glob ( "*" ) :
         if file_path.is_file () :
             file_path.unlink ( missing_ok = True )
+
 tx_samples , timestamp = build_tx_samples_and_timestamp ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) #usuunąć
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 if debug : print ( f"\n{ script_filename= } { tx_pluto= }" )
@@ -81,7 +82,7 @@ timestamp = ""
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 scope_id = socket.if_nametoindex ( INTERFACE )
 # Bindowanie gniazda do naszego adresu IPv6 i portu 10001
-udp_sock.bind ( (LOCAL_IP_v6_ADDR , UDP_PORT , 0 , scope_id ) )
+udp_sock.bind ( ( LOCAL_IP_v6_ADDR , UDP_PORT , 0 , scope_id ) )
 
 payload_udp = b""
 try :
