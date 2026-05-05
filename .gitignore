@@ -2,3 +2,5 @@
 *.pt
 *.csv
 *.pyc
+*.nbc
+*.nbi
