@@ -37,7 +37,7 @@ for timestamp_group in timestamp_groups :
 		rx_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 	if plt : rx_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_samples.samples.size=}" )
 	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
-	rx_samples_frame_start_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
+	rx_samples_frame_start_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
 	if plt : rx_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_samples.samples.size=} {rx_samples_frame_start_idx.size=}" , peaks = rx_samples_frame_start_idx )
 	if clp :
 		rx_samples.clip_samples_for_training ()
@@ -46,10 +46,13 @@ for timestamp_group in timestamp_groups :
 		if plt : rx_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_samples.samples.size=} {rx_samples_frame_start_idx.size=}" , peaks = rx_samples_frame_start_idx )
 	print ( f"{rx_samples=}" )
 	rx_symbols_flat_tensor = rx_samples.symbols_2_flat_tensor ()
-	tx_symbols_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_symbols_flat_tensor.pt" , dir_name = samples_dir.name )
+	if plt : plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
+	tx_symbols_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_symbols_flat_tensor.pt" , dir_name = samples_dir.name ) #* modulation.SPS
+	if plt : plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor[ 2 : : modulation.SPS ] , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
 	tx_samples_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_samples_flat_tensor.pt" , dir_name = samples_dir.name )
 	# Wariant 1. Sprawdzenie pełnej zgodności tensorów rx i tx. Jeśli są identyczne, to można bezpiecznie zapisać y_train i usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
-	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor ) :
+	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor[ 2 : : modulation.SPS ] ) :
+		if dbg : print ( f"rx_symbols_flat_tensor jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}." )
 		if wrt :
 			rx_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
 			rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
@@ -57,15 +60,17 @@ for timestamp_group in timestamp_groups :
 				for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
 					if file_path.is_file () :
 						file_path.unlink ( missing_ok = True )
+		rx_frames_start_abs_idx = rx_samples_frame_start_idx[0]
 	else :
+		if dbg : print ( f"rx_symbols_flat_tensor NIE jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}." )
 		if rx_samples.frames is not None :
 			tx_samples = packet.RxSamples_v0_1_18 ()
 			tx_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) , concatenate = True )
 			tx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = True )
 			tx_frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in tx_samples.frames ] , dtype = np.uint32 )
 			if plt : tx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} {rx_samples.samples.size=} {rx_samples_frame_start_idx.size=}" )
-			if plt : plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" , marker_idx = tx_frames_start_idx )
-			if plt : plot.flat_tensor_v0_1_18 ( tx_samples_flat_tensor , title = f"{script_filename} {timestamp_group} tx samples flat tensor" , marker_idx = tx_frames_start_idx )
+			#if plt : plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" , marker_idx = tx_frames_start_idx )
+			#if plt : plot.flat_tensor_v0_1_18 ( tx_samples_flat_tensor , title = f"{script_filename} {timestamp_group} tx samples flat tensor" , marker_idx = tx_frames_start_idx )
 
 			'''
 			W rx_samples znajdź frame, która jest identyczna jak pierwsza frame w tx_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)

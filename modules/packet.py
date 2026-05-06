@@ -496,6 +496,7 @@ class RxFrame_v0_1_18 :
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     header_bits : NDArray[ np.uint8 ] = field ( init = False )
     frame_start_abs_idx : np.uint32 = field ( init = False )
+    frame_start_abs_first_sample_idx : np.uint32 = field ( init = False )
     frame_end_abs_idx : np.uint32 = field ( init = False )
     packet_start_abs_idx : NDArray[ np.uint32 ] = field ( init = False )
     leftovers_start_abs_idx : np.uint32 = field ( init = False )
@@ -539,6 +540,8 @@ class RxFrame_v0_1_18 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
                         self.frame_start_abs_idx = self.sync_sequence_peak_abs_idx + sync_sequence_start_idx
+                        #self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - ( self.frame_start_abs_idx % self.SPS ) # szukam pierwszego sample, który jest początkiem ramki, czyli tego, który jest podzielny przez SPS, bo jeśli znalazłem dopasowanie ramki, to jest ono w jednym z 4 punktów odd
+                        self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - self.SPS // 2
                         self.packet_start_abs_idx = self.sync_sequence_peak_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.frame_end_abs_idx = self.sync_sequence_peak_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.header_bits = np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] )
