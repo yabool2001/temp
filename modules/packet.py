@@ -487,7 +487,6 @@ class RxPacket_v0_1_18 :
 class RxFrame_v0_1_18 :
     
     samples_filtered : NDArray[ np.complex128 ]
-    all_samples : NDArray[ np.complex128 ]
     sync_sequence_peak_abs_idx : np.uint32
 
     # Pola uzupełnianie w __post_init__
@@ -536,7 +535,6 @@ class RxFrame_v0_1_18 :
                     crc32_bytes_read = pad_bits2bytes ( crc32_bits )
                     crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                        #self.frame_start_abs_first_idx ()
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
                         self.frame_start_abs_idx = self.sync_sequence_peak_abs_idx + sync_sequence_start_idx
@@ -562,72 +560,6 @@ class RxFrame_v0_1_18 :
                             return
         if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_abs_idx=} {has_sync_sequence=}, {self.has_frame=}" )
         return
-
-    def frame_start_abs_first_idx ( self ) -> np.uint32 :
-        '''Znalazłem dopasowanie ramki w jednym z punktów SPS, ale nie wiem czy pierwszy. A chciałbym precyzyjnie znaleźć pierwszy, żeby mieć pewność,
-        że plik y_train będzie idealnie dopasowany względem X_train. I nie będzie przesunięty ani o 1 sample.
-        Będę szukał dopasowania frame header w 4 punktach, które są oddalone o 1 sample od siebie, czyli
-        znaleźć precyzyjnie pierwszy sample a nie któryś z 4, który rozpoczyna frame
-        Zacznę od cofania o 1 sample od znalezionego dopasowania, żeby znaleć ten pierwszy sample, a póżniej będę szedł do przodu o 1 sample,
-        żeby znaleźć ostatni i czy wychodzi liczba sampli z dostposowaniem= SPS,
-        '''
-        frame_start_abs_idxs : NDArray[ np.uint32 ] = np.array ( [] , dtype = np.uint32 )
-        for offset in range ( 1 , self.SPS ) :
-            sync_sequence_start_idx = ( self.sync_sequence_peak_abs_idx + self.SPAN * self.SPS // 2 ) - offset
-            sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.SPS )
-            packet_len_start_idx = sync_sequence_end_idx
-            packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.SPS )
-            crc32_start_idx = packet_len_end_idx
-            crc32_end_idx : np.uint32 = np.uint32 ( crc32_start_idx + ( CRC32_LEN_BITS * self.SPS ) )
-
-            samples_components = [ ( self.all_samples.real , "sync sequence real" ) , ( self.all_samples.imag , "sync sequence imag" ) , ( -self.all_samples.real , "sync sequence -real" ) , ( -self.all_samples.imag , "sync sequence -imag" ) ]
-            for samples_component , samples_name in samples_components :
-                sync_sequence_symbols = samples_component [ sync_sequence_start_idx : sync_sequence_end_idx : self.SPS ]
-                sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
-                if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                    #print ( f"{sync_sequence_start_idx=} , {offset=} sync_sequence ok" )
-                    has_sync_sequence = True
-                    packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.SPS ]
-                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
-                    packet_len_uint16 = self.bits2uint16 ( packet_len_bits )
-                    check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
-                    for samples_comp , frame_name in check_components :
-                        crc32_symbols = samples_comp [ crc32_start_idx : crc32_end_idx : self.SPS ]
-                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
-                        crc32_bytes_read = pad_bits2bytes ( crc32_bits )
-                        crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
-                        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                            frame_start_abs_idxs.append ( sync_sequence_start_idx )
-                            #print ( f"{sync_sequence_start_idx=} , {offset=} crc32 ok" )
-        
-        for offset in range ( 1 , self.SPS ) :
-            sync_sequence_start_idx = ( self.sync_sequence_peak_abs_idx + self.SPAN * self.SPS // 2 ) + offset
-            sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.SPS )
-            packet_len_start_idx = sync_sequence_end_idx
-            packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.SPS )
-            crc32_start_idx = packet_len_end_idx
-            crc32_end_idx : np.uint32 = np.uint32 ( crc32_start_idx + ( CRC32_LEN_BITS * self.SPS ) )
-
-            samples_components = [ ( self.all_samples.real , "sync sequence real" ) , ( self.all_samples.imag , "sync sequence imag" ) , ( -self.all_samples.real , "sync sequence -real" ) , ( -self.all_samples.imag , "sync sequence -imag" ) ]
-            for samples_component , samples_name in samples_components :
-                sync_sequence_symbols = samples_component [ sync_sequence_start_idx : sync_sequence_end_idx : self.SPS ]
-                sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( sync_sequence_symbols )
-                if np.array_equal ( sync_sequence_bits , BARKER13_BITS ) :
-                    #print ( f"{sync_sequence_start_idx=} , {offset=} sync_sequence ok" )
-                    has_sync_sequence = True
-                    packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.SPS ]
-                    packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
-                    packet_len_uint16 = self.bits2uint16 ( packet_len_bits )
-                    check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
-                    for samples_comp , frame_name in check_components :
-                        crc32_symbols = samples_comp [ crc32_start_idx : crc32_end_idx : self.SPS ]
-                        crc32_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( crc32_symbols )
-                        crc32_bytes_read = pad_bits2bytes ( crc32_bits )
-                        crc32_bytes_calculated = create_crc32_bytes ( pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits, packet_len_bits ] ) ) )
-                        if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
-                            frame_start_abs_idxs.append ( sync_sequence_start_idx )
-                            #print ( f"{sync_sequence_start_idx=} , {offset=} crc32 ok" )
-        return sync_sequence_start_idx
 
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
         return modulation.bpsk_symbols_2_bits_v0_1_7 ( samples [ : : self.sps ] )
@@ -734,7 +666,7 @@ class RxSamples_v0_1_18 :
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx : ] , all_samples = self.samples_corrected , sync_sequence_peak_abs_idx = idx )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx  : ] , sync_sequence_peak_abs_idx = idx )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx

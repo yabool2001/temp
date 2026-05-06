@@ -47,12 +47,15 @@ for timestamp_group in timestamp_groups :
 	tx_samples_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_samples_flat_tensor.pt" , dir_name = samples_dir.name )
 
 	if plt :
-		rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" , marker = True )
+		#rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" , marker = True )
 		rx_samples.plot_complex_samples ( title = f"{script_filename} rx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" , peaks = rx_samples_frame_first_sample_idx )
 		plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
 		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor[ 2 : : modulation.SPS ] , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
 
 	rx_frames_first_sample_idx : np.uint32 = None
+
+	# Wariant 0_light, wykorzystuje rx_frame.header_bits do znalezienia pozycji pierwszego sample w rx_symbols_flat_tensor.
+
 
 	# Wariant 1. Sprawdzenie pełnej zgodności tensorów rx i tx. Jeśli są identyczne, to można bezpiecznie zapisać y_train i usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
 	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor[ 2 : : modulation.SPS ] ) :
@@ -76,34 +79,19 @@ for timestamp_group in timestamp_groups :
 			tx_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) )
 			tx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = True )
 			tx_frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in tx_samples.frames ] , dtype = np.uint32 )
-			if plt : tx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected tx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" )
-			#if plt : plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" , marker_idx = tx_frames_start_idx )
-			#if plt : plot.flat_tensor_v0_1_18 ( tx_samples_flat_tensor , title = f"{script_filename} {timestamp_group} tx samples flat tensor" , marker_idx = tx_frames_start_idx )
-
-			'''
-			W rx_samples znajdź frame, która jest identyczna jak pierwsza znalezion frame w tx_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
-			i zapisz jej pozycję początkową frame_starts_idx jako tx_rx_frame_start_abs_idx.
-			'''
+			#if plt : tx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected tx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" )
 			
+			''' W rx_samples znajdź frame, która jest identyczna jak pierwsza znalezion frame w tx_samples (czyli pierwsza ramka w pliku {timestamp_group}_tx_samples4pluto.npy)
+			i zapisz jej pozycję początkową frame_starts_idx jako tx_rx_frame_start_abs_idx. '''
 			if tx_samples.frames is not None and len ( tx_samples.frames ) > 0 :
-				for tx_unique_frame in tx_samples.frames :
-					#if dbg : print ( f"\n\r{tx_unique_frame.frame_start_abs_idx=}" )
-					tx_first_unique_frame = None
-					is_unique = True
-					for tx_frame in tx_samples.frames :
-						#if dbg : print ( f",{tx_frame.frame_start_abs_idx=}" )
-						if np.array_equal ( tx_unique_frame.header_bits , tx_frame.header_bits ) and ( tx_unique_frame.frame_start_abs_idx != tx_frame.frame_start_abs_idx ) :
-							is_unique = False
-							#if dbg : print ( f"{is_unique=}" )
-					if is_unique :
-						tx_first_unique_frame = tx_unique_frame
-						for rx_frame in rx_samples.frames :
-							if np.array_equal ( rx_frame.header_bits , tx_first_unique_frame.header_bits ) :
-								rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_first_unique_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
-								if dbg : print ( f"Wariant 2. Znaleziono dopasowanie ramki: {timestamp_group=} {tx_first_unique_frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
-								break
-						if rx_frames_first_sample_idx is not None :
+				for tx_frame in tx_samples.frames :
+					for rx_frame in rx_samples.frames :
+						if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
+							rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
+							if dbg : print ( f"Wariant 2. Znaleziono dopasowanie ramki: {timestamp_group=} {tx_frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
 							break
+					if rx_frames_first_sample_idx is not None :
+						break
 			if rx_frames_first_sample_idx is not None :
 				print ( f"Znaleziono dopasowanie ramki: {timestamp_group} rx_frames_first_sample_idx={rx_frames_first_sample_idx}" )
 				'''Znalazłem dopasowanie ramki w jednym z punktów SPS, ale nie wiem czy pierwszy. A chciałbym precyzyjnie znaleźć pierwszy, żeby mieć pewność,
@@ -112,11 +100,8 @@ for timestamp_group in timestamp_groups :
 				znaleźć precyzyjnie pierwszy sample a nie któryś z 4, który rozpoczyna frame
 				Zacznę od cofania o 1 sample od znalezionego dopasowania, żeby znaleć ten pierwszy sample, a póżniej będę szedł do przodu o 1 sample,
 				żeby znaleźć ostatni i czy wychodzi liczba sampli z dostposowaniem= SPS,
-				'''
 
-
-
-				'''Stworzenie symboli bpsk reprezentujacych cały przebieg rx_samples.samples:
+				Stworzenie symboli bpsk reprezentujacych cały przebieg rx_samples.samples:
 				1. Na początku tworzymy rx_tensor i na całej długości wszędzie wstawiamy 0+j0
 				2. Od pozycji rx_frames_first_sample_idx w rx_tensor podstawiamy odpowiednie symbole BPSK z tx_samples_flat_tensor.
 				'''

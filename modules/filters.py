@@ -19,7 +19,9 @@ with open ( "settings.toml" , "rb" ) as settings_toml_file :
 
 BETA = float ( toml_settings[ "rrc_filter" ][ "BETA" ] )
 SPAN = int ( toml_settings[ "rrc_filter" ][ "SPAN" ] )
-SPS  = modulation.SPS
+#SPS  = modulation.SPS
+SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
+PEAK_TO_ACTIVE_SAMPLE_OFFSET = np.uint32 ( SPAN * SPS // 2 )
 PEAK_TO_FIRST_SAMPLE_OFFSET = np.uint32 ( SPAN * SPS // 2 - SPS // 2 )
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
