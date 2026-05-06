@@ -15,7 +15,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
@@ -55,7 +55,20 @@ for timestamp_group in timestamp_groups :
 	rx_frames_first_sample_idx : np.uint32 = None
 
 	# Wariant 0_light, wykorzystuje rx_frame.header_bits do znalezienia pozycji pierwszego sample w rx_symbols_flat_tensor.
-
+	rx_frames : packet.RxFrame_v0_1_18 = []
+	rx_symbols : NDArray[ np.complex128 ] = np.repeat ( rx_symbols_flat_tensor.detach ().cpu ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
+	while rx_symbols.size > 0 :
+		frame = packet.RxFrame_v0_1_18 ( samples_filtered = rx_symbols , sync_sequence_peak_abs_idx = 0 )
+		if frame.has_header :
+			rx_frames.append ( frame )
+			rx_symbols = rx_symbols [ frame.frame_end_abs_idx : ] # Usunięcie sampli należących do tej ramki z rx_symbols, żeby w następnej iteracji sprawdzić kolejną ramkę.
+		else :
+			rx_symbols = rx_symbols [ modulation.SPS // 2 : ]
+	# Chwilowy kod walidacyjno-testowy
+	if rx_frames :
+		rx_frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_frames ] , dtype = np.uint32 )
+		if dbg : print ( f"Wariant 0_light. Zidentyfikowane ramki w rx_samples na podstawie header_bits: {timestamp_group=} {rx_frames_first_sample_idx=}" )
+	
 
 	# Wariant 1. Sprawdzenie pełnej zgodności tensorów rx i tx. Jeśli są identyczne, to można bezpiecznie zapisać y_train i usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
 	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor[ 2 : : modulation.SPS ] ) :

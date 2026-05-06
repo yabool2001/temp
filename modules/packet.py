@@ -511,7 +511,7 @@ class RxFrame_v0_1_18 :
         self.process_packet ()
     
     def process_packet ( self ) -> None :
-        sync_sequence_start_idx = self.SPAN * self.SPS // 2
+        sync_sequence_start_idx = 0 #self.SPAN * self.SPS // 2 # Można wróć do sprzed zmiany w git: 81d3093def3219f03c37e046d4f5141864f28c2c
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.SPS )
         packet_len_start_idx = sync_sequence_end_idx
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.SPS )
@@ -666,7 +666,7 @@ class RxSamples_v0_1_18 :
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx  : ] , sync_sequence_peak_abs_idx = idx )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , sync_sequence_peak_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
