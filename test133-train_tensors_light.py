@@ -15,7 +15,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
@@ -47,7 +47,8 @@ for timestamp_group in timestamp_groups :
 	tx_samples_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_samples_flat_tensor.pt" , dir_name = samples_dir.name )
 
 	if plt :
-		#rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" , marker = True )
+		rx_samples.plot_complex_samples ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
+		rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
 		rx_samples.plot_complex_samples ( title = f"{script_filename} rx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" , peaks = rx_samples_frame_first_sample_idx )
 		plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
 		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor[ 2 : : modulation.SPS ] , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )

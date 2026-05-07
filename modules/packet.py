@@ -726,9 +726,13 @@ class RxSamples_v0_1_18 :
     def correct_samples ( self ) -> None :
         self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
-    def plot_complex_samples ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples , f"RxSamples {title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )
-
+    def plot_complex_samples ( self , title = "" , marker_all_samples : bool = False , markers_first_active_samples : bool = False ) -> None :
+        if markers_first_active_samples :
+            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = marker_all_samples , marker_peaks = frames_first_sample_idx )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
+        
     def plot_complex_samples_filtered ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_filtered , f"RxSamples filtered {title} {self.samples_filtered.size=}" , marker_squares = marker , marker_peaks = peaks )
 
@@ -740,9 +744,12 @@ class RxSamples_v0_1_18 :
         flat_tensor = self.flat_tensor_from_y_train ()
         plot.tensor_waveform_v0_1_16 ( flat_tensor , title = f"RxSamples y_train_tensor {title}" , marker_peaks = frames_start_idx )
 
-    def plot_complex_samples_corrected_v0_1_20 ( self , title = "" , marker : bool = False ) -> None :
-        frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
-        plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}, {frames_start_idx.size=}" , marker_squares = marker , marker_peaks = frames_start_idx )
+    def plot_complex_samples_corrected_v0_1_20 ( self , title = "" , markers_first_active_samples : bool = False ) -> None :
+        if markers_first_active_samples :
+            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"{title} {self.samples_corrected.size=}, {frames_first_sample_idx.size=}" , marker_squares = markers_first_active_samples , marker_peaks = frames_first_sample_idx )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"{title} {self.samples_corrected.size=}" )
 
     def plot_complex_samples_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"RxSamples corrected {title} {self.samples_corrected.size=}" , marker_squares = marker , marker_peaks = peaks )
