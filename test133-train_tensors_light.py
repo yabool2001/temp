@@ -48,8 +48,7 @@ for timestamp_group in timestamp_groups :
 
 	if plt :
 		rx_samples.plot_complex_samples ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
-		rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
-		rx_samples.plot_complex_samples ( title = f"{script_filename} rx_samples {rx_samples.samples.size=} {rx_samples_frame_first_sample_idx.size=}" , peaks = rx_samples_frame_first_sample_idx )
+		#rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
 		plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
 		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor[ 2 : : modulation.SPS ] , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
 
