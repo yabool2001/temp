@@ -497,6 +497,7 @@ class RxFrame_v0_1_18 :
     frame_start_abs_idx : np.uint32 = field ( init = False )
     frame_start_abs_first_sample_idx : np.uint32 = field ( init = False )
     frame_end_abs_idx : np.uint32 = field ( init = False )
+    packet_len : np.uint16 = field ( init = False )
     packet_start_abs_idx : NDArray[ np.uint32 ] = field ( init = False )
     leftovers_start_abs_idx : np.uint32 = field ( init = False )
     has_header : bool = False # przydate jeśli nie wykryje pakietu/payload
@@ -527,7 +528,7 @@ class RxFrame_v0_1_18 :
                 add2log_packet ( f"{t.time()},{has_sync_sequence=},{sync_sequence_start_idx}")
                 packet_len_symbols = samples_component [ packet_len_start_idx : packet_len_end_idx : self.SPS ]
                 packet_len_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( packet_len_symbols )
-                packet_len_uint16 = self.bits2uint16 ( packet_len_bits )
+                packet_len_uint16 = self.packet_len = self.bits2uint16 ( packet_len_bits )
                 check_components = [ ( self.samples_filtered.real , " frame real" ) , ( self.samples_filtered.imag , " frame imag" ) , ( -self.samples_filtered.real , " frame -real" ) , ( -self.samples_filtered.imag , " frame -imag" ) ]
                 for samples_comp , frame_name in check_components :
                     crc32_symbols = samples_comp [ crc32_start_idx : crc32_end_idx : self.SPS ]
