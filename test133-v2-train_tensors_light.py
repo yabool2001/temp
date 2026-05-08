@@ -15,11 +15,13 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
 
+device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
+print ( f"torch {device=}" )
 
 samples_dir = Path ( "np.tensors" )
 
@@ -88,7 +90,7 @@ for timestamp_group in timestamp_groups :
 		frame = None
 
 	#rx_frames : packet.RxFrame_v0_1_18 = []
-	#rx_symbols : NDArray[ np.complex128 ] = np.repeat ( rx_symbols_flat_tensor.detach ().cpu ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
+	#rx_symbols : NDArray[ np.complex128 ] = np.repeat ( rx_symbols_flat_tensor.detach ().device ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
 	#while rx_symbols.size > 0 :
 	#	frame = packet.RxFrame_v0_1_18 ( samples_filtered = rx_symbols , sync_sequence_peak_abs_idx = 0 )
 	#	if frame.has_header :
