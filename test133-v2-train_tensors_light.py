@@ -15,7 +15,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
@@ -49,7 +49,7 @@ for timestamp_group in timestamp_groups :
 	tx_samples_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_samples_flat_tensor.pt" , dir_name = samples_dir.name )
 
 	if plt :
-		rx_samples.plot_complex_samples ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
+		rx_samples.plot_complex_samples ( title = f"{script_filename} {timestamp_group} corrected rx_samples | " , markers_first_active_samples = True )
 		#rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
 		plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
 		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor[ 2 : : modulation.SPS ] , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
@@ -65,7 +65,7 @@ for timestamp_group in timestamp_groups :
 		if frame.has_header :
 			for rx_frame in rx_samples.frames :
 				#TO JEST DO BANI TRZEBA SPRAWDZIĆ DLACZEGO DANE W tx_symbols_flat_tensor SĄ DO bani
-				# bo W ARIANCE 2 DANE Z tx_samples4pluto.npy SUPER!
+				# bo W WARIANCE 2 DANE Z tx_samples4pluto.npy SUPER!
 				# 
 				# 
 				# 
@@ -81,7 +81,7 @@ for timestamp_group in timestamp_groups :
 					#print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
 				if np.array_equal ( rx_frame.header_bits , frame.header_bits ) :
 					rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - frame.frame_start_abs_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
-					if dbg : print ( f"Wariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
+					if dbg : print ( f"\r\nWariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
 					break
 			#tx_frames.append ( frame )
 			tx_symbols = tx_symbols [ frame.frame_end_abs_idx : ] # Usunięcie sampli należących do tej ramki z rx_symbols, żeby w następnej iteracji sprawdzić kolejną ramkę.
@@ -114,7 +114,7 @@ for timestamp_group in timestamp_groups :
 					if file_path.is_file () :
 						file_path.unlink ( missing_ok = True )
 		rx_frames_first_sample_idx = rx_samples_frame_first_sample_idx[0]
-		if dbg : print ( f"Wariant 1. rx_symbols_flat_tensor jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}, {rx_frames_first_sample_idx=}" )
+		if dbg : print ( f"\r\nWariant 1. rx_symbols_flat_tensor jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}, {rx_frames_first_sample_idx=}" )
 	
 	# Wariant 2. Dopasowanie pierwszego zidentyfikowanego frame_header w rx_samples i odszukanie jego pozycji względem pierwszego frame_header w tx_samples,
 	# żeby znaleźć pozycję pierwszego sample w rx_samples, który odpowiada pierwszemu sample w tx_samples.
@@ -136,7 +136,7 @@ for timestamp_group in timestamp_groups :
 							print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
 						if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
 							rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
-							if dbg : print ( f"Wariant 2. Znaleziono dopasowanie ramki: {timestamp_group=} {tx_frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
+							if dbg : print ( f"\r\nWariant 2. Znaleziono dopasowanie ramki: {timestamp_group=} {tx_frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
 							break
 					if rx_frames_first_sample_idx is not None :
 						break

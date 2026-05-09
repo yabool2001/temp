@@ -39,15 +39,31 @@ plt = False
 wrt = True
 del_old = True
 fedora_tx = False
+lipkow_ap = True
+s21_ultra_ap = False
 
 Nof_ATTEMPTS = int ( 20 )
 Nof_WRTS = int ( 8 )
+
+if lipkow_ap:
+    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
+    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
+elif s21_ultra_ap :
+    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
+    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
 if fedora_tx :
     UDP_DEST_IP = "192.168.1.60" # fedora
-    UDP_DEST_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
+    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
 else :
     UDP_DEST_IP = "192.168.1.50" # ubuntu
-    UDP_DEST_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
+    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
+    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
+UDP_DEST_IP_V6_ADDR = UDP_DEST_IP_V6_GO3
 INTERFACE = 'wlp1s0'
 UDP_TARGET_PORT = 10001
 ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
