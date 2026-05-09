@@ -16,33 +16,53 @@ import socket
 import time as t
 import tomllib
 
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
+
+dir_name = "np.tensors"
+Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+script_filename = os.path.basename ( __file__ )
+filename = "rx_samples.npy"
 
 debug = True
 plt = False
 wrt = True
 del_old = True
+lipkow_ap = True
+single_machine = True
 
-Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 2 )
-UDP_DEST_IP = "192.168.1.50" # ubuntu
-UDP_DEST_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
-INTERFACE = 'wlp1s0'
-UDP_TARGET_PORT = 10001
-ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
-ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
+if lipkow_ap :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+else :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
+
+UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
+INTERFACE = toml_settings["IF"][ "LEGION" ]
+ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
+ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
-ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
-end_rx = False
+ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 
-dir_name = "np.tensors"
-filename = "rx_samples.npy"
 Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+
 
 timestamp_min = int ( ops_os.milis_timestamp () ) - 1000 * 365 * 60 * 60 * 24 # -1Y
 timestamp_max = int ( ops_os.milis_timestamp () ) + 1000 * 365 * 60 * 60 * 24 # +1Y
 
-script_filename = os.path.basename ( __file__ )
+Nof_ATTEMPTS = int ( 1 )
+Nof_WRTS = int ( 2 )
 
 def resolve_interface_name ( preferred_interface : str ) -> str :
     available_interfaces = [ name for _ , name in socket.if_nameindex () ]
@@ -79,12 +99,12 @@ if debug : print ( f"\n{ script_filename= } { rx_samples.samples.size= }" )
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 INTERFACE = resolve_interface_name ( INTERFACE )
 scope_id = socket.if_nametoindex ( INTERFACE )
-udp_target_addr = ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT , 0 , scope_id )
+udp_target_addr = ( IP_DST_ADDR , UDP_PORT , 0 , scope_id )
 #udp_sock.setblocking ( False )
 
 udp_sock.sendto ( ASCII_FF , udp_target_addr )
 if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+if debug : print ( f"Sent ASCII_FF to { IP_DST_ADDR }:{ UDP_PORT }" )
 
 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
 payload_udp = b""
@@ -98,7 +118,7 @@ try :
         if len ( payload_udp ) >= 13 and int ( payload_udp ) > timestamp_min and int ( payload_udp ) < timestamp_max : # Received a valid timestamp to name the file with received samples
             if debug : print ( f"Valid timestamp received: {payload_udp=}" )
             udp_sock.sendto ( ASCII_ENQ , udp_target_addr )
-            if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }. Sent ASCII_ENQ to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+            if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }. Sent ASCII_ENQ to { IP_DST_ADDR }:{ UDP_PORT }" )
             i = Nof_WRTS
             while i :
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
@@ -111,7 +131,7 @@ try :
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             if j > 0 :
                 udp_sock.sendto ( ASCII_FF , udp_target_addr )
-                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }. Sent ASCII_FF to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }. Sent ASCII_FF to { IP_DST_ADDR }:{ UDP_PORT }" )
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
             
         t.sleep ( 0.1 )  # odciążenie CPU
@@ -121,7 +141,7 @@ try :
 
 finally :
     udp_sock.sendto ( ASCII_CAN , udp_target_addr )
-    if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+    if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { IP_DST_ADDR }:{ UDP_PORT }" )
     udp_sock.close ()
     exit ( 0 )
 

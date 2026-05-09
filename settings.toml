@@ -9,6 +9,7 @@ PADDING_BITS = [ 0 , 0 , 0 ]                                            # Paddin
 PAYLOAD_4BYTES_DEC = [ 15, 15 , 15 , 15 ]
 PAYLOAD_NONE = []
 cuda = "True"
+UDP_PORT = 10001
 
 [ADALM-Pluto]
 F_C = 2900000000                    # center frequency
@@ -39,15 +40,20 @@ USB = "usb:"
 SN_RX = "10447318ac0f00091e002400454e18b77d"
 SN_TX = "1044739a470b000a090018007ecf7f5ea8"
 
-[AP.Orange9D40]
-SURFACE_PRO9_IP_V6_ADDR = "fe80::3955:2f85:5e16:c8a"
-SURFACE_GO3_IP_V6_ADDR = "fe80::8fa9:8d27:9409:210e"
-LEGION_IP_V6_ADDR = "fe80::a31c:346b:7d2d:9aae"
+[IF]
+LEGION = "wlp130s0"
+SURFACE_PRO9 = "wlp1s0"
+SURFACE_GO3 = ""
 
-[AP.S21_ULTRA]
-SURFACE_PRO9_IP_V6_ADDR = "fe80::508d:aae1:d391:439a"
-SURFACE_GO3_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40"
-LEGION_IP_V6_ADDR = "fe80::97e9:b4e9:6c68:985c"
+[IP_V6_ADDR.Orange9D40]
+SURFACE_PRO9 = "fe80::3955:2f85:5e16:c8a"
+SURFACE_GO3 = "fe80::8fa9:8d27:9409:210e"
+LEGION = "fe80::a31c:346b:7d2d:9aae"
+
+[IP_V6_ADDR.S21_ULTRA]
+SURFACE_PRO9 = "fe80::508d:aae1:d391:439a"
+SURFACE_GO3 = "fe80::339e:6cea:f65b:ee40"
+LEGION = "fe80::97e9:b4e9:6c68:985c"
 
 [bpsk]
 SPS = 4                             # samples per symbol

@@ -30,50 +30,47 @@ import socket
 import time as t
 import tomllib
 
-np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
 
-Path ( "np.samples_series_01" ).mkdir ( parents = True , exist_ok = True )
+dir_name = "np.tensors"
+Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+filename = "rx_samples.npy"
 
 debug = True
 plt = False
 wrt = True
 del_old = True
-fedora_tx = False
 lipkow_ap = True
-s21_ultra_ap = False
+single_machine = True
+
+if lipkow_ap :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+else :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
+
+UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
+INTERFACE = toml_settings["IF"][ "LEGION" ]
+ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
+ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
+ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
+ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 
 Nof_ATTEMPTS = int ( 20 )
 Nof_WRTS = int ( 8 )
 
-if lipkow_ap:
-    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
-    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
-    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
-elif s21_ultra_ap :
-    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
-    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
-    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
-if fedora_tx :
-    UDP_DEST_IP = "192.168.1.60" # fedora
-    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
-    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
-    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
-else :
-    UDP_DEST_IP = "192.168.1.50" # ubuntu
-    UDP_DEST_IP_V6_GO3 = "fe80::339e:6cea:f65b:ee40" # ubuntu GO3
-    UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
-    UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # Surface 9
-UDP_DEST_IP_V6_ADDR = UDP_DEST_IP_V6_GO3
-INTERFACE = 'wlp1s0'
-UDP_TARGET_PORT = 10001
-ASCII_EOT = b'\x04' # Sygnał zakończenia transmisji danych przez skrypt tx
-ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
-ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
-ASCII_CAN = b'\x18' # Sygnał do zakończenia pracy skryptu tx
-end_rx = False
-
-dir_name = "np.tensors"
-filename = "rx_samples.npy"
 series_len = 10
 
 timestamp_min = int ( ops_os.milis_timestamp () ) - 1000 * 365 * 60 * 60 * 24 # -1Y
@@ -116,11 +113,11 @@ if debug : print ( f"\n{script_filename=} {rx_samples.samples.size=}" )
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 INTERFACE = resolve_interface_name ( INTERFACE )
 scope_id = socket.if_nametoindex ( INTERFACE )
-udp_target_addr = ( UDP_DEST_IP_V6_ADDR , UDP_TARGET_PORT , 0 , scope_id )
+udp_target_addr = ( IP_DST_ADDR , UDP_PORT , 0 , scope_id )
 
 udp_sock.sendto ( ASCII_FF , udp_target_addr )
 if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-if debug : print ( f"Sent ASCII_FF to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+if debug : print ( f"Sent ASCII_FF to { IP_DST_ADDR }:{ UDP_PORT }" )
 
 payload_udp = b""
 try :

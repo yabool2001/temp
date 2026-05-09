@@ -22,32 +22,41 @@ from modules import ops_os , packet , payload_test_data as ptd , sdr
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
+dir_name = "np.tensors"
+Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+script_filename = os.path.basename ( __file__ )
+
 if len ( sys.argv ) > 1 :
     tx_gain_float = float ( sys.argv[ 1 ] )
 else :
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
-script_filename = os.path.basename ( __file__ )
-dir_name = "np.tensors"
-
 debug = True
 plt = False
 wrt = True
 del_old = True
+lipkow_ap = True
+single_machine = True
 
-UDP_DEST_IP = "192.168.1.50" # ubuntu
-LOCAL_IP_v6_ADDR = "fe80::508d:aae1:d391:439a" 
-UDP_DEST_IP_V6_SURFACE_9 = "fe80::508d:aae1:d391:439a" # fedora Pro9
-UDP_DEST_IP_V6_LEGION = "fe80::a31c:346b:7d2d:9aae" # Legion
-UDP_PORT = 10001
-INTERFACE = 'wlp1s0'
+if lipkow_ap :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+else :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
 
-UDP_PORT = 10001
+UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
+INTERFACE = toml_settings["IF"][ "LEGION" ]
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
+
 SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
@@ -84,7 +93,7 @@ timestamp_group = ""
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 scope_id = socket.if_nametoindex ( INTERFACE )
 # Bindowanie gniazda do naszego adresu IPv6 i portu 10001
-udp_sock.bind ( ( LOCAL_IP_v6_ADDR , UDP_PORT , 0 , scope_id ) )
+udp_sock.bind ( ( IP_SRC_ADDR , UDP_PORT , 0 , scope_id ) )
 
 payload_udp = b""
 try :

@@ -26,29 +26,41 @@ if len ( sys.argv ) > 1 :
 else :
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
+dir_name = "np.tensors"
+Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 , linewidth = np.inf ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 script_filename = os.path.basename ( __file__ )
+
 
 debug = True
 plt = False
 wrt = True
 del_old = True
+lipkow_ap = True
+single_machine = True
 
-UDP_DEST_IP = "192.168.1.50" # ubuntu
-LOCAL_IP_v6_ADDR = "fe80::339e:6cea:f65b:ee40"
-UDP_DEST_IP_V6 = "fe80::508d:aae1:d391:439a" # fedora Pro9
-INTERFACE = 'wlp1s0'
-UDP_TARGET_PORT = 10001
-ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
-ASCII_ENQ = b'\x05' # Sygnał do rozpoczęcia transmisji danych przez skrypt tx
+if lipkow_ap :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+else :
+    if single_machine :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+    else :
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
+
+UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
+INTERFACE = toml_settings["IF"][ "LEGION" ]
+ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
+ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
+
 MAX_SAMPLES_SIZE =  int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] ) * 0.8 # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
 
 tx_samples = []
 tx_samples_4pluto = np.array ( [] , dtype = np.complex128 )
-
-dir_name = "np.tensors"
 
 if del_old :
     for file_path in Path ( dir_name ).glob ( "*" ) :
@@ -82,10 +94,10 @@ if plt :
 # Setup UDP Socket
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )
 scope_id = socket.if_nametoindex ( INTERFACE )
-udp_sock.bind ( ( LOCAL_IP_v6_ADDR , UDP_TARGET_PORT , 0 , scope_id ) )
+udp_sock.bind ( ( IP_SRC_ADDR , UDP_PORT , 0 , scope_id ) )
 #udp_sock.setblocking ( False )
-print ( f"Czekam na komendy na IPv6 UDP {LOCAL_IP_v6_ADDR}:{UDP_TARGET_PORT}%{INTERFACE}" )
-udp_sender_addr = ( UDP_DEST_IP_V6 , UDP_TARGET_PORT , 0 , scope_id )
+print ( f"Czekam na komendy na IPv6 UDP {IP_SRC_ADDR}:{UDP_PORT}%{INTERFACE}" )
+#udp_sender_addr = ( IP_DST_ADDR , UDP_PORT , 0 , scope_id )
 
 payload_udp = b""
 try :

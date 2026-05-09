@@ -76,9 +76,9 @@ for timestamp_group in timestamp_groups :
 				# .
 				# tx: 147 [  6  80 147  40 113  58  10]   0
 				#crx: 160 [  6  80 160 151 161  91  28]   734382
-				# if dbg :
-					#print ( f"tx: {frame.packet_len}	{packet.pad_bits2bytes ( frame.header_bits )}	{frame.frame_start_abs_idx}" )
-					#print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
+				if dbg :
+					print ( f"tx: {frame.packet_len}	{packet.pad_bits2bytes ( frame.header_bits )}	{frame.frame_start_abs_idx}" )
+					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
 				if np.array_equal ( rx_frame.header_bits , frame.header_bits ) :
 					rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - frame.frame_start_abs_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
 					if dbg : print ( f"\r\nWariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
