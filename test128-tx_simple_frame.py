@@ -32,7 +32,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 , linewidth = np.inf ) # Og
 script_filename = os.path.basename ( __file__ )
 
 
-debug = True
+dbg = True
 plt = False
 wrt = True
 del_old = True
@@ -70,12 +70,13 @@ if del_old :
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 print ( f"\n{ script_filename= } { tx_pluto= }" )
 
-i = 1 # Liczba ramek
+i = 2 # Liczba ramek
 total_bytes_len = 0
 tx_samples = packet.TxSamples_v0_1_18 ()
 while i :
-    payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
+    #payload_bytes = ptd.PAYLOAD_4BYTES_DEC_15
     #payload_bytes = ptd.PAYLOAD_1500BYTES_DEC
+    payload_bytes = ptd.PAYLOAD_BYTES
     total_bytes_len += len ( payload_bytes )
     tx_samples.add_frame ( payload_bytes = payload_bytes )
     i -= 1
@@ -88,7 +89,7 @@ if plt :
     tx_samples.plot_complex_samples4pluto ( f"{script_filename}" , marker_peaks = True )
 
 #if wrt :
-#    if debug : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
+#    if dbg : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
 #    tx_samples.save_frames2flat_tensor ( filename = timestamp , dir_name = dir_name )
 
 # Setup UDP Socket
@@ -104,29 +105,29 @@ try :
     while True :
         payload_udp = b""
         payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 )
-        if debug : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
+        if dbg : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
         
         if payload_udp == ASCII_CAN : # ESCAPE
-            if debug : print ( f"Received ASCII_CAN {payload_udp=}, stopping transmission & ending script!" )
+            if dbg : print ( f"Received ASCII_CAN {payload_udp=}, stopping transmission & ending script!" )
             break
         
         elif payload_udp == ASCII_ENQ : # ENQUIRY (START OF TRANSMISSION)
-            if debug : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
+            if dbg : print ( f"Received ASCII_ENQ {payload_udp=}, starting transmission." )
             tx_samples.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
-            if debug : print ( f"All {tx_samples.samples4pluto.size=} samples transmitted." )
+            if dbg : print ( f"All {tx_samples.samples4pluto.size=} samples transmitted." )
             #tx_samples = None # Zwolnienie pamięci zajmowanej przez próbki po transmisji, aby nie trzymać w pamięci dużej tablicy próbek, która już została wysłana
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
-            if debug : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
+            if dbg : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
 
         elif payload_udp == ASCII_FF : # FORM FEED (START OF SCRIPT)
-            if debug : print ( f"Received ASCII_FF {payload_udp=}, starting transmission." )
+            if dbg : print ( f"Received ASCII_FF {payload_udp=}, starting transmission." )
             udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
-            if debug : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
+            if dbg : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             if wrt :
                 tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_symbols_flat_tensor" , dir_name = dir_name )
                 tx_samples.save_symbols_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name )
                 tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
-                if debug : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp=}..." )
+                if dbg : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp=}..." )
         
         t.sleep ( 0.05 )  # odciążenie CPU
 

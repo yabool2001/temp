@@ -5,11 +5,14 @@ from modules import packet
 with open ( "settings.toml" , "rb" ) as settings_file :
     settings = tomllib.load ( settings_file )
 
+PAYLOAD_1BYTE_DEC_15 = [ 15 ]
 PAYLOAD_4BYTES_DEC_15 = [ 15, 15 , 15 , 15 ]
 PAYLOAD_8BYTES_DEC_15 = [ 15, 15 , 15 , 15 , 15, 15, 15, 15 ]
 PAYLOAD_12BYTES_DEC_15 = [ 15, 15 , 15 , 15 , 15, 15, 15, 15, 15, 15, 15, 15 ]
 PAYLOAD_16BYTES_DEC_15 = [ 15, 15 , 15 , 15 , 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15 ]
 PAYLOAD_32BYTES_DEC_15 = [ 15, 15 , 15 , 15 , 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15 ]
+
+PAYLOAD_BYTES = [ 0 ]
 
 PAYLOAD_4BYTES_DEC = [ i % 256 for i in range ( 4 ) ]
 if settings["log"]["verbose_2"] : print ( f"Payload test data initialized: { len ( PAYLOAD_4BYTES_DEC ) } bytes." )

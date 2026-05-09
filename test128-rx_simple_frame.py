@@ -27,7 +27,7 @@ script_filename = os.path.basename ( __file__ )
 filename = "rx_samples.npy"
 
 debug = True
-plt = False
+plt = True
 wrt = True
 del_old = True
 lipkow_ap = True

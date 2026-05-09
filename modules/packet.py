@@ -727,7 +727,7 @@ class RxSamples_v0_1_18 :
     def correct_samples ( self ) -> None :
         self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples_filtered , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
-    def plot_complex_samples ( self , title = "" , marker_all_samples : bool = False , markers_first_active_samples : bool = False ) -> None :
+    def plot_complex_samples ( self , title = "" , marker_all_samples : bool = False , markers_first_active_samples : bool = True ) -> None :
         if markers_first_active_samples :
             frames_first_sample_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = marker_all_samples , marker_peaks = frames_first_sample_idx )

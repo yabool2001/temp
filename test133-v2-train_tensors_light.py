@@ -66,7 +66,7 @@ for timestamp_group in timestamp_groups :
 			for rx_frame in rx_samples.frames :
 				#TO JEST DO BANI TRZEBA SPRAWDZIĆ DLACZEGO DANE W tx_symbols_flat_tensor SĄ DO bani
 				# bo W WARIANCE 2 DANE Z tx_samples4pluto.npy SUPER!
-				# 
+				# dwa pierwsze przebiegi w np.tensors_006
 				# 
 				# 
 				# 
