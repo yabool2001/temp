@@ -42,10 +42,12 @@ SN_TX = "1044739a470b000a090018007ecf7f5ea8"
 [AP.Orange9D40]
 SURFACE_PRO9_IP_V6_ADDR = "fe80::3955:2f85:5e16:c8a"
 SURFACE_GO3_IP_V6_ADDR = "fe80::8fa9:8d27:9409:210e"
+LEGION_IP_V6_ADDR = "fe80::a31c:346b:7d2d:9aae"
 
 [AP.S21_ULTRA]
 SURFACE_PRO9_IP_V6_ADDR = "fe80::508d:aae1:d391:439a"
 SURFACE_GO3_IP_V6_ADDR = "fe80::339e:6cea:f65b:ee40"
+LEGION_IP_V6_ADDR = "fe80::97e9:b4e9:6c68:985c"
 
 [bpsk]
 SPS = 4                             # samples per symbol
