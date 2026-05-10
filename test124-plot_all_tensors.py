@@ -9,6 +9,7 @@ from modules import plot
 script_filename = os.path.basename ( __file__ )
 
 dir_name = Path ( "np.tensors" )
+dir_name = Path ( "training" )
 
 tensor_files = sorted ( dir_name.glob ( "*.pt" ) )
 
@@ -22,4 +23,4 @@ for tensor_file in tensor_files :
 	if "flat" in tensor_file.name.lower() :
 		plot.flat_tensor_v0_1_18 ( loaded_tensor , f"{script_filename} | {tensor_file.name} flat tensor {loaded_tensor.size()}" )
 	elif "y_train" in tensor_file.name.lower() :
-		plot.y_train_tensor_as_flat_tensor_v0_1_18 ( loaded_tensor , f"{script_filename} | {tensor_file.name} tensor {loaded_tensor.size()}" )
+		plot.y_train_tensor_as_flat_tensor_v0_1_18 ( y_train_tensor = loaded_tensor , title = f"{script_filename} | {tensor_file.name} tensor {loaded_tensor.size()}" )

@@ -17,7 +17,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
 plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
-dbg : bool = True
+dbg : bool = False
 del_files : bool = False
 
 device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
@@ -54,58 +54,27 @@ for timestamp_group in timestamp_groups :
 		plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
 		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
 
-	rx_frames_first_sample_idx : np.uint32 = None
-
 	# Wariant 0_light, wykorzystuje rx_frame.header_bits do znalezienia pozycji pierwszego sample w rx_symbols_flat_tensor.
 	# To jest do poprawy, bo ręcznie łatałem problem z -2 w 
+	rx_frames_first_sample_idx_w0 : np.uint32 = None
 	tx_frames : packet.RxFrame_v0_1_18 = []
 	tx_symbols : NDArray[ np.complex128 ] = tx_symbols_flat_tensor.detach ().cpu ().numpy ().astype ( np.complex128 , copy = False )
+	rx_samples.tx_active_symbols = tx_symbols
 	while tx_symbols.size > 0 :
 		frame = packet.RxFrame_v0_1_18 ( samples_filtered = tx_symbols , sync_sequence_peak_abs_idx = 0 )
 		if frame.has_header :
-			for rx_frame in rx_samples.frames :
-				#TO JEST DO BANI TRZEBA SPRAWDZIĆ DLACZEGO DANE W tx_symbols_flat_tensor SĄ DO bani
-				# bo W WARIANCE 2 DANE Z tx_samples4pluto.npy SUPER!
-				# dwa pierwsze przebiegi w np.tensors_006
-				# 
-				# 
-				# 
-				# 
-				# 
-				# 
-				# .
-				# tx: 147 [  6  80 147  40 113  58  10]   0
-				#crx: 160 [  6  80 160 151 161  91  28]   734382
-				if dbg :
-					print ( f"tx: {frame.packet_len}	{packet.pad_bits2bytes ( frame.header_bits )}	{frame.frame_start_abs_idx}" )
-					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
-				if np.array_equal ( rx_frame.header_bits , frame.header_bits ) :
-					rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx #- frame.frame_start_abs_idx
-					if dbg : print ( f"\r\nWariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
-					break
-			#tx_frames.append ( frame )
-			tx_symbols = tx_symbols [ frame.frame_end_abs_idx : ] # Usunięcie sampli należących do tej ramki z rx_symbols, żeby w następnej iteracji sprawdzić kolejną ramkę.
-		else :
-			tx_symbols = tx_symbols [ modulation.SPS // 2 : ]
+			if np.array_equal ( rx_samples.frames[0].header_bits , frame.header_bits ) :
+				rx_frames_first_sample_idx_w0 = rx_samples.frames[0].frame_start_abs_first_sample_idx
+				if dbg : print ( f"\r\nWariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_samples.frames[0].frame_start_abs_idx=}, {rx_frames_first_sample_idx_w0=}" )
+				tx_symbols = [] # Przerwanie pętli, bo już znalazłem dopasowanie pierwszej ramki i nie muszę szukać dalej.
+				break
+			else :
+				tx_symbols = tx_symbols [ modulation.SPS // 2 : ]
 		frame = None
 
-	#rx_frames : packet.RxFrame_v0_1_18 = []
-	#rx_symbols : NDArray[ np.complex128 ] = np.repeat ( rx_symbols_flat_tensor.detach ().device ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
-	#while rx_symbols.size > 0 :
-	#	frame = packet.RxFrame_v0_1_18 ( samples_filtered = rx_symbols , sync_sequence_peak_abs_idx = 0 )
-	#	if frame.has_header :
-	#		rx_frames.append ( frame )
-	#		rx_symbols = rx_symbols [ frame.frame_end_abs_idx : ] # Usunięcie sampli należących do tej ramki z rx_symbols, żeby w następnej iteracji sprawdzić kolejną ramkę.
-	#	else :
-	#		rx_symbols = rx_symbols [ modulation.SPS // 2 : ]
-	# Chwilowy kod walidacyjno-testowy
-	#if rx_frames :
-	#	rx_frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_frames ] , dtype = np.uint32 )
-	#	if dbg : print ( f"Wariant 0_light. Zidentyfikowane ramki w rx_samples na podstawie header_bits: {timestamp_group=} {rx_frames_first_sample_idx=}" )
-
-
 	# Wariant 1. Sprawdzenie pełnej zgodności tensorów rx i tx. Jeśli są identyczne, to można bezpiecznie zapisać y_train i usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
-	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor[ 2 : : modulation.SPS ] ) :
+	rx_frames_first_sample_idx_w1 : np.uint32 = None
+	if torch.equal ( rx_symbols_flat_tensor , tx_symbols_flat_tensor[ : : modulation.SPS ] ) :
 		if wrt :
 			rx_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
 			rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
@@ -113,14 +82,16 @@ for timestamp_group in timestamp_groups :
 				for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
 					if file_path.is_file () :
 						file_path.unlink ( missing_ok = True )
-		rx_frames_first_sample_idx = rx_samples_frame_first_sample_idx[0]
-		if dbg : print ( f"\r\nWariant 1. rx_symbols_flat_tensor jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}, {rx_frames_first_sample_idx=}" )
+		rx_frames_first_sample_idx_w1 = rx_samples_frame_first_sample_idx[0]
+		if dbg : print ( f"\r\nWariant 1. rx_symbols_flat_tensor jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}, {rx_frames_first_sample_idx_w1=}" )
+	else :
+		if dbg : print ( f"\r\nWariant 1. rx_symbols_flat_tensor NIE jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}" )
 	
 	# Wariant 2. Dopasowanie pierwszego zidentyfikowanego frame_header w rx_samples i odszukanie jego pozycji względem pierwszego frame_header w tx_samples,
 	# żeby znaleźć pozycję pierwszego sample w rx_samples, który odpowiada pierwszemu sample w tx_samples.
 	# Dzięki temu można mieć pewność, że y_train będzie idealnie dopasowane względem X_train.
-	if rx_frames_first_sample_idx is not None : # Sprawdzenie, czy wariant 1 - najlepszy, nie zadziałał.
-		if dbg : print ( f"rx_symbols_flat_tensor NIE jest identyczny z tx_symbols_flat_tensor dla grupy {timestamp_group}." )
+	rx_frames_first_sample_idx_w2 : np.uint32 = None
+	if rx_frames_first_sample_idx_w1 is None : # Sprawdzenie, czy wariant 1 - najlepszy, nie zadziałał.
 		if rx_samples.frames is not None :
 			tx_samples = packet.RxSamples_v0_1_18 ()
 			tx_samples.rx ( samples_filename = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples4pluto.npy" ) )
@@ -135,35 +106,35 @@ for timestamp_group in timestamp_groups :
 							print ( f"tx: {tx_frame.packet_len}	{packet.pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.frame_start_abs_idx}" )
 							print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
 						if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
-							rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
-							if dbg : print ( f"\r\nWariant 2. Znaleziono dopasowanie ramki: {timestamp_group=} {tx_frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
+							rx_frames_first_sample_idx_w2 = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
+							if dbg : print ( f"\r\nWariant 2. Znaleziono dopasowanie ramki: {timestamp_group=} {tx_frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx_w2=}" )
 							break
-					if rx_frames_first_sample_idx is not None :
+					if rx_frames_first_sample_idx_w2 is not None :
 						break
-			if rx_frames_first_sample_idx is not None :
-				print ( f"Znaleziono dopasowanie ramki: {timestamp_group} rx_frames_first_sample_idx={rx_frames_first_sample_idx}" )
-				'''Znalazłem dopasowanie ramki w jednym z punktów SPS, ale nie wiem czy pierwszy. A chciałbym precyzyjnie znaleźć pierwszy, żeby mieć pewność,
-				że plik y_train będzie idealnie dopasowany względem X_train. I nie będzie przesunięty ani o 1 sample.
-				Będę szukał dopasowania frame header w 4 punktach, które są oddalone o 1 sample od siebie, czyli
-				znaleźć precyzyjnie pierwszy sample a nie któryś z 4, który rozpoczyna frame
-				Zacznę od cofania o 1 sample od znalezionego dopasowania, żeby znaleć ten pierwszy sample, a póżniej będę szedł do przodu o 1 sample,
-				żeby znaleźć ostatni i czy wychodzi liczba sampli z dostposowaniem= SPS,
 
-				Stworzenie symboli bpsk reprezentujacych cały przebieg rx_samples.samples:
-				1. Na początku tworzymy rx_tensor i na całej długości wszędzie wstawiamy 0+j0
-				2. Od pozycji rx_frames_first_sample_idx w rx_tensor podstawiamy odpowiednie symbole BPSK z tx_samples_flat_tensor.
-				'''
-				rx_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
-				rx_tensor [ rx_frames_first_sample_idx : rx_frames_first_sample_idx + tx_samples_flat_tensor.size(0) ] = tx_samples_flat_tensor
-				if plt : plot.flat_tensor_v0_1_18 ( rx_tensor , title = f"{script_filename} {timestamp_group} rx tensor aligned to tx symbols" , marker_idx = rx_samples_frame_first_sample_idx )
-				# Teraz można bezpiecznie zapisać y_train, bo jest pewność, że jest poprawnie dopasowane do X_train, a także można usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
-				if wrt :
-					rx_samples.save_frames2y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name )
-					rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
-					if del_files :
-						for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
-							if file_path.is_file () :
-								file_path.unlink ( missing_ok = True )
-			else :
-				print ( f"Nie znaleziono dopasowania ramki: {timestamp_group}" )
-	print ( f"Zakończono przetwarzanie grupy: {timestamp_group}" )
+	# Na razie wymagam tylko zgodności w0 i w2.
+	if rx_frames_first_sample_idx_w0 is not None and rx_frames_first_sample_idx_w2 is not None :
+		if rx_frames_first_sample_idx_w0 == rx_frames_first_sample_idx_w2 :
+			print ( f"Znaleziono dopasowanie ramki: {timestamp_group} w samplu {rx_frames_first_sample_idx_w0}" )
+			# 1. Opracuj rx_samples.y_train_np_array o długość rx_samples.samples i wstaw tx_symbols od miejsca rx_frames_first_sample_idx_w0, żeby mieć pewność, że jest idealnie dopasowane do X_train.
+			rx_samples.y_train_np_array = np.zeros ( rx_samples.samples.size , dtype = np.complex128 )
+			rx_samples.y_train_np_array [ rx_frames_first_sample_idx_w0 : rx_frames_first_sample_idx_w0 + tx_symbols_flat_tensor.size(0) ] = tx_symbols_flat_tensor.detach ().cpu ().numpy ().astype ( np.complex128 , copy = False )
+			if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_np_array , title = f"{script_filename} {timestamp_group} rx y_train_np_array" , marker_idx = rx_frames_first_sample_idx_w0 )
+			# 2. Przytnij rx_samples.samples, rx_samples.samples_filtered, rx_samples.samples_corrected i rx_samples.y_train_np_array do odpowiedniej długości.
+			rx_samples.clip_Xy_samples_wo_mute_for_training ( frames_first_sample_idx = rx_frames_first_sample_idx_w0 , dir_name = "training" ,  timestamp_group = timestamp_group )
+			# 3. Zapisz rx_samples.y_train_np_array jako rx_samples.y_train_tensor (już nie jako płaski tensor - tylko taki do trenowania).
+
+			#rx_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
+			#rx_tensor [ rx_frames_first_sample_idx_w0 : rx_frames_first_sample_idx_w0 + tx_samples_flat_tensor.size(0) ] = tx_samples_flat_tensor
+			#if plt : plot.flat_tensor_v0_1_18 ( rx_tensor , title = f"{script_filename} {timestamp_group} rx tensor aligned to tx symbols" , marker_idx = rx_frames_first_sample_idx_w0 )
+			# Teraz można bezpiecznie zapisać y_train, bo jest pewność, że jest poprawnie dopasowane do X_train, a także można usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
+			#if wrt :
+			#	rx_samples.active_symbols_2_y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name , rx_frames_first_sample_idx = rx_frames_first_sample_idx_w0 )
+			#	rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
+			if del_files :
+				for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
+					if file_path.is_file () :
+						file_path.unlink ( missing_ok = True )
+	else :
+		print ( f"Nie znaleziono dopasowania ramki: {timestamp_group}" )
+	if dbg : print ( f"Zakończono przetwarzanie grupy: {timestamp_group}" )

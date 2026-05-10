@@ -8,12 +8,9 @@ yabool2001@fedora:~$ cd python/temp/
 yabool2001@fedora:~$ git pull
 yabool2001@fedora:~$ python test126-tx_large_data.py -10.0
 
-
 Sekwencja uruchomienia skryptu test126-rx_large_data.py lokalnie na ubuntu:
 cd ~/python/temp/
 source .venv/bin/activate
-
-
 
 Sekwencja uruchomienia skryptu w ubuntu:
 cd ~/python/temp/
@@ -68,7 +65,7 @@ ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 
-Nof_ATTEMPTS = int ( 20 )
+Nof_ATTEMPTS = int ( 1 )
 Nof_WRTS = int ( 8 )
 
 series_len = 10
@@ -146,7 +143,7 @@ try :
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             if j > 0 :
                 udp_sock.sendto ( ASCII_FF , udp_target_addr )
-                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] } Sent ASCII_FF to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] } Sent ASCII_FF to { IP_DST_ADDR }:{ UDP_PORT }" )
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
         
         t.sleep ( 0.1 )  # odciążenie CPU
@@ -155,6 +152,6 @@ try :
 
 finally :
     udp_sock.sendto ( ASCII_CAN , udp_target_addr )
-    if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { UDP_DEST_IP_V6_ADDR }:{ UDP_TARGET_PORT }" )
+    if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { IP_DST_ADDR }:{ UDP_PORT }" )
     udp_sock.close ()
     exit ( 0 )

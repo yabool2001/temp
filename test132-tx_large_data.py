@@ -33,7 +33,7 @@ else :
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
 debug = True
-plt = False
+plt = True
 wrt = True
 del_old = True
 lipkow_ap = True
@@ -64,7 +64,7 @@ def wrt_flat_tensor ( tx_samples : packet.TxSamples_v0_1_18 , timestamp_group : 
     tx_samples.save_frames2flat_tensor ( filename = f"{timestamp_group}_tx_symbols_flat_tensor" , dir_name = dir_name )
     #tx_samples.save_samples_2_flat_tensor ( filename = f"{timestamp_group}_tx_samples_flat_tensor" , dir_name = dir_name ) # wersja z rozbiegówką i wygaszeniem (41 sampli) jako  0+j0
     tx_samples.save_symbols_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp_group}_tx_samples_flat_tensor" , dir_name = dir_name ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
-    tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp_group}_tx_samples4pluto" , dir_name = dir_name , add_timestamp_group = False )
+    tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp_group}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
     if debug : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp_group=}..." )
 
 def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) -> tuple [ packet.TxSamples_v0_1_18 , str ] :
@@ -122,8 +122,8 @@ try :
             if debug : print ( f"Received ASCII_FF {payload_udp=}, sending timestamp_group." )
             tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR )
             if plt :
-                #tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
-                #tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
+                tx_samples.plot_symbols ( f"{script_filename} {tx_samples.bytes.size=}" )
+                tx_samples.plot_complex_samples4pluto ( f"{script_filename}" )
                 tx_samples.plot_samples_spectrum ( f"{ script_filename } samples4pluto" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if debug : print ( f"Sent {timestamp_group=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )

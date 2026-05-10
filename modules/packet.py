@@ -600,7 +600,9 @@ class RxSamples_v0_1_18 :
 
     # Pola uzupełnianie w __post_init__
     samples : NDArray[ np.complex128 ] = field ( init = False )
+    y_train_np_array : NDArray[ np.complex128 ] = field ( init = False )
     y_train_tensor : torch.Tensor = field ( init = False )
+    tx_active_symbols : NDArray[ np.complex128 ] = field ( init = False )
     flat_tensor : torch.Tensor = field ( init = False )
     #samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -708,13 +710,42 @@ class RxSamples_v0_1_18 :
         # bez ponownego filtrowania i korygowania.
         self.detect_frames ( deep = False , filter = False , correct = False )
 
+    def clip_Xy_samples_wo_mute_for_training ( self , frames_first_sample_idx : np.uint32 = None , timestamp_group : str = None , dir_name : str = None ) -> None :
+        # Przcięcie self.samples, self.samples_filtered, y_train_np_array i y_train_tensor do zakresu między frames_first_sample_idx a frames_last_sample_idx.
+        if frames_first_sample_idx is None or timestamp_group is None or dir_name is None :
+            raise ValueError ( f"All arguments must be provided." )
+        if frames_first_sample_idx >= self.samples.size :
+            raise ValueError ( f"{frames_first_sample_idx=} must be less than  {self.samples.size}." )
+        '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.'''
+        frames_last_sample_idx = frames_first_sample_idx + self.tx_active_symbols.size
+        i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
+        ratio : float = self.tx_active_symbols.size / self.samples.size
+        clip1 = ( ( frames_first_sample_idx - 1 ) // i ) * i
+        clip2 = ( frames_last_sample_idx // i + 1) * i
+        # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
+        clip1 = np.maximum ( 0 , clip1 )
+        clip2 = np.minimum ( np.uint32 ( self.samples.size ) , clip2 )
+        ratio_clipped = self.tx_active_symbols.size / ( clip2 - clip1 )
+        print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
+        self.samples = self.clip_samples_corrected ( self.samples , clip1 , clip2 )
+        # Poniższa komenda ma sens jeśli rzeczywiście filtrowałeś sygnał.
+        self.samples_filtered = self.clip_samples_corrected ( self.samples_filtered , clip1 , clip2 )
+        self.y_train_np_array = self.y_train_np_array[ clip1 : clip2 ]
+        # Zapisanie self.y_train_np_array do self.y_train_tensor w typie torch.complex64 i odpowiednim formacie i shape do odczytu przez pętlę test129-training.py
+        self.y_train_tensor = torch.from_numpy ( self.y_train_np_array.astype ( np.complex64 ) )
+        self.save_tensor_2_pt ( tensor = self.y_train_tensor , file_name = f"{timestamp_group}_y_train" , dir_name = dir_name )
+        self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples , file_name = f"{timestamp_group}_rx_samples" , dir_name = dir_name , add_timestamp = False )
+        self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples_filtered , file_name = f"{timestamp_group}_rx_samples_filtered" , dir_name = dir_name , add_timestamp = False )
+
     def reset_frame_detection ( self ) -> None :
         self.samples = self.samples_filtered = self.samples_corrected = np.array ( [] , dtype = np.complex128 )
         self.frames = []
         self.leftovers = None
         self.has_leftovers = False
         self.leftovers_start_idx = np.uint32 ( 0 )
-        self.y_train_tensor = torch.tensor ( [] )
+        self.y_train_tensor = torch.tensor ( [] ,dtype = torch.complex64 )
         self.has_amp_greater_than_ths = False
         self.samples_corrected_len = np.uint32 ( 0 )
         self.sync_sequence_peaks = np.array ( [] , dtype = np.uint32 )
@@ -729,7 +760,7 @@ class RxSamples_v0_1_18 :
 
     def plot_complex_samples ( self , title = "" , marker_all_samples : bool = False , markers_first_active_samples : bool = True ) -> None :
         if markers_first_active_samples :
-            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in self.frames ] , dtype = np.uint32 )
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = marker_all_samples , marker_peaks = frames_first_sample_idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
@@ -741,13 +772,13 @@ class RxSamples_v0_1_18 :
         plot.tensor_waveform_v0_1_16 ( self.y_train_tensor , title = f"y_train_tensor {title}" , marker_squares = marker , marker_peaks = peaks , frame_idx = frame_idx )
 
     def plot_flat_tensor ( self , title : str = "" ) -> None :
-        frames_start_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+        frames_start_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in self.frames ] , dtype = np.uint32 )
         flat_tensor = self.flat_tensor_from_y_train ()
         plot.tensor_waveform_v0_1_16 ( flat_tensor , title = f"RxSamples y_train_tensor {title}" , marker_peaks = frames_start_idx )
 
     def plot_complex_samples_corrected_v0_1_20 ( self , title = "" , markers_first_active_samples : bool = False ) -> None :
         if markers_first_active_samples :
-            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in self.frames ] , dtype = np.uint32 )
             plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"{title} {self.samples_corrected.size=}, {frames_first_sample_idx.size=}" , marker_squares = markers_first_active_samples , marker_peaks = frames_first_sample_idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples_corrected , f"{title} {self.samples_corrected.size=}" )
@@ -759,6 +790,17 @@ class RxSamples_v0_1_18 :
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
+
+    def save_complex_samples_2_npf_v0_1_20 ( self , samples : NDArray[ np.complex128 ] = None , file_name : str = None, dir_name : str = None , add_timestamp : bool = False ) -> None :
+        if file_name is None or not isinstance ( samples , np.ndarray ) or samples.dtype != np.complex128 :
+            raise TypeError ( "file_name must be provided and samples must be numpy.ndarray with dtype=np.complex128" )
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        if dir_name is not None :
+            Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+            filename_and_dirname = f"{dir_name}/{filename}"
+        else :
+            filename_and_dirname = filename
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , samples )
 
     def save_complex_samples_2_npf ( self , file_name : str , dir_name : str ) -> None :
         filename_with_timestamp = ops_file.add_timestamp_2_filename ( file_name )
@@ -840,6 +882,15 @@ class RxSamples_v0_1_18 :
                 y_train_symbols[ frame_start_idx : frame_end_idx ] = frame_symbols[ : frame_end_idx - frame_start_idx ]
         return torch.from_numpy ( y_train_symbols )
 
+    def active_symbols_2_y_train_tensor ( self , file_name : str , dir_name : str , rx_frames_first_sample_idx : np.uint32 = None ) -> torch.Tensor :
+        if rx_frames_first_sample_idx is None :
+            print ( "ERROR: rx_frames_first_sample_idx must be provided." )
+            return None
+        self.y_train_tensor = torch.zeros ( self.samples.size , dtype = torch.complex64 )
+        last_sample_idx = self.samples.size
+        self.y_train_tensor [ rx_frames_first_sample_idx : last_sample_idx ] = 0 + 0j
+
+
     def flat_tensor_from_y_train ( self ) -> torch.Tensor :
         if not isinstance ( self.y_train_tensor , torch.Tensor ) or not torch.is_complex ( self.y_train_tensor ) :
             raise TypeError ( "y_train_tensor must be a complex torch.Tensor" )
@@ -851,6 +902,13 @@ class RxSamples_v0_1_18 :
         tensor_filename = f"{dir_name}/{file_name}.pt"
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         torch.save ( self.y_train_tensor , tensor_filename )
+
+    def save_tensor_2_pt ( self , tensor : torch.Tensor = None , file_name : str = None , dir_name : str = None ) -> None :
+        if tensor is None or file_name is None or dir_name is None or not isinstance ( tensor , torch.Tensor ) or tensor.dtype != torch.complex64 :
+            raise TypeError ( "All argument must be provided" )
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        tensor_filename = f"{dir_name}/{file_name}.pt"
+        torch.save ( tensor , tensor_filename )
 
     def __repr__ ( self ) -> str :
         for frame in self.frames :
@@ -1086,7 +1144,7 @@ class TxSamples_v0_1_18 :
         if repeat < 1 or repeat > 4294967295 :
             raise ValueError ( "Error: reapt value is out of the range! Allowed range is 1 to 4294967295." )
         while repeat :
-            sdr_ctx.tx ( self.samples4pluto )
+            sdr_ctx.tx ( self.samples4pluto_wo_mute ) # Uwaga w innych nie wprowadziłem tej zmiany, tj. wo_mute
             repeat -= 1
 
     def tx_cyclic ( self , sdr_ctx : Pluto ) -> None :
