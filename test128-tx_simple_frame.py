@@ -33,7 +33,7 @@ script_filename = os.path.basename ( __file__ )
 
 
 dbg = True
-plt = False
+plt = True
 wrt = True
 del_old = True
 lipkow_ap = True
@@ -41,7 +41,10 @@ single_machine = True
 
 if lipkow_ap :
     if single_machine :
-        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        #IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+        #INTERFACE = toml_settings["IF"][ "LEGION" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
     else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
 else :
@@ -51,7 +54,6 @@ else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
 
 UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
-INTERFACE = toml_settings["IF"][ "LEGION" ]
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
@@ -87,6 +89,9 @@ timestamp = ops_os.milis_timestamp ()
 
 if plt :
     tx_samples.plot_complex_samples4pluto ( f"{script_filename}" , marker_peaks = True )
+    tx_samples.plot_samples_flat_tensor_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )
+    tx_samples.plot_symbols_flat_tensor_wo_mute ( f"{script_filename}" , marker_idx = True )
+    tx_samples.plot_active_symbols_wo_mute ( f"{script_filename}" , mark_frames_first_sample = True )
 
 #if wrt :
 #    if dbg : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
@@ -127,8 +132,8 @@ try :
                 tx_samples.save_frames2flat_tensor ( filename = f"{timestamp}_tx_symbols_flat_tensor" , dir_name = dir_name )
                 tx_samples.save_symbols_flat_tensor_wo_mute_2_pt ( file_name = f"{timestamp}_tx_samples_flat_tensor" , dir_name = dir_name )
                 tx_samples.save_complex_samples4pluto_2_npf ( file_name = f"{timestamp}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
+                tx_samples.save_active_symbols_wo_mute_2_npf ( file_name = f"{timestamp}_tx_active_symbols" , dir_name = dir_name , add_timestamp = False )
                 if dbg : print ( f"Frames' symbols and samples4pluto saved to flat tensor asd samples4pluto to npf file in {dir_name=} {timestamp=}..." )
-        
         t.sleep ( 0.05 )  # odciążenie CPU
 
 finally :

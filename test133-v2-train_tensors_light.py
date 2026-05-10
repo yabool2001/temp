@@ -15,7 +15,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
@@ -59,7 +59,7 @@ for timestamp_group in timestamp_groups :
 	# Wariant 0_light, wykorzystuje rx_frame.header_bits do znalezienia pozycji pierwszego sample w rx_symbols_flat_tensor.
 	# To jest do poprawy, bo ręcznie łatałem problem z -2 w 
 	tx_frames : packet.RxFrame_v0_1_18 = []
-	tx_symbols : NDArray[ np.complex128 ] = np.repeat ( rx_symbols_flat_tensor[1::].detach ().cpu ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
+	tx_symbols : NDArray[ np.complex128 ] = np.repeat ( tx_symbols_flat_tensor.detach ().cpu ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
 	while tx_symbols.size > 0 :
 		frame = packet.RxFrame_v0_1_18 ( samples_filtered = tx_symbols , sync_sequence_peak_abs_idx = 0 )
 		if frame.has_header :

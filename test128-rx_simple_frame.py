@@ -35,8 +35,12 @@ single_machine = True
 
 if lipkow_ap :
     if single_machine :
-        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
-        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        #IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        #IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+        IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+        #INTERFACE = toml_settings["IF"][ "LEGION" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
     else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
         IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
@@ -49,7 +53,6 @@ else :
         IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
 
 UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
-INTERFACE = toml_settings["IF"][ "LEGION" ]
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
