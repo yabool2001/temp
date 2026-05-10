@@ -730,14 +730,16 @@ class RxSamples_v0_1_18 :
         ratio_clipped = self.tx_active_symbols.size / ( clip2 - clip1 )
         print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
         self.samples = self.clip_samples_corrected ( self.samples , clip1 , clip2 )
-        # Poniższa komenda ma sens jeśli rzeczywiście filtrowałeś sygnał.
+        # Poniższe 2 komendy mają sens jeśli rzeczywiście filtrowałeś i korygowałeś sygnał.
         self.samples_filtered = self.clip_samples_corrected ( self.samples_filtered , clip1 , clip2 )
+        self.samples_corrected = self.clip_samples_corrected ( self.samples_corrected , clip1 , clip2 )
         self.y_train_np_array = self.y_train_np_array[ clip1 : clip2 ]
         # Zapisanie self.y_train_np_array do self.y_train_tensor w typie torch.complex64 i odpowiednim formacie i shape do odczytu przez pętlę test129-training.py
         self.y_train_tensor = torch.from_numpy ( self.y_train_np_array.astype ( np.complex64 ) )
         self.save_tensor_2_pt ( tensor = self.y_train_tensor , file_name = f"{timestamp_group}_y_train" , dir_name = dir_name )
         self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples , file_name = f"{timestamp_group}_rx_samples" , dir_name = dir_name , add_timestamp = False )
         self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples_filtered , file_name = f"{timestamp_group}_rx_samples_filtered" , dir_name = dir_name , add_timestamp = False )
+        self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples_corrected , file_name = f"{timestamp_group}_rx_samples_corrected" , dir_name = dir_name , add_timestamp = False )
 
     def reset_frame_detection ( self ) -> None :
         self.samples = self.samples_filtered = self.samples_corrected = np.array ( [] , dtype = np.complex128 )

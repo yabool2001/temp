@@ -42,7 +42,7 @@ for timestamp_group in timestamp_groups :
 	for samples_file in samples_files :
 		rx_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
 	
-	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
+	rx_samples.detect_frames ( deep = False , filter = True , correct = True , add_peak_at_0 = False )
 	rx_samples_frame_first_sample_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
 	rx_symbols_flat_tensor = rx_samples.symbols_2_flat_tensor ()
 	tx_symbols_flat_tensor : torch.Tensor = ops_file.open_flat_tensor ( file_name = f"{timestamp_group}_tx_symbols_flat_tensor.pt" , dir_name = samples_dir.name )
