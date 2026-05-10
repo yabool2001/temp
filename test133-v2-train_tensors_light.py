@@ -52,14 +52,14 @@ for timestamp_group in timestamp_groups :
 		rx_samples.plot_complex_samples ( title = f"{script_filename} {timestamp_group} corrected rx_samples | " , markers_first_active_samples = True )
 		#rx_samples.plot_complex_samples_corrected_v0_1_20 ( title = f"{script_filename} corrected rx_samples | " , markers_first_active_samples = True )
 		plot.flat_tensor_v0_1_18 ( rx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} rx symbols flat tensor" )
-		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor[ 2 : : modulation.SPS ] , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
+		plot.flat_tensor_v0_1_18 ( tx_symbols_flat_tensor , title = f"{script_filename} {timestamp_group} tx symbols flat tensor" )
 
 	rx_frames_first_sample_idx : np.uint32 = None
 
 	# Wariant 0_light, wykorzystuje rx_frame.header_bits do znalezienia pozycji pierwszego sample w rx_symbols_flat_tensor.
 	# To jest do poprawy, bo ręcznie łatałem problem z -2 w 
 	tx_frames : packet.RxFrame_v0_1_18 = []
-	tx_symbols : NDArray[ np.complex128 ] = np.repeat ( tx_symbols_flat_tensor.detach ().cpu ().numpy () , modulation.SPS ).astype ( np.complex128 , copy = False )
+	tx_symbols : NDArray[ np.complex128 ] = tx_symbols_flat_tensor.detach ().cpu ().numpy ().astype ( np.complex128 , copy = False )
 	while tx_symbols.size > 0 :
 		frame = packet.RxFrame_v0_1_18 ( samples_filtered = tx_symbols , sync_sequence_peak_abs_idx = 0 )
 		if frame.has_header :
