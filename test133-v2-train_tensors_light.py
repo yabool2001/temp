@@ -15,7 +15,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False
 dbg : bool = True
 del_files : bool = False
@@ -80,7 +80,7 @@ for timestamp_group in timestamp_groups :
 					print ( f"tx: {frame.packet_len}	{packet.pad_bits2bytes ( frame.header_bits )}	{frame.frame_start_abs_idx}" )
 					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_idx}" )
 				if np.array_equal ( rx_frame.header_bits , frame.header_bits ) :
-					rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx - frame.frame_start_abs_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
+					rx_frames_first_sample_idx = rx_frame.frame_start_abs_first_sample_idx #- frame.frame_start_abs_idx
 					if dbg : print ( f"\r\nWariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_frame.frame_start_abs_idx=}, {rx_frames_first_sample_idx=}" )
 					break
 			#tx_frames.append ( frame )
