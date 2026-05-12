@@ -682,6 +682,49 @@ def y_train_tensor_as_flat_tensor_v0_1_18 (
     )
 
 
+def samples_and_tensor (
+    samples : NDArray[ np.complex128 ] ,
+    y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
+    tensor_m : int ,
+    title : str
+) -> None :
+    if samples.size == 0 :
+        raise ValueError ( "Wejściowe samples jest puste." )
+    if samples.ndim != 1 :
+        raise ValueError ( "samples musi być tablicą 1D." )
+    if not np.iscomplexobj ( samples ) :
+        raise ValueError ( "samples musi zawierać wartości zespolone." )
+
+    if isinstance ( y_train_tensor , torch.Tensor ) :
+        tensor_np = y_train_tensor.detach ().cpu ().numpy ()
+    else :
+        tensor_np = np.asarray ( y_train_tensor )
+
+    if tensor_np.size == 0 :
+        raise ValueError ( "Wejściowy y_train_tensor jest pusty." )
+    if not np.iscomplexobj ( tensor_np ) :
+        raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
+
+    tensor_flat = np.asarray ( tensor_np , dtype = np.complex64 ).reshape ( -1 )
+    tensor_valid = tensor_flat * tensor_m
+    tensor_x = np.arange ( tensor_valid.size )
+
+    fig = px.line ( title = f"{title} | samples={samples.size} tensor={tensor_flat.size} tensor_m={tensor_m}" )
+    fig.add_scatter ( x = np.arange ( samples.size ) , y = samples.real , mode = 'lines' , name = 'samples I (real)' , line = dict ( color = 'blue' ) )
+    fig.add_scatter ( x = np.arange ( samples.size ) , y = samples.imag , mode = 'lines' , name = 'samples Q (imag)' , line = dict ( color = 'green' , dash = 'dash' ) )
+    fig.add_scatter ( x = tensor_x , y = tensor_valid.real , mode = 'lines+markers' , name = 'tensor I (real)' , line = dict ( color = 'red' ) , marker = dict ( symbol = 'circle', size = 6 ) )
+    fig.add_scatter ( x = tensor_x , y = tensor_valid.imag , mode = 'lines+markers' , name = 'tensor Q (imag)' , line = dict ( color = 'orange' , dash = 'dot' ) , marker = dict ( symbol = 'x', size = 7 ) )
+
+    fig.update_layout (
+        xaxis_title = "Numer próbki" ,
+        yaxis_title = "Amplituda" ,
+        xaxis = dict ( rangeslider_visible = True ) ,
+        legend = dict ( orientation = "h" , yanchor = "bottom" , y = 1.02 , xanchor = "center" , x = 0.5 ) ,
+        height = 550
+    )
+    fig.show ()
+
+
 def tensor_waveform_v0_1_16 (
     signal_tensor : torch.Tensor | NDArray[ np.float32 ] ,
     title : str = "Tensor RxSamples" ,

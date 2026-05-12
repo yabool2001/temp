@@ -16,7 +16,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
 plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
-wrt : bool = False
+wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = False
 del_files : bool = False
 
@@ -121,7 +121,7 @@ for timestamp_group in timestamp_groups :
 			rx_samples.y_train_np_array [ rx_frames_first_sample_idx_w0 : rx_frames_first_sample_idx_w0 + tx_symbols_flat_tensor.size(0) ] = tx_symbols_flat_tensor.detach ().cpu ().numpy ().astype ( np.complex128 , copy = False )
 			if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_np_array , title = f"{script_filename} {timestamp_group} rx y_train_np_array" , marker_idx = rx_frames_first_sample_idx_w0 )
 			# 2. Przytnij rx_samples.samples, rx_samples.samples_filtered, rx_samples.samples_corrected i rx_samples.y_train_np_array do odpowiedniej długości.
-			rx_samples.clip_Xy_samples_wo_mute_for_training ( frames_first_sample_idx = rx_frames_first_sample_idx_w0 , dir_name = "training" ,  timestamp_group = timestamp_group )
+			if wrt : rx_samples.clip_Xy_samples_wo_mute_for_training ( frames_first_sample_idx = rx_frames_first_sample_idx_w0 , dir_name = "training" ,  timestamp_group = timestamp_group )
 			# 3. Zapisz rx_samples.y_train_np_array jako rx_samples.y_train_tensor (już nie jako płaski tensor - tylko taki do trenowania).
 
 			#rx_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
