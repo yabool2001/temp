@@ -44,4 +44,4 @@ for samples_file in samples_files :
 		if dbg : print ( f"\n{samples_file.name} samples.shape={samples.shape} samples.dtype={samples.dtype}" )
 		#if plt : plot.complex_waveform_v0_1_6 ( samples , f"{samples_file.name} samples.size={samples.size}")
 
-plot.samples_and_tensor ( rx_pluto_samples.samples , loaded_tensor , tensor_m = 500 , title = "combined" )
+plot.samples_and_tensor ( rx_pluto_samples.samples , loaded_tensor , tensor_m = 500 , title = "combined" , parts = 8 )

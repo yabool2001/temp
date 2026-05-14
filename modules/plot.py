@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import torch
 from scipy import signal
 from typing import Optional, TYPE_CHECKING
@@ -686,7 +687,8 @@ def samples_and_tensor (
     samples : NDArray[ np.complex128 ] ,
     y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
     tensor_m : int ,
-    title : str
+    title : str ,
+    parts : int = 4
 ) -> None :
     if samples.size == 0 :
         raise ValueError ( "Wejściowe samples jest puste." )
@@ -704,25 +706,43 @@ def samples_and_tensor (
         raise ValueError ( "Wejściowy y_train_tensor jest pusty." )
     if not np.iscomplexobj ( tensor_np ) :
         raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
+    if parts <= 0 :
+        raise ValueError ( "parts musi być większe od 0." )
 
     tensor_flat = np.asarray ( tensor_np , dtype = np.complex64 ).reshape ( -1 )
     tensor_valid = tensor_flat * tensor_m
-    tensor_x = np.arange ( tensor_valid.size )
 
-    fig = px.line ( title = f"{title} | samples={samples.size} tensor={tensor_flat.size} tensor_m={tensor_m}" )
-    fig.add_scatter ( x = np.arange ( samples.size ) , y = samples.real , mode = 'lines' , name = 'samples I (real)' , line = dict ( color = 'blue' ) )
-    fig.add_scatter ( x = np.arange ( samples.size ) , y = samples.imag , mode = 'lines' , name = 'samples Q (imag)' , line = dict ( color = 'green' , dash = 'dash' ) )
-    fig.add_scatter ( x = tensor_x , y = tensor_valid.real , mode = 'lines+markers' , name = 'tensor I (real)' , line = dict ( color = 'red' ) , marker = dict ( symbol = 'circle', size = 6 ) )
-    fig.add_scatter ( x = tensor_x , y = tensor_valid.imag , mode = 'lines+markers' , name = 'tensor Q (imag)' , line = dict ( color = 'orange' , dash = 'dot' ) , marker = dict ( symbol = 'x', size = 7 ) )
+    samples_parts = min ( parts , samples.size )
+    tensor_parts = min ( parts , tensor_valid.size )
 
-    fig.update_layout (
-        xaxis_title = "Numer próbki" ,
-        yaxis_title = "Amplituda" ,
-        xaxis = dict ( rangeslider_visible = True ) ,
-        legend = dict ( orientation = "h" , yanchor = "bottom" , y = 1.02 , xanchor = "center" , x = 0.5 ) ,
-        height = 550
-    )
-    fig.show ()
+    samples_bounds = np.linspace ( 0 , samples.size , num = samples_parts + 1 , dtype = np.int_ )
+    tensor_bounds = np.linspace ( 0 , tensor_valid.size , num = tensor_parts + 1 , dtype = np.int_ )
+
+    figures_count = max ( samples_parts , tensor_parts )
+    for part_idx in range ( figures_count ) :
+        sample_start = samples_bounds[ min ( part_idx , samples_parts - 1 ) ]
+        sample_stop = samples_bounds[ min ( part_idx + 1 , samples_parts ) ]
+        tensor_start = tensor_bounds[ min ( part_idx , tensor_parts - 1 ) ]
+        tensor_stop = tensor_bounds[ min ( part_idx + 1 , tensor_parts ) ]
+
+        samples_chunk = samples[ sample_start : sample_stop ]
+        tensor_chunk = tensor_valid[ tensor_start : tensor_stop ]
+
+        fig = go.Figure ()
+        fig.add_trace ( go.Scattergl ( x = np.arange ( sample_start , sample_stop ) , y = samples_chunk.real , mode = 'lines' , name = 'samples I (real)' , line = dict ( color = 'blue' ) ) )
+        fig.add_trace ( go.Scattergl ( x = np.arange ( sample_start , sample_stop ) , y = samples_chunk.imag , mode = 'lines' , name = 'samples Q (imag)' , line = dict ( color = 'green' , dash = 'dash' ) ) )
+        fig.add_trace ( go.Scattergl ( x = np.arange ( tensor_start , tensor_stop ) , y = tensor_chunk.real , mode = 'lines' , name = 'tensor I (real)' , line = dict ( color = 'red' ) ) )
+        fig.add_trace ( go.Scattergl ( x = np.arange ( tensor_start , tensor_stop ) , y = tensor_chunk.imag , mode = 'lines' , name = 'tensor Q (imag)' , line = dict ( color = 'orange' , dash = 'dot' ) ) )
+
+        fig.update_layout (
+            title = f"{title} | part {part_idx + 1}/{figures_count} | samples={sample_start}:{sample_stop} tensor={tensor_start}:{tensor_stop} tensor_m={tensor_m}" ,
+            xaxis_title = "Numer próbki" ,
+            yaxis_title = "Amplituda" ,
+            xaxis = dict ( rangeslider_visible = True ) ,
+            legend = dict ( orientation = "h" , yanchor = "bottom" , y = 1.02 , xanchor = "center" , x = 0.5 ) ,
+            height = 550
+        )
+        fig.show ()
 
 
 def tensor_waveform_v0_1_16 (

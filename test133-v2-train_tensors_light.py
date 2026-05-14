@@ -65,6 +65,7 @@ for timestamp_group in timestamp_groups :
 		if frame.has_header :
 			if np.array_equal ( rx_samples.frames[0].header_bits , frame.header_bits ) :
 				rx_frames_first_sample_idx_w0 = rx_samples.frames[0].frame_start_abs_first_sample_idx
+				rx_frames_start_sample_idx_w0 = rx_samples.frames[0].frame_start_abs_idx
 				if dbg : print ( f"\r\nWariant 0. Znaleziono dopasowanie ramki: {timestamp_group=} {frame.frame_start_abs_idx=}, {rx_samples.frames[0].frame_start_abs_idx=}, {rx_frames_first_sample_idx_w0=}" )
 				tx_symbols = [] # Przerwanie pętli, bo już znalazłem dopasowanie pierwszej ramki i nie muszę szukać dalej.
 				break
@@ -115,6 +116,7 @@ for timestamp_group in timestamp_groups :
 	# Na razie wymagam tylko zgodności w0 i w2.
 	if rx_frames_first_sample_idx_w0 is not None and rx_frames_first_sample_idx_w2 is not None :
 		if rx_frames_first_sample_idx_w0 == rx_frames_first_sample_idx_w2 :
+			rx_frames_first_sample_idx_w0 = rx_frames_start_sample_idx_w0 - 1
 			print ( f"Znaleziono dopasowanie ramki: {timestamp_group} w samplu {rx_frames_first_sample_idx_w0}" )
 			# 1. Opracuj rx_samples.y_train_np_array o długość rx_samples.samples i wstaw tx_symbols od miejsca rx_frames_first_sample_idx_w0, żeby mieć pewność, że jest idealnie dopasowane do X_train.
 			rx_samples.y_train_np_array = np.zeros ( rx_samples.samples.size , dtype = np.complex128 )
