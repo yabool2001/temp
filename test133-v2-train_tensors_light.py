@@ -116,11 +116,11 @@ for timestamp_group in timestamp_groups :
 	# Na razie wymagam tylko zgodności w0 i w2.
 	if rx_frames_first_sample_idx_w0 is not None and rx_frames_first_sample_idx_w2 is not None :
 		if rx_frames_first_sample_idx_w0 == rx_frames_first_sample_idx_w2 :
-			rx_frames_first_sample_idx_w0 = rx_frames_start_sample_idx_w0 #- 1
+			rx_frames_first_sample_idx_w0 = rx_frames_start_sample_idx_w0 - 1
 			print ( f"Znaleziono dopasowanie ramki: {timestamp_group} w samplu {rx_frames_first_sample_idx_w0}" )
 			# 1. Opracuj rx_samples.y_train_np_array o długość rx_samples.samples i wstaw tx_symbols od miejsca rx_frames_first_sample_idx_w0, żeby mieć pewność, że jest idealnie dopasowane do X_train.
 			rx_samples.y_train_np_array = np.zeros ( rx_samples.samples.size , dtype = np.complex128 )
-			rx_samples.y_train_np_array [ rx_frames_first_sample_idx_w0 : rx_frames_first_sample_idx_w0 + tx_symbols_flat_tensor.size(0) ] = tx_symbols_flat_tensor.detach ().cpu ().numpy ().astype ( np.complex128 , copy = False )
+			rx_samples.y_train_np_array [ rx_frames_first_sample_idx_w0 : rx_frames_first_sample_idx_w0 + tx_symbols_flat_tensor.size(0) ] = tx_samples_flat_tensor.detach ().cpu ().numpy ().astype ( np.complex128 , copy = False )
 			if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_np_array , title = f"{script_filename} {timestamp_group} rx y_train_np_array" , marker_idx = rx_frames_first_sample_idx_w0 )
 			# 2. Przytnij rx_samples.samples, rx_samples.samples_filtered, rx_samples.samples_corrected i rx_samples.y_train_np_array do odpowiedniej długości.
 			if wrt : rx_samples.clip_Xy_samples_wo_mute_for_training ( frames_first_sample_idx = rx_frames_first_sample_idx_w0 , dir_name = "training" ,  timestamp_group = timestamp_group )

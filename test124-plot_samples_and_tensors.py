@@ -29,4 +29,4 @@ else :
 
 loaded_tensor = torch.load ( tensor_file )
 
-plot.samples_and_tensor ( rx_pluto_samples.samples , loaded_tensor , tensor_m = 500 , title = "combined" , parts = 8 )
+plot.samples_and_tensor ( rx_pluto_samples.samples , loaded_tensor , tensor_m = 5000 , title = "combined" , parts = 8 )
