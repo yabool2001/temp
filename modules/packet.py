@@ -596,6 +596,54 @@ class RxFrame_v0_1_18 :
         return ( f"{self.packet=}, {self.has_frame=}, {self.has_leftovers=}" )
 
 @dataclass ( slots = True , eq = False )
+class RxSamples :
+
+    # Pola uzupełnianie w __post_init__
+    samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    concatenates : int = 0
+    SPS = modulation.SPS
+    SPAN = filters.SPAN
+    CONCATENATE_THS : int = 10
+
+    def __post_init__ ( self ) -> None :
+
+        pass
+
+    def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> None :
+
+        if sdr_ctx is not None :
+            samples = sdr_ctx.rx ()
+        elif file_name is not None :
+            if file_name.endswith('.npy'):
+                samples = ops_file.open_samples_from_npf ( file_name )
+            elif file_name.endswith('.csv'):
+                samples = ops_file.open_csv_and_load_np_complex128 ( file_name )
+            else:
+                raise ValueError(f"Error: unsupported file format for {file_name}! Supported formats: .npy, .csv")
+        else :
+            raise ValueError ( "Either sdr_ctx or file_name must be provided." )
+        if concatenate :
+            if self.concatenates < self.CONCATENATE_THS :
+                self.concatenates += 1
+                self.samples = np.concatenate ( [ self.samples , samples ] )
+            else :
+                raise MemoryError ( f"{self.concatenates=}. To prevent modem performance issues, further concatenation is blocked." )
+        else :
+            self.samples = samples
+
+    def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
+
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
+
+    def __repr__ ( self ) -> str :
+
+        return ( f"{self.samples.size=}, {self.samples.dtype=}")
+
+
+@dataclass ( slots = True , eq = False )
 class RxSamples_v0_1_18 :
 
     # Pola uzupełnianie w __post_init__
@@ -1017,6 +1065,80 @@ class TxFrame_v0_1_18 :
     def __repr__ ( self ) -> str :
         return (
             f"{self.bytes.size=}, {self.bpsk_symbols.size=}, {self.bpsk_symbols_flat_tensor.size=}, {self.samples4pluto.size=}" )
+
+@dataclass ( slots = True , eq = False )
+class TxSamples :
+
+    payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
+    samples_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
+    samples_4_pluto : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
+    SPS = modulation.SPS
+
+    def __post_init__ ( self ) -> None :
+
+        if self.payload_bytes is not None and len ( self.payload_bytes ) > 0 :
+            self.add_frame ( payload_bytes = self.payload_bytes )
+
+    def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
+
+        if payload_bytes is not None and len ( payload_bytes ) > 0 :
+            payload_bytes_np_arr = np.asarray ( payload_bytes , dtype = np.uint8 ).ravel ()
+            if len ( payload_bytes_np_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
+                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
+        else :
+            raise ValueError ( "Error: payload_bytes must be provided." )
+        tx_frame = self.create_tx_frame ( payload_bytes_np_arr = payload_bytes_np_arr )
+        self.frames.append ( tx_frame )
+        self.create_samples4pluto_and_active_symbols ()
+
+    def create_tx_frame ( self , payload_bytes_np_arr : NDArray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
+
+        tx_frame_payload = TxPacket_v0_1_18 ( payload_bytes = payload_bytes_np_arr )
+        tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
+        return tx_frame
+
+    def create_samples4pluto_and_active_symbols ( self ) -> None :
+
+        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
+        if frames_bpsk_symbols.size > 0 :
+            samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
+            self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
+            first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_FIRST_SAMPLE_OFFSET )
+            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * modulation.SPS
+            active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
+            self.active_symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+
+    def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
+        sdr_ctx.tx_destroy_buffer ()
+        sdr_ctx.tx_cyclic_buffer = False
+        if repeat < 1 or repeat > 4294967295 :
+            raise ValueError ( "Error: reapt value is out of the range! Allowed range is 1 to 4294967295." )
+        while repeat :
+            sdr_ctx.tx ( self.samples_4_pluto ) # Uwaga w innych nie wprowadziłem tej zmiany, tj. wo_mute
+            repeat -= 1
+
+    def save_samples_4_pluto_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples_4_pluto )
+
+    def save_active_symbols_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.active_symbols )
+
+    def plot_samples_4_pluto ( self , title = "" ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" )
+
+    def plot_active_symbols ( self , title = "" ) -> None :
+        plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols , title = f"{title} tx {self.active_symbols.size=}" )
+
+    def __repr__ ( self ) -> str :
+        return ( f"{ self.bpsk_symbols.size= }, { self.samples_4_pluto.size= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples_v0_1_18 :
