@@ -600,7 +600,9 @@ class RxSamples :
 
     # Pola uzupełnianie w __post_init__
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     concatenates : int = 0
+    frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     SPS = modulation.SPS
     SPAN = filters.SPAN
     CONCATENATE_THS : int = 10
@@ -631,12 +633,36 @@ class RxSamples :
         else :
             self.samples = samples
 
+    def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False , add_peak_at_0 : bool = False ) -> None :
+        if filter :
+            self.samples = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples )
+        if correct :
+            self.samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
+        if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
+        previous_processed_idx : np.uint32 = 0
+        for idx in self.sync_sequence_peaks :
+            if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , sync_sequence_peak_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
+                if frame.has_header :
+                    self.frames.append ( frame )
+                    previous_processed_idx = frame.frame_end_abs_idx
+                else :
+                    previous_processed_idx = idx
+
     def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
 
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
+
+    def plot_samples ( self , title = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
+        if mark_first_active_samples :
+            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_sample_idx )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
 
     def __repr__ ( self ) -> str :
 
@@ -1071,6 +1097,7 @@ class TxSamples :
 
     payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
     samples_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
+    samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_4_pluto : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
@@ -1103,8 +1130,8 @@ class TxSamples :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
-            samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
+            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
             self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
             first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_FIRST_SAMPLE_OFFSET )
             last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * modulation.SPS
@@ -1125,17 +1152,29 @@ class TxSamples :
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples_4_pluto )
 
+    def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
+
     def save_active_symbols_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.active_symbols )
 
+    def plot_samples ( self , title = "" ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
+
     def plot_samples_4_pluto ( self , title = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" )
 
     def plot_active_symbols ( self , title = "" ) -> None :
-        plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols , title = f"{title} tx {self.active_symbols.size=}" )
+        #plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols , title = f"{title} tx {self.active_symbols.size=}" )
+        plot.complex_waveform_v0_1_6 ( self.active_symbols , f"{title} {self.active_symbols.size=}" )
+
+    def plot_samples_4_pluto_spectrum ( self , title = "" ) -> None :
+        plot.spectrum_occupancy ( self.samples_4_pluto , 1024 , title )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.bpsk_symbols.size= }, { self.samples_4_pluto.size= }" )

@@ -23,9 +23,9 @@ def generate_payload_rand_up_2_1500b () -> list [ int ] :
     payload_len = random.randint ( 1 , 1500 )
     return [ random.randint ( 0 , 255 ) for _ in range ( payload_len ) ]
 
-def fill_samples_up_to_max_length ( tx_samples : packet.TxSamples_v0_1_18 , max_samples_size : int ) -> None :
+def fill_samples_up_to_max_length ( tx_samples : packet.TxSamples , max_samples_size : int ) -> None :
     payload_sizes = np.array ( [] ).astype ( np.uint32 )
-    while tx_samples.samples4pluto.size < max_samples_size :
+    while tx_samples.samples_4_pluto.size < max_samples_size :
         payload_bytes = generate_payload_rand_up_2_1500b ()
         if not np.any ( payload_sizes == np.uint32 ( len ( payload_bytes ) ) ):
             payload_sizes = np.append ( payload_sizes , np.uint32 ( len ( payload_bytes )  ) )

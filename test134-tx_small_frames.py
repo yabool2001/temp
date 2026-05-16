@@ -2,14 +2,14 @@
 '''
 Skrypt do generowania prostej ramki przez ADALM-Pluto.
 Odbiera komendę "ASCII ENQ" (0x05) przez UDP, która jest sygnałem do wysłania wcześniej przygotowanych danych testowych.
-Komendę wysyła skrypt test134-rx_and_save_simple_frame.py po tym jak jest gotowy do odbioru danych.
+Komendę wysyła skrypt test134-rx_small_frames.py po tym jak jest gotowy do odbioru danych.
 Wysłane dane są zapisywane do pliku w katalogu "np.simple-frames" dla późniejszej analizy.
 Po zakończeniu wysyłania danych skrypt wysyła komendę "ASCII EOT" (0x04), że zakończył wysyłanie danych.
 
 Sekwencja uruchomienia skryptu w ubuntu:
 cd ~/python/temp/
 source .venv/bin/activate
-python test134-tx_simple_frame.py -10.0
+python test134-tx_small_frames.py -10.0
 
 '''
 
@@ -50,12 +50,15 @@ if lipkow_ap :
             IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
             INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
     else :
-        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
+        IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
 else :
     if single_machine :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
     else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_GO3" ]
 
 UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
@@ -131,7 +134,9 @@ try :
             if dbg : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             if wrt :
                 tx_samples.save_samples_4_pluto_2_npf ( file_name = f"{timestamp}_tx_samples_4_pluto" , dir_name = dir_name , add_timestamp = False )
+                tx_samples.save_samples_2_npf ( file_name = f"{timestamp}_tx_samples" , dir_name = dir_name , add_timestamp = False )
                 tx_samples.save_active_symbols_2_npf ( file_name = f"{timestamp}_tx_active_symbols" , dir_name = dir_name , add_timestamp = False )
+                tx_samples.plot_samples_4_pluto_spectrum ( f"{script_filename}" )
                 if dbg : print ( f"Frames' symbols and samples_4_pluto saved to flat tensor asd samples_4_pluto to npf file in {dir_name=} {timestamp=}..." )
         t.sleep ( 0.05 )  # odciążenie CPU
 

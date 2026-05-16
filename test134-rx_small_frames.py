@@ -1,11 +1,10 @@
 '''
-Skrypt do zapisywania do pliku sampli wygenerowanych przez skrypt python test126-tx_large_data.py.
+Skrypt do zapisywania do pliku sampli wygenerowanych przez skrypt python test134-tx_small_frames.py.
 
 Sekwencja uruchomienia skryptu w ubuntu:
 cd ~/python/temp/
 source .venv/bin/activate
-
-python test134-tx_large_data.py -10.0
+python test134-tx_small_frames.py -10.0
 
 '''
 from modules import ops_os , packet , sdr
@@ -48,13 +47,16 @@ if lipkow_ap :
     else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
         IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+        INTERFACE = toml_settings["IF"][ "LEGION" ]
 else :
     if single_machine :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
         IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
     else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_PRO9" ]
         IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "S21_ULTRA" ][ "SURFACE_GO3" ]
+        INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
 
 UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
