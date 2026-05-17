@@ -599,7 +599,11 @@ class RxFrame_v0_1_18 :
 class RxSamples :
 
     # Pola uzupełnianie w __post_init__
+    raw_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    tx_active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    tx_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    y_train_tensor : torch.Tensor = field ( init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     concatenates : int = 0
     frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
@@ -627,17 +631,23 @@ class RxSamples :
         if concatenate :
             if self.concatenates < self.CONCATENATE_THS :
                 self.concatenates += 1
-                self.samples = np.concatenate ( [ self.samples , samples ] )
+                #self.raw_samples = np.concatenate ( [ self.raw_samples , samples ] )
+                self.raw_samples = np.append ( self.raw_samples , samples ) # to samo co powyżej, ale append jest szybszy dla 1 elementu
             else :
                 raise MemoryError ( f"{self.concatenates=}. To prevent modem performance issues, further concatenation is blocked." )
         else :
-            self.samples = samples
+            self.raw_samples = samples
 
     def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False , add_peak_at_0 : bool = False ) -> None :
+        
+        if correct and not filter :
+            raise ValueError ( "Cannot apply correction without filtering. You must set filter=True to apply correction!" )
         if filter :
-            self.samples = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples )
-        if correct :
-            self.samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+            self.samples = filters.apply_rrc_rx_convolve_v0_1_18 ( self.raw_samples )
+            if correct :
+                self.samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+        else :
+            self.samples = self.raw_samples
         self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
         if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
         previous_processed_idx : np.uint32 = 0
@@ -649,6 +659,34 @@ class RxSamples :
                     previous_processed_idx = frame.frame_end_abs_idx
                 else :
                     previous_processed_idx = idx
+
+    def create_tx_symbols ( self , first_active_symbols_idx : np.uint32 ) -> None :
+        if not self.tx_active_symbols.size > 0 :
+            raise ValueError ( "tx_active_symbols must be set and have size greater than 0 before calling create_tx_symbols." )
+        self.tx_symbols = np.zeros ( self.raw_samples.size , dtype = np.complex128 )
+        self.tx_symbols [ first_active_symbols_idx : first_active_symbols_idx + self.tx_active_symbols.size ] = self.tx_active_symbols
+
+    def clip_samples_and_tensor_4_training ( self , first_sample_idx : np.uint32 = None ) -> None :
+
+        # Przcięcie self.samples, i stworzenie i y_train_tensor do zakresu między frames_first_sample_idx a frames_last_sample_idx.
+        if first_sample_idx >= self.samples.size :
+            raise ValueError ( f"{first_sample_idx=} must be less than {self.samples.size}." )
+        '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.'''
+        last_sample_idx = first_sample_idx + self.tx_symbols.size
+        i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
+        ratio : float = self.tx_active_symbols.size / self.samples.size
+        clip1 = ( ( first_sample_idx - 1 ) // i ) * i
+        clip2 = ( last_sample_idx // i + 1) * i
+        # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
+        clip1 = np.maximum ( 0 , clip1 )
+        clip2 = np.minimum ( np.uint32 ( self.samples.size ) , clip2 )
+        ratio_clipped = self.tx_active_symbols.size / ( clip2 - clip1 )
+        print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
+        self.samples = self.samples [ clip1 : clip2 ]
+        self.y_train_tensor = torch.zeros ( self.samples.size , dtype = torch.complex64 )
+        self.y_train_tensor [ first_sample_idx - clip1 : first_sample_idx - clip1 + self.tx_active_symbols.size ] = torch.from_numpy ( self.tx_active_symbols.astype ( np.complex64 ) )
 
     def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
 
@@ -663,6 +701,9 @@ class RxSamples :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_sample_idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
+
+    def plot_symbols ( self , symbols : NDArray[ np.complex128 ] , title = "" ) -> None :
+        plot.complex_waveform_v0_1_6 ( symbols , f"{title} {symbols.size=}" )
 
     def __repr__ ( self ) -> str :
 

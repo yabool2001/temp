@@ -6,7 +6,7 @@
 import numpy as np , os , tomllib , torch
 from pathlib import Path
 from numpy.typing import NDArray
-from modules import corrections , ops_file, packet , plot
+from modules import corrections, filters , ops_file, packet , plot
 
 script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -15,7 +15,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = False # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 del_files : bool = False
@@ -43,14 +43,14 @@ for timestamp_group in timestamp_groups :
 		rx_samples.rx ( file_name = str ( samples_file ) , concatenate = True )
 		print ( f"{rx_samples.concatenates=}" )
 	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
-	rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples | " , mark_first_active_samples = True )
 	rx_samples_frames_first_sample_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
-	tx_active_symbols : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( filename = f"{samples_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
+	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{samples_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
 	if plt :
-		rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} rx_samples | " , mark_first_active_samples = True )
+		rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples | " , mark_first_active_samples = True )
+		rx_samples.plot_symbols ( rx_samples.tx_active_symbols , title = f"{script_filename} {timestamp_group} tx_active_symbols" )
 
 	# Szukanie dopasowania nagłówka ramki zaczynając od rx
-	first_matched_active_rx_sample_idx : np.uint32 = None
+	first_active_rx_sample_idx : np.uint32 = None
 	if rx_samples.frames is not None and len ( rx_samples.frames ) > 0 :
 		tx_samples = packet.RxSamples ()
 		tx_samples.rx ( file_name = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples_4_pluto.npy" ) )
@@ -61,28 +61,33 @@ for timestamp_group in timestamp_groups :
 					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_first_sample_idx}" )
 					print ( f"tx: {tx_frame.packet_len}	{packet.pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.frame_start_abs_first_sample_idx}" )
 				if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
-					first_matched_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx
-					if dbg : print ( f"\r\nZnaleziono dopasowanie ramki: {timestamp_group=} {rx_frame.frame_start_abs_first_sample_idx=}, {tx_frame.frame_start_abs_first_sample_idx=}, {first_matched_active_rx_sample_idx=}" )
+					first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
+					#first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx
+					if dbg : print ( f"\r\nZnaleziono dopasowanie ramki: {timestamp_group=} {rx_frame.frame_start_abs_first_sample_idx=}, {tx_frame.frame_start_abs_first_sample_idx=}, {first_active_rx_sample_idx=}" )
 					break
-			if first_matched_active_rx_sample_idx is not None :
+			if first_active_rx_sample_idx is not None :
+				rx_samples.create_tx_symbols ( first_active_symbols_idx = first_active_rx_sample_idx )
+				if plt : rx_samples.plot_symbols ( rx_samples.tx_symbols , title = f"{script_filename} {timestamp_group} tx_symbols" )
 				break
 
-	if first_matched_active_rx_sample_idx is not None :
-		first_matched_active_rx_sample_idx -= 1
-		print ( f"Znaleziono dopasowanie ramki: {timestamp_group} w samplu {first_matched_active_rx_sample_idx}" )
-		# 1. Opracuj y_train_np_array o długość rx_samples.samples i wstaw tx_symbols od miejsca first_matched_active_rx_sample_idx, żeby mieć pewność, że jest idealnie dopasowane do X_train.
+	if first_active_rx_sample_idx is not None :
+		first_active_rx_sample_idx -= 1
+		rx_samples.create_tx_symbols ( first_active_symbols_idx = first_active_rx_sample_idx )
+		print ( f"Znaleziono dopasowanie ramki: {timestamp_group} w samplu {first_active_rx_sample_idx}" )
+		rx_samples.clip_samples_and_tensor_4_training ( first_active_rx_sample_idx = first_active_rx_sample_idx )
+		# 1. Opracuj y_train_np_array o długość rx_samples.samples i wstaw tx_symbols od miejsca first_active_rx_sample_idx, żeby mieć pewność, że jest idealnie dopasowane do X_train.
 		y_train_np_array = np.zeros ( rx_samples.samples.size , dtype = np.complex128 )
-		y_train_np_array [ first_matched_active_rx_sample_idx : first_matched_active_rx_sample_idx + tx_active_symbols.size ] = tx_active_symbols
-		if plt : plot.flat_tensor_v0_1_18 ( y_train_np_array , title = f"{script_filename} {timestamp_group} rx y_train_np_array" , marker_idx = first_matched_active_rx_sample_idx )
+		y_train_np_array [ first_active_rx_sample_idx : first_active_rx_sample_idx + rx_samples.tx_active_symbols.size ] = rx_samples.tx_active_symbols
+		if plt : plot.flat_tensor_v0_1_18 ( y_train_np_array , title = f"{script_filename} {timestamp_group} rx y_train_np_array" , marker_idx = first_active_rx_sample_idx )
 		# 2. Przytnij rx_samples.samples, rx_samples.samples_filtered, rx_samples.samples_corrected i y_train_np_array do odpowiedniej długości.
-		if wrt : corrections.clip_samples ( rx_samples.samples , first_sample_idx = first_matched_active_rx_sample_idx , active_symbols_len = np.uint32 ( tx_active_symbols.size ) )
+		if wrt : corrections.clip_samples ( rx_samples.samples , first_sample_idx = first_active_rx_sample_idx , active_symbols_len = np.uint32 ( rx_samples.tx_active_symbols.size ) )
 		# 3. Zapisz y_train_np_array jako rx_y_train_tensor (już nie jako płaski tensor - tylko taki do trenowania).
 		rx_y_train_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
-		rx_y_train_tensor [ first_matched_active_rx_sample_idx : first_matched_active_rx_sample_idx + tx_samples_flat_tensor.size(0) ] = tx_samples_flat_tensor
-		#if plt : plot.flat_tensor_v0_1_18 ( rx_y_train_tensor , title = f"{script_filename} {timestamp_group} rx tensor aligned to tx symbols" , marker_idx = first_matched_active_rx_sample_idx )
+		rx_y_train_tensor [ first_active_rx_sample_idx : first_active_rx_sample_idx + rx_samples.tx_active_symbols.size ] = torch.from_numpy ( rx_samples.tx_active_symbols ).to ( torch.complex64 )
+		#if plt : plot.flat_tensor_v0_1_18 ( rx_y_train_tensor , title = f"{script_filename} {timestamp_group} rx tensor aligned to tx symbols" , marker_idx = first_active_rx_sample_idx )
 		# Teraz można bezpiecznie zapisać y_train, bo jest pewność, że jest poprawnie dopasowane do X_train, a także można usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
 		#if wrt :
-		#	rx_samples.active_symbols_2_y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name , rx_frames_first_sample_idx = first_matched_active_rx_sample_idx )
+		#	rx_samples.active_symbols_2_y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name , rx_frames_first_sample_idx = first_active_rx_sample_idx )
 		#	rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
 		if del_files :
 			for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
