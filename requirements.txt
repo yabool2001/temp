@@ -1,4 +1,4 @@
-numba==0.63.0rc1
+numba
 pandas
 plotly.express
 pyadi-iio==0.0.20

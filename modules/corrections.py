@@ -1,8 +1,6 @@
-import matplotlib.pyplot as plt
-from modules import modulation , ops_packet , plot , sdr
+from modules import modulation , ml , ops_packet , plot , sdr
 import numpy as np
-import pandas as pd
-import plotly.express as px
+from numpy.typing import NDArray
 from scipy.signal import correlate , butter, lfilter
 from numba import jit
 import time as t
@@ -269,35 +267,6 @@ def simple_correlation ( rx_samples , preamble_samples ) :
     peak_phase = np.angle ( corr[max_index] )
     return rx_samples[max_index:] * np.exp ( -1j * peak_phase )
 
-def costas_loop ( samples , f_s ) :
-    N = len ( samples )
-    phase = 0
-    freq = 0
-    # These next two params is what to adjust, to make the feedback loop faster or slower (which impacts stability)
-    alpha = 0.132
-    beta = 0.00932
-    out = np.zeros ( N , dtype = np.complex64 )
-    freq_log = []
-    for i in range ( N ) :
-        out[i] = samples[i] * np.exp ( -1j * phase ) # adjust the input sample by the inverse of the estimated phase offset
-        error = np.real ( out[i] ) * np.imag ( out[i] ) # This is the error formula for 2nd order Costas Loop (e.g. for BPSK)
-
-        # Advance the loop (recalc phase and freq offset)
-        freq += ( beta * error )
-        freq_log.append ( freq * f_s /  ( 2 * np.pi ) ) # convert from angular velocity to Hz for logging
-        phase += freq + (alpha * error)
-
-        # Optional: Adjust phase so its always between 0 and 2pi, recall that phase wraps around every 2pi
-        while phase >= 2 * np.pi :
-            phase -= 2 * np.pi
-        while phase < 0 :
-            phase += 2 * np.pi
-
-    # Plot freq over time to see how long it takes to hit the right offset
-    plt.plot ( freq_log , '.-' )
-    plt.show ()
-    return out
-
 def generate_noisy_samples () :
     '''
     Zakłócenia są bardzo podobne do tych w pliku rx_samples_32768.csv i obejmują:
@@ -364,3 +333,35 @@ def generate_noisy_samples () :
     #print("Przykład pierwszych 60 wartości (I,Q):")
     #print(samples_2_noisy_4_fo_interleaved[:60])
     return samples_2_noisy_4_fo_real
+
+def clip_samples ( samples : NDArray[ np.complex128 ] , first_sample_idx : np.uint32 = None , active_symbols_len : np.uint32 = None ) -> NDArray[ np.complex128 ] :
+
+        # Przcięcie self.samples, self.samples_filtered, y_train_np_array i y_train_tensor do zakresu między frames_first_sample_idx a frames_last_sample_idx.
+        if first_sample_idx >= samples.size :
+            raise ValueError ( f"{first_sample_idx=} must be less than {samples.size}." )
+        '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.'''
+        last_sample_idx = first_sample_idx + active_symbols_len
+        i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
+        ratio : float = active_symbols_len / samples.size
+        clip1 = ( ( first_sample_idx - 1 ) // i ) * i
+        clip2 = ( last_sample_idx // i + 1) * i
+        # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
+        clip1 = np.maximum ( 0 , clip1 )
+        clip2 = np.minimum ( np.uint32 ( samples.size ) , clip2 )
+        ratio_clipped = active_symbols_len / ( clip2 - clip1 )
+        print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
+        return samples [ clip1 : clip2 ]
+
+
+        # Poniższe 2 komendy mają sens jeśli rzeczywiście filtrowałeś i korygowałeś sygnał.
+        samples_filtered = self.clip_samples_corrected ( self.samples_filtered , clip1 , clip2 )
+        self.samples_corrected = self.clip_samples_corrected ( self.samples_corrected , clip1 , clip2 )
+        self.y_train_np_array = self.y_train_np_array[ clip1 : clip2 ]
+        # Zapisanie self.y_train_np_array do self.y_train_tensor w typie torch.complex64 i odpowiednim formacie i shape do odczytu przez pętlę test129-training.py
+        self.y_train_tensor = torch.from_numpy ( self.y_train_np_array.astype ( np.complex64 ) )
+        self.save_tensor_2_pt ( tensor = self.y_train_tensor , file_name = f"{timestamp_group}_y_train" , dir_name = dir_name )
+        self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples , file_name = f"{timestamp_group}_rx_samples" , dir_name = dir_name , add_timestamp = False )
+        self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples_filtered , file_name = f"{timestamp_group}_rx_samples_filtered" , dir_name = dir_name , add_timestamp = False )
+        self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples_corrected , file_name = f"{timestamp_group}_rx_samples_corrected" , dir_name = dir_name , add_timestamp = False )

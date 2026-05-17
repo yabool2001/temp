@@ -673,7 +673,8 @@ class RxSamples :
 class RxSamples_v0_1_18 :
 
     # Pola uzupełnianie w __post_init__
-    samples : NDArray[ np.complex128 ] = field ( init = False )
+    samples : NDArray[ np.complex128 ]
+    field ( init = False )
     y_train_np_array : NDArray[ np.complex128 ] = field ( init = False )
     y_train_tensor : torch.Tensor = field ( init = False )
     tx_active_symbols : NDArray[ np.complex128 ] = field ( init = False )
