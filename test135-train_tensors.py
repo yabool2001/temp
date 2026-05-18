@@ -72,25 +72,12 @@ for timestamp_group in timestamp_groups :
 
 	if first_active_rx_sample_idx is not None :
 		first_active_rx_sample_idx -= 1
-		rx_samples.create_tx_symbols ( first_active_symbols_idx = first_active_rx_sample_idx )
-		print ( f"Znaleziono dopasowanie ramki: {timestamp_group} w samplu {first_active_rx_sample_idx}" )
-		rx_samples.clip_samples_and_tensor_4_training ( first_active_rx_sample_idx = first_active_rx_sample_idx )
-		# 1. Opracuj y_train_np_array o długość rx_samples.samples i wstaw tx_symbols od miejsca first_active_rx_sample_idx, żeby mieć pewność, że jest idealnie dopasowane do X_train.
-		y_train_np_array = np.zeros ( rx_samples.samples.size , dtype = np.complex128 )
-		y_train_np_array [ first_active_rx_sample_idx : first_active_rx_sample_idx + rx_samples.tx_active_symbols.size ] = rx_samples.tx_active_symbols
-		if plt : plot.flat_tensor_v0_1_18 ( y_train_np_array , title = f"{script_filename} {timestamp_group} rx y_train_np_array" , marker_idx = first_active_rx_sample_idx )
-		# 2. Przytnij rx_samples.samples, rx_samples.samples_filtered, rx_samples.samples_corrected i y_train_np_array do odpowiedniej długości.
-		if wrt : corrections.clip_samples ( rx_samples.samples , first_sample_idx = first_active_rx_sample_idx , active_symbols_len = np.uint32 ( rx_samples.tx_active_symbols.size ) )
-		# 3. Zapisz y_train_np_array jako rx_y_train_tensor (już nie jako płaski tensor - tylko taki do trenowania).
-		rx_y_train_tensor = torch.zeros ( rx_samples.samples.size , dtype = torch.complex64 )
-		rx_y_train_tensor [ first_active_rx_sample_idx : first_active_rx_sample_idx + rx_samples.tx_active_symbols.size ] = torch.from_numpy ( rx_samples.tx_active_symbols ).to ( torch.complex64 )
-		#if plt : plot.flat_tensor_v0_1_18 ( rx_y_train_tensor , title = f"{script_filename} {timestamp_group} rx tensor aligned to tx symbols" , marker_idx = first_active_rx_sample_idx )
-		# Teraz można bezpiecznie zapisać y_train, bo jest pewność, że jest poprawnie dopasowane do X_train, a także można usunąć pliki z próbkami, bo nie będą już potrzebne do treningu.
-		#if wrt :
-		#	rx_samples.active_symbols_2_y_train_tensor ( file_name = f"{timestamp_group}_y_train_tensor" , dir_name = samples_dir.name , rx_frames_first_sample_idx = first_active_rx_sample_idx )
-		#	rx_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
+		rx_samples.clip_samples_and_create_tensor_4_training ( first_active_rx_sample_idx = first_active_rx_sample_idx )
+		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples" )
+		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
+		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = samples_dir.name , add_timestamp = False )
 		if del_files :
-			for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
+			for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_*.*" ) :
 				if file_path.is_file () :
 					file_path.unlink ( missing_ok = True )
 	else :

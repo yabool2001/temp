@@ -601,6 +601,7 @@ class RxSamples :
     # Pola uzupełnianie w __post_init__
     raw_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    X_train_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     y_train_tensor : torch.Tensor = field ( init = False )
@@ -666,27 +667,28 @@ class RxSamples :
         self.tx_symbols = np.zeros ( self.raw_samples.size , dtype = np.complex128 )
         self.tx_symbols [ first_active_symbols_idx : first_active_symbols_idx + self.tx_active_symbols.size ] = self.tx_active_symbols
 
-    def clip_samples_and_tensor_4_training ( self , first_sample_idx : np.uint32 = None ) -> None :
+    def clip_samples_and_create_tensor_4_training ( self , first_active_rx_sample_idx : np.uint32 = None ) -> None :
 
         # Przcięcie self.samples, i stworzenie i y_train_tensor do zakresu między frames_first_sample_idx a frames_last_sample_idx.
-        if first_sample_idx >= self.samples.size :
-            raise ValueError ( f"{first_sample_idx=} must be less than {self.samples.size}." )
+        if first_active_rx_sample_idx >= self.samples.size :
+            raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
         '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
         Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
         Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.'''
-        last_sample_idx = first_sample_idx + self.tx_symbols.size
+        last_sample_idx = first_active_rx_sample_idx + self.tx_symbols.size
         i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
         ratio : float = self.tx_active_symbols.size / self.samples.size
-        clip1 = ( ( first_sample_idx - 1 ) // i ) * i
+        clip1 = ( ( first_active_rx_sample_idx - 1 ) // i ) * i
         clip2 = ( last_sample_idx // i + 1) * i
         # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
         clip1 = np.maximum ( 0 , clip1 )
         clip2 = np.minimum ( np.uint32 ( self.samples.size ) , clip2 )
         ratio_clipped = self.tx_active_symbols.size / ( clip2 - clip1 )
         print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
-        self.samples = self.samples [ clip1 : clip2 ]
-        self.y_train_tensor = torch.zeros ( self.samples.size , dtype = torch.complex64 )
-        self.y_train_tensor [ first_sample_idx - clip1 : first_sample_idx - clip1 + self.tx_active_symbols.size ] = torch.from_numpy ( self.tx_active_symbols.astype ( np.complex64 ) )
+        self.X_train_samples = self.samples [ clip1 : clip2 ]
+        self.y_train_tensor = torch.zeros ( self.samples.size , dtype=torch.complex64 )
+        start_idx = first_active_rx_sample_idx - clip1
+        self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 
     def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
 
@@ -695,7 +697,17 @@ class RxSamples :
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
 
-    def plot_samples ( self , title = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
+    def save_train_data ( self , timestamp_group : str , dir_name : str , add_timestamp : bool = False ) -> None :
+
+        filename = ops_file.add_timestamp_2_filename ( f"{timestamp_group}_X_train_samples.npy" ) if add_timestamp else f"{timestamp_group}_X_train_samples.npy"
+        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.X_train_samples )
+        filename = ops_file.add_timestamp_2_filename ( f"{timestamp_group}_y_train_tensor.pt" ) if add_timestamp else f"{timestamp_group}_y_train_tensor.pt"
+        filename_and_dirname = f"{dir_name}/{filename}"
+        torch.save ( self.y_train_tensor , filename_and_dirname )
+
+    def plot_samples ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
         if mark_first_active_samples :
             frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in self.frames ] , dtype = np.uint32 )
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_sample_idx )
@@ -851,7 +863,7 @@ class RxSamples_v0_1_18 :
         self.samples_corrected = self.clip_samples_corrected ( self.samples_corrected , clip1 , clip2 )
         self.y_train_np_array = self.y_train_np_array[ clip1 : clip2 ]
         # Zapisanie self.y_train_np_array do self.y_train_tensor w typie torch.complex64 i odpowiednim formacie i shape do odczytu przez pętlę test129-training.py
-        self.y_train_tensor = torch.from_numpy ( self.y_train_np_array.astype ( np.complex64 ) )
+        self.y_train_tensor = torch.tensor(self.y_train_np_array, dtype=torch.complex64)
         self.save_tensor_2_pt ( tensor = self.y_train_tensor , file_name = f"{timestamp_group}_y_train" , dir_name = dir_name )
         self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples , file_name = f"{timestamp_group}_rx_samples" , dir_name = dir_name , add_timestamp = False )
         self.save_complex_samples_2_npf_v0_1_20 ( samples = self.samples_filtered , file_name = f"{timestamp_group}_rx_samples_filtered" , dir_name = dir_name , add_timestamp = False )

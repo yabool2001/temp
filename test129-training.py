@@ -25,7 +25,8 @@ if __name__ == "__main__":
     # 2. Ładowanie danych
     # Dataset w locie zrzutuje Twoje pliki .npy z uciążliwych 128-bitowych
     # na natywne 64-bitowe dla najwyższej przepustowości VRAM.
-    lista_plikow_X = sorted ( tensors_dir.glob ( "*_rx_samples.npy") )
+    #lista_plikow_X = sorted ( tensors_dir.glob ( "*_rx_samples.npy") )
+    lista_plikow_X = sorted ( tensors_dir.glob ( "*_X_train_samples.npy") )
     lista_plikow_y = sorted ( tensors_dir.glob ( "*_y_train_tensor.pt") )
     if not lista_plikow_X:
         raise RuntimeError ( "Nie znaleziono żadnych plików .npy w katalogu!" )
