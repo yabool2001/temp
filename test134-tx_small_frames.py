@@ -26,7 +26,7 @@ if len ( sys.argv ) > 1 :
 else :
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
-dir_name = "np.tensors"
+dir_name = "np.samples"
 Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 , linewidth = np.inf ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 script_filename = os.path.basename ( __file__ )
@@ -94,8 +94,9 @@ print ( f"{tx_samples.frames=}" )
 timestamp = ops_os.milis_timestamp ()
 
 if plt :
-    tx_samples.plot_samples_4_pluto ( f"{script_filename}" )
+    tx_samples.plot_samples ( f"{script_filename}" )
     tx_samples.plot_active_symbols ( f"{script_filename}" )
+    tx_samples.plot_samples_4_pluto_spectrum ( f"{script_filename}" )
 
 #if wrt :
 #    if dbg : print ( f"Saving frames to flat tensor file in {dir_name} directory with timestamp {timestamp}..." )
@@ -133,11 +134,9 @@ try :
             udp_sock.sendto ( timestamp.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestampu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if dbg : print ( f"Sent {timestamp=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             if wrt :
-                tx_samples.save_samples_4_pluto_2_npf ( file_name = f"{timestamp}_tx_samples_4_pluto" , dir_name = dir_name , add_timestamp = False )
                 tx_samples.save_samples_2_npf ( file_name = f"{timestamp}_tx_samples" , dir_name = dir_name , add_timestamp = False )
                 tx_samples.save_active_symbols_2_npf ( file_name = f"{timestamp}_tx_active_symbols" , dir_name = dir_name , add_timestamp = False )
-                tx_samples.plot_samples_4_pluto_spectrum ( f"{script_filename}" )
-                if dbg : print ( f"Frames' symbols and samples_4_pluto saved to flat tensor asd samples_4_pluto to npf file in {dir_name=} {timestamp=}..." )
+                if dbg : print ( f"Frames' symbols and samples saved to flat tensor as samples to npf file in {dir_name=} {timestamp=}..." )
         t.sleep ( 0.05 )  # odciążenie CPU
 
 finally :

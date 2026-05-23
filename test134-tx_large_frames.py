@@ -1,10 +1,16 @@
 
 '''
+
 Skrypt do generowania losowej transmisji dużych liczby danych przez ADALM-Pluto.
+Skrypt generuje niepowtarzającą się liczbę bajtów w pakiecie w celu zachowania różnej wartości frame_header.
 Odbiera komendę "ASCII ENQ" (0x05) przez UDP, która jest sygnałem do wysłania wcześniej przygotowanych danych testowych.
 Komendę wysyła skrypt test134-rx_large_frames.py po tym jak jest gotowy do odbioru danych.
 Wysłane dane są zapisywane do pliku w katalogu ...... dla późniejszej analizy.
 Po zakończeniu wysyłania danych skrypt wysyła komendę "ASCII EOT" (0x04), że zakończył wysyłanie danych.
+
+Skrypt zapisuje w lokalnym katalogu próbki do plików npy:
+{timestamp_group}_tx_samples.npy - próbki tx samples po filtrowaniu z rozbiegówką i wygaszeniem
+{timestamp_group}_tx_active_symbols.npy - aktywne próbki wyciągnięte ze składowej real sygnału samples_4_pluto (samples_4_pluto.real) i zaokrąglone do wartości -1+j0 i 1+j0. Wartości obejmują tylo aktywne symbole TX, zaczynające się od  (bez rozbiegówki i wygaszenia, bez 0+j0)
 
 Sekwencja uruchomienia skryptu w ubuntu:
 cd ~/python/temp/
@@ -21,7 +27,7 @@ from modules import ops_os , packet , payload_test_data as ptd , sdr
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
-dir_name = "np.tensors"
+dir_name = "np.samples"
 Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 script_filename = os.path.basename ( __file__ )
@@ -69,9 +75,10 @@ SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples , timestamp_group : str ) -> None :
-    tx_samples.save_active_symbols_2_npf ( file_name = f"{timestamp_group}_tx_samples_flat_tensor" , dir_name = dir_name , add_timestamp = False ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
-    tx_samples.save_samples_4_pluto_2_npf ( file_name = f"{timestamp_group}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
-    if dbg : print ( f"Samples 4 pluto and corresponding symbols saved to npf type files in {dir_name=} {timestamp_group=}..." )
+    tx_samples.save_active_symbols_2_npf ( file_name = f"{timestamp_group}_tx_active_symbols" , dir_name = dir_name , add_timestamp = False ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
+    #tx_samples.save_samples_4_pluto_2_npf ( file_name = f"{timestamp_group}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
+    tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dir_name , add_timestamp = False )
+    if dbg : print ( f"Samples and corresponding symbols saved to npf type files in {dir_name=} {timestamp_group=}..." )
 
 def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR ) -> tuple [ packet.TxSamples , str ] :
     max_samples_size = int ( SAMPLES_BUFFER_SIZE * multiplicator ) # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
@@ -129,7 +136,7 @@ try :
             tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR )
             if plt :
                 tx_samples.plot_active_symbols ( f"{script_filename}" )
-                tx_samples.plot_samples_4_pluto ( f"{script_filename}" )
+                tx_samples.plot_samples ( f"{script_filename}" )
                 tx_samples.plot_samples_4_pluto_spectrum ( f"{ script_filename } Samples 4 pluto spectrum" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if dbg : print ( f"Sent {timestamp_group=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )

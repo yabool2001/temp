@@ -668,13 +668,13 @@ class RxSamples :
         self.tx_symbols [ first_active_symbols_idx : first_active_symbols_idx + self.tx_active_symbols.size ] = self.tx_active_symbols
 
     def clip_samples_and_create_tensor_4_training ( self , first_active_rx_sample_idx : np.uint32 = None ) -> None :
-
-        # Przcięcie self.samples, i stworzenie i y_train_tensor do zakresu między frames_first_sample_idx a frames_last_sample_idx.
+        '''
+        Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
+        '''
         if first_active_rx_sample_idx >= self.samples.size :
             raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
-        '''Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
-        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
-        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.'''
         last_sample_idx = first_active_rx_sample_idx + self.tx_symbols.size
         i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
         ratio : float = self.tx_active_symbols.size / self.samples.size
@@ -695,7 +695,7 @@ class RxSamples :
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         filename_and_dirname = f"{dir_name}/{filename}"
-        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.raw_samples )
 
     def save_train_data ( self , timestamp_group : str , dir_name : str , add_timestamp : bool = False ) -> None :
 

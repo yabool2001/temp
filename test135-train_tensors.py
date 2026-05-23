@@ -1,3 +1,16 @@
+'''
+Odczytanie próbek z plików npy:
+{timestamp_group}_rx_samples_{timestamp}.npy - surowe próbki rx
+{timestamp_group}_tx_active_symbols.npy - aktywne próbki wyciągnięte ze składowej real sygnału samples_4_pluto (samples_4_pluto.real) i zaokrąglone do wartości -1+j0 i 1+j0. Wartości obejmują tylo aktywne symbole TX, zaczynające się od  (bez rozbiegówki i wygaszenia, bez 0+j0)
+Może w przyszłości {timestamp_group}_tx_samples.npy wykorzystam dodatkowo do wielkiej korelacji całego przebiegu ale na razie wydaje się to niewykonalne ze względu na rozmiar danych i czas potrzebny na korelację.
+
+Agregowanie sampli raw do obiektu RxSamples, wykrywanie ramek, dopasowywanie ich do ramek z próbek tx,
+
+Tworzenie tensorów y_train i przycinanie ich razem z samplami i zapisywanie ich do plików w katalogu wrt_dir:
+- {timestamp_group}_X_train_samples.npy - wejsciowe raw sample przycięte ale bez filtrowania i korekcji
+- {timestamp_group}_y_train_tensor.pt - tensor z symbolami tx przycięty do tej samej długości co X_train_samples, gotowy do treningu modelu ML
+'''
+
 # issue #45 - dekodowanie symboli z wszystkich plików X-train npy zapisanych we wskazanym katalogu
 # i zapisywanie ich jako y_train w plikach odpowiadajacych X_train
 
@@ -14,25 +27,26 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
-clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
+clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
-wrt : bool = False # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
+wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
-del_files : bool = False
+del_files : bool = True
 
 device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
 print ( f"torch {device=}" )
 
-samples_dir = Path ( "np.tensors" )
+samples_dir = Path ( "np.samples" )
+tensors_dir = Path ( "pt.training" )
 
 # Znajdź unikalne grupy plików na podstawie timestampu w nazwie dla plików *_rx_samples_*.npy które nie były jeszcze obrobione!!!
-timestamp_groups = sorted ( { p.name.split ( "_rx_samples_" , 1 )[ 0 ] for p in Path("np.tensors").glob("*_rx_samples_*.npy") } )
+timestamp_groups = sorted ( { p.name.split ( "_rx_samples_" , 1 )[ 0 ] for p in samples_dir.glob("*_rx_samples_*.npy") } )
 
 # Główna pętla przetwarzająca każdą grupę plików 
 for timestamp_group in timestamp_groups :
 
 	samples_files = sorted ( samples_dir.glob ( f"{timestamp_group}_rx_samples_*.npy" ) )
-	timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in Path("np.tensors").glob(f"{timestamp_group}_rx_samples_*.npy") } )
+	timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in samples_dir.glob(f"{timestamp_group}_rx_samples_*.npy") } )
 	if dbg : print ( f"\n{timestamp_group=} : {timestamps=}" )
 	if not samples_files :
 		raise FileNotFoundError ( f"Brak plikow {timestamp_group}_rx_samples_*.npy w katalogu {samples_dir}" )
@@ -53,7 +67,7 @@ for timestamp_group in timestamp_groups :
 	first_active_rx_sample_idx : np.uint32 = None
 	if rx_samples.frames is not None and len ( rx_samples.frames ) > 0 :
 		tx_samples = packet.RxSamples ()
-		tx_samples.rx ( file_name = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples_4_pluto.npy" ) )
+		tx_samples.rx ( file_name = str ( f"{samples_dir.name}/{timestamp_group}_tx_samples.npy" ) )
 		tx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = True )
 		for rx_frame in rx_samples.frames :
 			for tx_frame in tx_samples.frames :
@@ -75,7 +89,7 @@ for timestamp_group in timestamp_groups :
 		rx_samples.clip_samples_and_create_tensor_4_training ( first_active_rx_sample_idx = first_active_rx_sample_idx )
 		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples" )
 		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
-		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = samples_dir.name , add_timestamp = False )
+		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = tensors_dir.name , add_timestamp = False )
 		if del_files :
 			for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_*.*" ) :
 				if file_path.is_file () :
