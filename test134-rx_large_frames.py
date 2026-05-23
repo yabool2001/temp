@@ -71,7 +71,7 @@ ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
 
 Nof_ATTEMPTS = int ( 2 )
-Nof_WRTS = int ( 8 )
+Nof_WRTS = int ( 7 )
 
 series_len = 10
 

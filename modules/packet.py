@@ -675,7 +675,7 @@ class RxSamples :
         '''
         if first_active_rx_sample_idx >= self.samples.size :
             raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
-        last_sample_idx = first_active_rx_sample_idx + self.tx_symbols.size
+        last_sample_idx = first_active_rx_sample_idx + self.tx_active_symbols.size
         i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
         ratio : float = self.tx_active_symbols.size / self.samples.size
         clip1 = ( ( first_active_rx_sample_idx - 1 ) // i ) * i
@@ -686,7 +686,7 @@ class RxSamples :
         ratio_clipped = self.tx_active_symbols.size / ( clip2 - clip1 )
         print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
         self.X_train_samples = self.samples [ clip1 : clip2 ]
-        self.y_train_tensor = torch.zeros ( self.samples.size , dtype=torch.complex64 )
+        self.y_train_tensor = torch.zeros ( clip2 - clip1 , dtype=torch.complex64 )
         start_idx = first_active_rx_sample_idx - clip1
         self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 

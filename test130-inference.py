@@ -14,14 +14,14 @@ print(f"🔥 {device=}")
 model = ml.HardcoreComplexEqualizer().to(device)
 
 # Ładujemy Twój plik z ugotowanymi wagami z RTX'a
-model.load_state_dict ( torch.load ( "bpsk_modem_002.pth" , map_location = device , weights_only = True ) )
+model.load_state_dict ( torch.load ( "bpsk_modem_003.pth" , map_location = device , weights_only = True ) )
 
 # BEZWZGLĘDNIE: Blokujemy sieć! (Wyłącza aktualizację wag, włącza tryb analizy)
 model.eval ()
 
 # 2. ŁADUJEMY JEDNĄ PACZKĘ Z DYSKU (Twoja krojownia załatwi zrównanie ramki i AGC)
-dir_name = Path ( "np.tensors_002_inference" )
-lista_X = [ sorted ( dir_name.glob ( "*_rx_samples.npy" ) )[ 0 ] ]
+dir_name = Path ( "pt.training" )
+lista_X = [ sorted ( dir_name.glob ( "*_X_train_samples.npy" ) )[ 0 ] ]
 lista_y = [ sorted ( dir_name.glob ( "*_y_train_tensor.pt" ) )[ 0 ] ]
 
 dataset = ml.BPSKDataset ( X_files = lista_X , y_files = lista_y , chunk_samples = ml.CHUNK_SAMPLES_LEN )

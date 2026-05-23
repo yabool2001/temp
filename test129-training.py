@@ -10,7 +10,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
-tensors_dir = Path ( "np.tensors_002" )
+#tensors_dir = Path ( "np.tensors_002" )
+tensors_dir = Path ( "pt.training_003" )
 
 if __name__ == "__main__":
     
@@ -103,6 +104,6 @@ if __name__ == "__main__":
     print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )
     
     # Zrzucamy wyuczoną fizykę na twardy dysk!
-    torch.save ( model.state_dict () , "bpsk_modem_002.pth" )
+    torch.save ( model.state_dict () , "bpsk_modem_003.pth" )
     print ( "💾 Wagi zapisane do pliku. Gotowe do inferencji i testów!" )
     print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )

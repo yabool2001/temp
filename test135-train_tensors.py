@@ -31,13 +31,19 @@ clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do tren
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
-del_files : bool = True
+del_pt_files : bool = True
+del_np_files : bool = True
 
 device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
 print ( f"torch {device=}" )
 
 samples_dir = Path ( "np.samples" )
 tensors_dir = Path ( "pt.training" )
+
+if del_pt_files :
+	for file_path in Path ( tensors_dir ).glob ( "*" ) :
+		if file_path.is_file () :
+			file_path.unlink ( missing_ok = True )
 
 # Znajdź unikalne grupy plików na podstawie timestampu w nazwie dla plików *_rx_samples_*.npy które nie były jeszcze obrobione!!!
 timestamp_groups = sorted ( { p.name.split ( "_rx_samples_" , 1 )[ 0 ] for p in samples_dir.glob("*_rx_samples_*.npy") } )
@@ -85,12 +91,12 @@ for timestamp_group in timestamp_groups :
 				break
 
 	if first_active_rx_sample_idx is not None :
-		first_active_rx_sample_idx -= 1
+		#first_active_rx_sample_idx -= 1
 		rx_samples.clip_samples_and_create_tensor_4_training ( first_active_rx_sample_idx = first_active_rx_sample_idx )
-		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples" )
+		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" )
 		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = tensors_dir.name , add_timestamp = False )
-		if del_files :
+		if del_np_files :
 			for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_*.*" ) :
 				if file_path.is_file () :
 					file_path.unlink ( missing_ok = True )
