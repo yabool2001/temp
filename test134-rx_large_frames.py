@@ -26,6 +26,9 @@ import tomllib
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
+Nof_ATTEMPTS = int ( 1 )
+Nof_WRTS = int ( 7 )
+
 dir_name = "np.samples"
 Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
@@ -69,9 +72,6 @@ ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
-
-Nof_ATTEMPTS = int ( 2 )
-Nof_WRTS = int ( 7 )
 
 series_len = 10
 

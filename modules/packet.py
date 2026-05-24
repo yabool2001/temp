@@ -487,14 +487,13 @@ class RxPacket_v0_1_18 :
 class RxFrame_v0_1_18 :
     
     samples_filtered : NDArray[ np.complex128 ]
-    sync_sequence_peak_abs_idx : np.uint32
+    frame_start_abs_idx : np.uint32
 
     # Pola uzupełnianie w __post_init__
     SPS = modulation.SPS
     SPAN = filters.SPAN
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     header_bits : NDArray[ np.uint8 ] = field ( init = False )
-    frame_start_abs_idx : np.uint32 = field ( init = False )
     frame_start_abs_first_sample_idx : np.uint32 = field ( init = False )
     frame_end_abs_idx : np.uint32 = field ( init = False )
     packet_len : np.uint16 = field ( init = False )
@@ -508,7 +507,7 @@ class RxFrame_v0_1_18 :
     
     def __post_init__ ( self ) -> None :
         if not self.frame_len_validation () :
-            return self.sync_sequence_peak_abs_idx
+            return self.frame_start_abs_idx
         self.process_packet ()
     
     def process_packet ( self ) -> None :
@@ -538,17 +537,16 @@ class RxFrame_v0_1_18 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
-                        self.frame_start_abs_idx = self.sync_sequence_peak_abs_idx + sync_sequence_start_idx
                         #self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - ( self.frame_start_abs_idx % self.SPS ) # szukam pierwszego sample, który jest początkiem ramki, czyli tego, który jest podzielny przez SPS, bo jeśli znalazłem dopasowanie ramki, to jest ono w jednym z 4 punktów odd
-                        self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - self.SPS // 2
-                        self.packet_start_abs_idx = self.sync_sequence_peak_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
-                        self.frame_end_abs_idx = self.sync_sequence_peak_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - filters.FIRST_TO_ACTIVE_SAMPLE_OFFSET
+                        self.packet_start_abs_idx = self.frame_start_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.frame_end_abs_idx = self.frame_start_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.header_bits = np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] )
                         self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.header_bits )
                         add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{self.has_header=},{self.frame_start_abs_idx=}" )
                         if not self.packet_len_validation ( packet_end_idx ) :
                             add2log_packet ( f"{t.time()},{self.has_header=},{sync_sequence_start_idx=},{self.frame_start_abs_idx=}" )
-                            if settings["log"]["verbose_2"] : print ( f"{self.sync_sequence_peak_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {self.has_header=}" )
+                            if settings["log"]["verbose_2"] : print ( f"{self.frame_start_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {self.has_header=}" )
                             return
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
@@ -559,7 +557,7 @@ class RxFrame_v0_1_18 :
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
                             if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.frame_start_abs_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return
-        if settings["log"]["verbose_2"] : print ( f"{self.frame_sync_sequence_peak_abs_idx=} {has_sync_sequence=}, {self.has_frame=}" )
+        if settings["log"]["verbose_2"] : print ( f"{self.frame_start_abs_idx=} {has_sync_sequence=}, {self.has_frame=}" )
         return
 
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
@@ -573,8 +571,8 @@ class RxFrame_v0_1_18 :
         return pad_bits2bytes ( bits )
     
     def set_leftovers_idx_for_incomplete_frame ( self ) -> None :
-        if settings["log"]["verbose_2"] : print ( f"Samples at index { self.sync_sequence_peak_abs_idx } is too close to the end of samples to contain a complete frame. Skipping." )
-        self.leftovers_start_abs_idx = self.sync_sequence_peak_abs_idx - self.SPAN * self.SPS // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
+        if settings["log"]["verbose_2"] : print ( f"Samples at index { self.frame_start_abs_idx } is too close to the end of samples to contain a complete frame. Skipping." )
+        self.leftovers_start_abs_idx = self.frame_start_abs_idx - self.SPAN * self.SPS // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 
     def frame_len_validation ( self ) -> bool :
@@ -654,7 +652,7 @@ class RxSamples :
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , sync_sequence_peak_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , frame_start_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
@@ -666,6 +664,20 @@ class RxSamples :
             raise ValueError ( "tx_active_symbols must be set and have size greater than 0 before calling create_tx_symbols." )
         self.tx_symbols = np.zeros ( self.raw_samples.size , dtype = np.complex128 )
         self.tx_symbols [ first_active_symbols_idx : first_active_symbols_idx + self.tx_active_symbols.size ] = self.tx_active_symbols
+
+    def clip_samples_and_create_tensor_4_training_only_active_symbols ( self , first_active_rx_sample_idx : np.uint32 = None ) -> None :
+        '''
+        Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
+        '''
+        if first_active_rx_sample_idx >= self.samples.size :
+            raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
+        last_sample_idx = first_active_rx_sample_idx + self.tx_active_symbols.size
+        self.X_train_samples = self.samples [ first_active_rx_sample_idx : last_sample_idx ]
+        self.y_train_tensor = torch.zeros ( last_sample_idx - first_active_rx_sample_idx , dtype=torch.complex64 )
+        start_idx = first_active_rx_sample_idx - first_active_rx_sample_idx
+        self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 
     def clip_samples_and_create_tensor_4_training ( self , first_active_rx_sample_idx : np.uint32 = None ) -> None :
         '''
@@ -797,7 +809,7 @@ class RxSamples_v0_1_18 :
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , sync_sequence_peak_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples_corrected [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , frame_start_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx

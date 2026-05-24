@@ -19,7 +19,11 @@ import tomllib
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
-dir_name = "np.tensors"
+Nof_ATTEMPTS = int ( 1 )
+Nof_WRTS = int ( 2 )
+
+
+dir_name = "np.samples"
 Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 script_filename = os.path.basename ( __file__ )
@@ -69,9 +73,6 @@ Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
 
 timestamp_min = int ( ops_os.milis_timestamp () ) - 1000 * 365 * 60 * 60 * 24 # -1Y
 timestamp_max = int ( ops_os.milis_timestamp () ) + 1000 * 365 * 60 * 60 * 24 # +1Y
-
-Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 2 )
 
 def resolve_interface_name ( preferred_interface : str ) -> str :
     available_interfaces = [ name for _ , name in socket.if_nameindex () ]

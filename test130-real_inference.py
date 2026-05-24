@@ -70,7 +70,7 @@ if __name__ == "__main__":
     # Bierzemy obojętnie który plik z radia, byle bez odpowiedzi!
     #PLIK_RX = "np.tensors_002_inference/1776615893939_rx_samples.npy"
     #PLIK_RX = "np.tensors_004/1777228098212_rx_samples_1777228108811.npy"
-    PLIK_RX = "pt.training/1779573500228_X_train_samples.npy"
+    PLIK_RX = "pt.training/1779620689621_X_train_samples.npy"
 
     
     # Magia dzieje się w 1 linijce:

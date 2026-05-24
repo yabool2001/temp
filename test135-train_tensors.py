@@ -31,8 +31,8 @@ clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do tren
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
-del_pt_files : bool = True
-del_np_files : bool = True
+del_pt_files : bool = False
+del_np_files : bool = False
 
 device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
 print ( f"torch {device=}" )
@@ -67,7 +67,7 @@ for timestamp_group in timestamp_groups :
 	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{samples_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
 	if plt :
 		rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples | " , mark_first_active_samples = True )
-		rx_samples.plot_symbols ( rx_samples.tx_active_symbols , title = f"{script_filename} {timestamp_group} tx_active_symbols" )
+		if plt : rx_samples.plot_symbols ( rx_samples.tx_active_symbols , title = f"{script_filename} {timestamp_group} tx_active_symbols" )
 
 	# Szukanie dopasowania nagłówka ramki zaczynając od rx
 	first_active_rx_sample_idx : np.uint32 = None
