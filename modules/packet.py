@@ -687,7 +687,7 @@ class RxSamples :
         '''
         if first_active_rx_sample_idx >= self.samples.size :
             raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
-        last_sample_idx = first_active_rx_sample_idx + self.tx_active_symbols.size
+        last_sample_idx = first_active_rx_sample_idx + self.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET
         i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
         ratio : float = self.tx_active_symbols.size / self.samples.size
         clip1 = ( ( first_active_rx_sample_idx - 1 ) // i ) * i

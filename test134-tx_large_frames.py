@@ -38,7 +38,7 @@ else :
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
 dbg = True
-plt = False
+plt = True
 wrt = True
 del_old = True
 

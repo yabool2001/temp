@@ -26,7 +26,7 @@ import tomllib
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
-Nof_ATTEMPTS = int ( 1 )
+Nof_ATTEMPTS = int ( 10 )
 Nof_WRTS = int ( 7 )
 
 dir_name = "np.samples"
