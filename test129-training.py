@@ -11,7 +11,8 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 #tensors_dir = Path ( "np.tensors_002" )
-tensors_dir = Path ( "pt.training_003" )
+#tensors_dir = Path ( "pt.training_003" )
+tensors_dir = Path ( "pt.training" )
 
 if __name__ == "__main__":
     

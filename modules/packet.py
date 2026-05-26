@@ -602,6 +602,7 @@ class RxSamples :
     X_train_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    tx_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     y_train_tensor : torch.Tensor = field ( init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     concatenates : int = 0
@@ -679,18 +680,47 @@ class RxSamples :
         start_idx = first_active_rx_sample_idx - first_active_rx_sample_idx
         self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 
-    def clip_samples_and_create_tensor_4_training ( self , first_active_rx_sample_idx : np.uint32 = None ) -> None :
+    def clip_samples_and_create_tensor_4_training ( self , first_idx : np.uint32 = None ) -> None :
+        '''
+        Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
+        W stosunku do poprzedniej wersji _v_old1 wstawiam sample a nie symbole
+        '''
+        if first_idx >= self.samples.size :
+            raise ValueError ( f"{first_idx=} must be less than {self.samples.size}." )
+        last_sample_idx = first_idx + self.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET
+        i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
+        ratio : float = self.tx_active_symbols.size / self.samples.size
+        clip1 = ( ( first_idx - 1 ) // i ) * i
+        clip2 = ( last_sample_idx // i + 1) * i
+        # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
+        clip1 = np.maximum ( 0 , clip1 )
+        clip2 = np.minimum ( np.uint32 ( self.samples.size ) , clip2 )
+        ratio_clipped = self.tx_active_symbols.size / ( clip2 - clip1 )
+        print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
+        self.X_train_samples = self.samples [ clip1 : clip2 ]
+        self.y_train_tensor = torch.zeros ( clip2 - clip1 , dtype = torch.complex64 )
+        start_idx = first_idx - clip1
+        self.y_train_tensor[ start_idx : start_idx + self.tx_samples[ 20 : -20 ].size ] = torch.tensor ( self.tx_samples[ 20 : -20 ] , dtype = torch.complex64 )
+        #plot.complex_waveform_v0_1_6 ( self.tx_samples[ 20 : -20 ] , title = f"{self.tx_samples[ 20 : -20 ].size=}" )
+        #test = np.zeros ( 425 , dtype = np.complex128 )
+        #plot.complex_waveform_v0_1_6 ( test , title = f"test 1 {test.size=}" )
+        #test[ 20 : 20 + self.tx_samples[ 20 : -20 ].size ] = self.tx_samples[ 20 : -20 ]
+        #plot.complex_waveform_v0_1_6 ( test , title = f"test 2{test.size=}" )
+
+    def clip_samples_and_create_tensor_4_training_v_old1 ( self , first_idx : np.uint32 = None ) -> None :
         '''
         Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
         Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
         Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
         '''
-        if first_active_rx_sample_idx >= self.samples.size :
-            raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
-        last_sample_idx = first_active_rx_sample_idx + self.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET
+        if first_idx >= self.samples.size :
+            raise ValueError ( f"{first_idx=} must be less than {self.samples.size}." )
+        last_sample_idx = first_idx + self.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET
         i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
         ratio : float = self.tx_active_symbols.size / self.samples.size
-        clip1 = ( ( first_active_rx_sample_idx - 1 ) // i ) * i
+        clip1 = ( ( first_idx - 1 ) // i ) * i
         clip2 = ( last_sample_idx // i + 1) * i
         # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
         clip1 = np.maximum ( 0 , clip1 )
@@ -699,7 +729,7 @@ class RxSamples :
         print ( f"{clip1=} , {clip2=} , {ratio=:.2f} , {ratio_clipped=:.2f}" )
         self.X_train_samples = self.samples [ clip1 : clip2 ]
         self.y_train_tensor = torch.zeros ( clip2 - clip1 , dtype=torch.complex64 )
-        start_idx = first_active_rx_sample_idx - clip1
+        start_idx = first_idx - clip1
         self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 
     def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :

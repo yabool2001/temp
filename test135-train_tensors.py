@@ -28,11 +28,11 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 del_pt_files : bool = True
-del_np_files : bool = False
+del_np_files : bool = True
 
 device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
 print ( f"torch {device=}" )
@@ -65,6 +65,7 @@ for timestamp_group in timestamp_groups :
 	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
 	#rx_samples_frames_first_sample_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
 	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{samples_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
+	rx_samples.tx_samples = ops_file.open_samples_from_npf ( filename = f"{samples_dir.name}/{timestamp_group}_tx_samples.npy" )
 	my_idx1 : NDArray [ np.uint32 ] = np.array ( [ rx_samples.frames[0].frame_start_abs_first_sample_idx , rx_samples.frames[0].frame_start_abs_first_sample_idx + rx_samples.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET ] , dtype = np.uint32 )
 	if plt :
 		#rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples | " , mark_first_active_samples = True )
@@ -94,9 +95,9 @@ for timestamp_group in timestamp_groups :
 				break
 
 	if first_active_rx_sample_idx is not None :
-		rx_samples.clip_samples_and_create_tensor_4_training ( first_active_rx_sample_idx = first_active_rx_sample_idx )
+		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_active_rx_sample_idx )
 		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = my_idx2 )
-		#if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
+		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = tensors_dir.name , add_timestamp = False )
 		if del_np_files :
 			for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_*.*" ) :
