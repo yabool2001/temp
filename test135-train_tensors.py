@@ -27,23 +27,30 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
-clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 del_pt_files : bool = True
 del_np_files : bool = True
-
-device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
-print ( f"torch {device=}" )
+trn : bool = False
 
 samples_dir = Path ( "np.samples" )
-tensors_dir = Path ( "pt.training" )
+
+if trn :
+	tensors_dir = Path ( "pt.training" )
+	clp : bool = True # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
+else :
+	tensors_dir = Path ( "np.inference" )
+	clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
 
 if del_pt_files :
 	for file_path in Path ( tensors_dir ).glob ( "*" ) :
 		if file_path.is_file () :
 			file_path.unlink ( missing_ok = True )
+
+device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
+print ( f"torch {device=}" )
+
 
 # Znajdź unikalne grupy plików na podstawie timestampu w nazwie dla plików *_rx_samples_*.npy które nie były jeszcze obrobione!!!
 timestamp_groups = sorted ( { p.name.split ( "_rx_samples_" , 1 )[ 0 ] for p in samples_dir.glob("*_rx_samples_*.npy") } )

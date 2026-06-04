@@ -1,6 +1,34 @@
 # Dziennik projektu
 
-## 2026.05.26 testy nowej funkcji clip_samples_and_create_tensor_4_training któ©a bazuje na wklejaniu sampli a nie symboli i jest wielki progres
+## 2026.06.04 wprowadziłem adaptacyjny learning rate w test129-training.py
+
+```python
+# Najlepsze rozwiązanie: automatyczny scheduler zmniejszający LR przy stagnacji
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau ( optimizer , mode = 'min' , factor = 0.1 , patience = 2 )
+
+    # Aktualizacja schedulera: jeśli wymacana dolina jest płaska przez 2 epoki, tnie bazowy LR!
+    scheduler.step ( avg_loss )
+```
+I jest lepszy końcowy efekt
+Epoka [01/15] | Błąd EVM (MSE): 0.12048 | Czas epoki: 113.90 s
+Epoka [02/15] | Błąd EVM (MSE): 0.11828 | Czas epoki: 112.01 s
+Epoka [03/15] | Błąd EVM (MSE): 0.11811 | Czas epoki: 111.44 s
+Epoka [04/15] | Błąd EVM (MSE): 0.11800 | Czas epoki: 111.92 s
+Epoka [05/15] | Błąd EVM (MSE): 0.11798 | Czas epoki: 111.64 s
+Epoka [06/15] | Błąd EVM (MSE): 0.11792 | Czas epoki: 111.55 s
+Epoka [07/15] | Błąd EVM (MSE): 0.11795 | Czas epoki: 110.93 s
+Epoka [08/15] | Błąd EVM (MSE): 0.11802 | Czas epoki: 110.98 s
+Epoka [09/15] | Błąd EVM (MSE): 0.11799 | Czas epoki: 111.17 s
+Epoka [10/15] | Błąd EVM (MSE): 0.11796 | Czas epoki: 112.00 s
+Epoka [11/15] | Błąd EVM (MSE): 0.11804 | Czas epoki: 112.82 s
+Epoka [12/15] | Błąd EVM (MSE): 0.11778 | Czas epoki: 110.91 s
+Epoka [13/15] | Błąd EVM (MSE): 0.11803 | Czas epoki: 111.73 s
+Epoka [14/15] | Błąd EVM (MSE): 0.11802 | Czas epoki: 111.17 s
+Epoka [15/15] | Błąd EVM (MSE): 0.11793 | Czas epoki: 112.30 s
+
+Model zostal zapisany jako 
+
+## 2026.05.26 testy nowej funkcji clip_samples_and_create_tensor_4_training która bazuje na wklejaniu sampli a nie symboli i jest wielki progres
 Epoka [01/15] | Błąd EVM (MSE): 0.12287 | Czas epoki: 114.12 s
 Epoka [02/15] | Błąd EVM (MSE): 0.11848 | Czas epoki: 113.07 s
 Epoka [03/15] | Błąd EVM (MSE): 0.11810 | Czas epoki: 115.24 s

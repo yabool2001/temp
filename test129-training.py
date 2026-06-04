@@ -58,6 +58,9 @@ if __name__ == "__main__":
     # Nowoczesny wariant Adama (AdamW) z lekkim hamulcem wag dla lepszej stabilności
     optimizer = torch.optim.AdamW ( model.parameters () , lr = ml.LEARNING_RATE , weight_decay = 1e-4 )
     
+    # Najlepsze rozwiązanie: automatyczny scheduler zmniejszający LR przy stagnacji
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau ( optimizer , mode = 'min' , factor = 0.1 , patience = 2 )
+    
     # Minimalizacja błędu średniokwadratowego = fizyczny zjazd z EVM
     criterion = nn.MSELoss ()
 
@@ -92,19 +95,22 @@ if __name__ == "__main__":
             loss = criterion ( torch.view_as_real ( predictions ) , torch.view_as_real ( batch_y ) )
             
             # Wsteczna propagacja gradientów Wirtingera (magia zespolonego autogradu)
-            loss.backward()
-            optimizer.step()
+            loss.backward ()
+            optimizer.step ()
             
-            total_loss += loss.item()
+            total_loss += loss.item ()
             
-        epoch_time = time.time() - start_time
-        avg_loss = total_loss / len(loader)
+        epoch_time = time.time () - start_time
+        avg_loss = total_loss / len ( loader )
+        
+        # Aktualizacja schedulera: jeśli wymacana dolina jest płaska przez 2 epoki, tnie bazowy LR!
+        scheduler.step ( avg_loss )
         
         # Oczekiwany rezultat: Epoka 1 potrwa np. 40 sekund, od Epoki 2 czasy pikują na dno!
         print ( f"Epoka [{epoch+1:02d}/{EPOCHS}] | Błąd EVM (MSE): {avg_loss:.5f} | Czas epoki: {epoch_time:.2f} s")
     print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )
     
     # Zrzucamy wyuczoną fizykę na twardy dysk!
-    torch.save ( model.state_dict () , "bpsk_modem_003.pth" )
+    torch.save ( model.state_dict () , "bpsk_modem.pth" )
     print ( "💾 Wagi zapisane do pliku. Gotowe do inferencji i testów!" )
     print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )

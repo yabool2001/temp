@@ -22,7 +22,7 @@ def demoduluj_na_zywo ( sciezka_do_pliku_npy: str ) -> np.ndarray :
 
     # 1. WSKRZESZAMY MÓZG (W produkcji ten krok robisz raz przy starcie aplikacji)
     model = ml.HardcoreComplexEqualizer().to(device)
-    model.load_state_dict(torch.load("bpsk_modem_002.pth", map_location=device, weights_only=True))
+    model.load_state_dict ( torch.load ( "bpsk_modem.pth" , map_location = device , weights_only = True ) )
     
     # KRYTYCZNE: Blokujemy sieć do odczytu (tryb ewaluacji). 
     # Bez tego system próbowałby liczyć gradienty i wywaliłby pamięć RAM w kosmos.
@@ -70,11 +70,11 @@ if __name__ == "__main__":
     # Bierzemy obojętnie który plik z radia, byle bez odpowiedzi!
     #PLIK_RX = "np.tensors_002_inference/1776615893939_rx_samples.npy"
     #PLIK_RX = "np.tensors_004/1777228098212_rx_samples_1777228108811.npy"
-    PLIK_RX = "pt.training/1779620689621_X_train_samples.npy"
+    PLIK_RX = "np.inference/1780580221043_X_train_samples.npy"
 
     
     # Magia dzieje się w 1 linijce:
-    odzyskane_symbole = demoduluj_na_zywo(PLIK_RX)
+    odzyskane_symbole = demoduluj_na_zywo ( PLIK_RX )
     
     # Otrzymujesz na tacy "odzyskane_symbole". To jest właśnie Twój wygenerowany 
     # przez sztuczną inteligencję odpowiednik "sig_target" z poprzedniego pliku!
