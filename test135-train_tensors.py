@@ -19,7 +19,7 @@ Tworzenie tensorów y_train i przycinanie ich razem z samplami i zapisywanie ich
 import numpy as np , os , tomllib , torch
 from pathlib import Path
 from numpy.typing import NDArray
-from modules import corrections, filters , ops_file, packet , plot
+from modules import filters , ops_file, packet , plot
 
 script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
@@ -27,12 +27,19 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
+#######################################################################################################################
+### SETTINGS ##########################################################################################################
+#######################################################################################################################
+
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 del_pt_files : bool = True
-del_np_files : bool = True
+del_np_files : bool = False
 trn : bool = False
+
+#######################################################################################################################
+#######################################################################################################################
 
 samples_dir = Path ( "np.samples" )
 
@@ -91,10 +98,10 @@ for timestamp_group in timestamp_groups :
 					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_first_sample_idx}" )
 					print ( f"tx: {tx_frame.packet_len}	{packet.pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.frame_start_abs_first_sample_idx}" )
 				if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
-					first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_FIRST_SAMPLE_OFFSET
+					first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET
 					#first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx
 					if dbg : print ( f"\r\nZnaleziono dopasowanie ramki: {timestamp_group=} {first_active_rx_sample_idx=}" )
-					my_idx2 = np.array ( [ first_active_rx_sample_idx , first_active_rx_sample_idx + rx_samples.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET ] , dtype = np.uint32 )
+					my_idx2 = np.array ( [ first_active_rx_sample_idx , first_active_rx_sample_idx + rx_samples.tx_active_symbols.size ] , dtype = np.uint32 )
 					break
 			if first_active_rx_sample_idx is not None :
 				rx_samples.create_tx_symbols ( first_active_symbols_idx = first_active_rx_sample_idx )
@@ -102,7 +109,7 @@ for timestamp_group in timestamp_groups :
 				break
 
 	if first_active_rx_sample_idx is not None :
-		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_active_rx_sample_idx )
+		rx_samples.clip_samples_and_create_tensor_4_training_only_active_symbols ( first_idx = first_active_rx_sample_idx )
 		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = my_idx2 )
 		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = tensors_dir.name , add_timestamp = False )

@@ -9,7 +9,7 @@ from modules import plot
 script_filename = os.path.basename ( __file__ )
 
 dir_name = Path ( "np.tensors" )
-dir_name = Path ( "training" )
+dir_name = Path ( "pt.training" )
 
 tensor_files = sorted ( dir_name.glob ( "*.pt" ) )
 

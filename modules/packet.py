@@ -666,18 +666,18 @@ class RxSamples :
         self.tx_symbols = np.zeros ( self.raw_samples.size , dtype = np.complex128 )
         self.tx_symbols [ first_active_symbols_idx : first_active_symbols_idx + self.tx_active_symbols.size ] = self.tx_active_symbols
 
-    def clip_samples_and_create_tensor_4_training_only_active_symbols ( self , first_active_rx_sample_idx : np.uint32 = None ) -> None :
+    def clip_samples_and_create_tensor_4_training_only_active_symbols ( self , first_idx : np.uint32 = None ) -> None :
         '''
         Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
         Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
         Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
         '''
-        if first_active_rx_sample_idx >= self.samples.size :
-            raise ValueError ( f"{first_active_rx_sample_idx=} must be less than {self.samples.size}." )
-        last_sample_idx = first_active_rx_sample_idx + self.tx_active_symbols.size
-        self.X_train_samples = self.samples [ first_active_rx_sample_idx : last_sample_idx ]
-        self.y_train_tensor = torch.zeros ( last_sample_idx - first_active_rx_sample_idx , dtype=torch.complex64 )
-        start_idx = first_active_rx_sample_idx - first_active_rx_sample_idx
+        if first_idx >= self.samples.size :
+            raise ValueError ( f"{first_idx=} must be less than {self.samples.size}." )
+        last_sample_idx = first_idx + self.tx_active_symbols.size
+        self.X_train_samples = self.samples [ first_idx : last_sample_idx ]
+        self.y_train_tensor = torch.zeros ( last_sample_idx - first_idx , dtype=torch.complex64 )
+        start_idx = first_idx - first_idx
         self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 
     def clip_samples_and_create_tensor_4_training ( self , first_idx : np.uint32 = None ) -> None :
@@ -1223,6 +1223,18 @@ class TxSamples :
         return tx_frame
 
     def create_samples4pluto_and_active_symbols ( self ) -> None :
+
+        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
+        if frames_bpsk_symbols.size > 0 :
+            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
+            self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
+            first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
+            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * modulation.SPS
+            active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
+            self.active_symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+
+    def create_samples4pluto_and_active_symbols_old ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :

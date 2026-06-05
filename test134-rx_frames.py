@@ -14,8 +14,9 @@ source .venv/bin/activate
 python test134-rx_large_frames.py -10.0
 
 '''
-from modules import ops_os , packet , sdr
+from modules import ops_file, ops_os , packet, plot , sdr
 from pathlib import Path
+from numpy.typing import NDArray
 import numpy as np
 import os , sys , tomllib
 import socket
@@ -35,7 +36,8 @@ single_machine = True
 legion = True
 
 Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 7 )
+Nof_WRTS = int ( 3 )
+frame_size : str = "S"
 
 ################
 ################
@@ -78,10 +80,19 @@ else :
 UDP_PORT = int ( toml_settings[ "UDP_PORT" ] )
 ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
-ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
+#ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
-ASCII_S = b'\x13'  # Sygnał do rozpoczęcia odbioru próbek znak S)
-
+ASCII_S = b'\x53'  # Sygnał do rozpoczęcia odbioru próbek (printable char S)
+ASCII_M = b'\x4d'  # Sygnał do rozpoczęcia odbioru próbek (printable char M)
+ASCII_L = b'\x4c'  # Sygnał do rozpoczęcia odbioru próbek (printable char L)
+match frame_size :
+    case "S" :
+        ASCII_FRAME_SIZE = ASCII_S
+    case "M" :
+        ASCII_FRAME_SIZE = ASCII_M
+    case "L" :
+        ASCII_FRAME_SIZE = ASCII_L
+        
 timestamp_min = int ( ops_os.milis_timestamp () ) - 1000 * 365 * 60 * 60 * 24 # -1Y
 timestamp_max = int ( ops_os.milis_timestamp () ) + 1000 * 365 * 60 * 60 * 24 # +1Y
 
@@ -116,9 +127,10 @@ INTERFACE = resolve_interface_name ( INTERFACE )
 scope_id = socket.if_nametoindex ( INTERFACE )
 udp_target_addr = ( IP_DST_ADDR , UDP_PORT , 0 , scope_id )
 
-udp_sock.sendto ( ASCII_FF , udp_target_addr )
+#udp_sock.sendto ( ASCII_FF , udp_target_addr )
+udp_sock.sendto ( ASCII_FRAME_SIZE , udp_target_addr )
 if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] }" )
-if debug : print ( f"Sent ASCII_FF to { IP_DST_ADDR }:{ UDP_PORT }" )
+if debug : print ( f"Sent ASCII_FRAME_SIZE to { IP_DST_ADDR }:{ UDP_PORT }" )
 
 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
 payload_udp = b""
@@ -139,15 +151,14 @@ try :
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx )
                 if wrt :
                     rx_samples.save_samples_2_npf ( file_name = f"{payload_udp.decode("utf-8")}_{filename}" , dir_name = dir_name , add_timestamp = True )
-                if plt : rx_samples.plot_samples ( title = f"{script_filename}" )
                 i -= 1
             j -= 1
         
         elif payload_udp == ASCII_EOT : # Received END OF TRANSMISSION
             if debug : print ( f"Received ASCII_EOT {payload_udp=}, stopping transmission!" )
             if j > 0 :
-                udp_sock.sendto ( ASCII_FF , udp_target_addr )
-                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] } Sent ASCII_FF to { IP_DST_ADDR }:{ UDP_PORT }" )
+                udp_sock.sendto ( ASCII_FRAME_SIZE , udp_target_addr )
+                if debug : print ( f"UDP source socket: { udp_sock.getsockname ()[ 0 ] }:{ udp_sock.getsockname ()[ 1 ] } Sent ASCII_FRAME_SIZE to { IP_DST_ADDR }:{ UDP_PORT }" )
                 rx_samples.rx ( sdr_ctx = rx_pluto.pluto_rx_ctx) # Wyczyszczenie bufora odbiorczego przed rozpoczęciem odbioru próbek, aby nie zapisać starych próbek z poprzedniej transmisji
         
         t.sleep ( 0.1 )  # odciążenie CPU
@@ -158,4 +169,9 @@ finally :
     udp_sock.sendto ( ASCII_CAN , udp_target_addr )
     if debug : print ( f"Sent ASCII_CAN {ASCII_CAN} to { IP_DST_ADDR }:{ UDP_PORT }" )
     udp_sock.close ()
+    if plt :
+        samples_files = sorted ( Path ( dir_name ).glob ( "*_rx_samples_*.npy" ) )
+        for samples_file in samples_files :
+            samples : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( str ( samples_file ) )
+            plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} {samples_file.name}")
     exit ( 0 )

@@ -48,8 +48,6 @@ del_old = True
 lipkow_ap = True
 single_machine = True
 legion = True
-
-frame_mode : str = "large"
 ################
 ################
 
@@ -77,6 +75,10 @@ ASCII_ENQ = b'\x05'  # Sygnał do rozpoczęcia transmisji danych
 ASCII_EOT = b'\x04'  # Sygnał do zakończenia transmisji danych
 ASCII_FF = b'\x0c'  # Sygnał do rozpoczęcia pracy skryptu (Form Feed)
 ASCII_CAN = b'\x18'  # Sygnał do zakończenia pracy skryptu
+ASCII_S = b'\x53'  # Sygnał do rozpoczęcia odbioru próbek (printable char S)
+ASCII_M = b'\x4d'  # Sygnał do rozpoczęcia odbioru próbek (printable char M)
+ASCII_L = b'\x4c'  # Sygnał do rozpoczęcia odbioru próbek (printable char L)
+ASCII_FRAME_SIZE = b''
 
 SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
@@ -87,19 +89,19 @@ def wrt_flat_tensor ( tx_samples : packet.TxSamples , timestamp_group : str ) ->
     tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dir_name , add_timestamp = False )
     if dbg : print ( f"Samples and corresponding symbols saved to npf type files in {dir_name=} {timestamp_group=}..." )
 
-def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_mode : str = "large" ) -> tuple [ packet.TxSamples , str ] :
+def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_size : bytes = ASCII_L ) -> tuple [ packet.TxSamples , str ] :
     tx_samples = packet.TxSamples ()
-    if frame_mode == "small" :
-        #payload_bytes = ptd.PAYLOAD_1500BYTES_DEC
-        payload_bytes = [ 15 ]
-        tx_samples.add_frame ( payload_bytes = payload_bytes )
-    elif frame_mode == "medium" :
-        payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
-        tx_samples.add_frame ( payload_bytes = payload_bytes )
-    elif frame_mode == "large" :
-        max_samples_size = int ( SAMPLES_BUFFER_SIZE * multiplicator ) # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
-        ptd.fill_samples_up_to_max_length ( tx_samples = tx_samples , max_samples_size = max_samples_size )
-
+    match frame_size :
+        case b"S" :
+            #payload_bytes = ptd.PAYLOAD_1500BYTES_DEC
+            payload_bytes = [ 15 ]
+            tx_samples.add_frame ( payload_bytes = payload_bytes )
+        case b"M" :
+            payload_bytes = ptd.generate_payload_rand_up_2_1500b ()
+            tx_samples.add_frame ( payload_bytes = payload_bytes )
+        case b"L" :
+            max_samples_size = int ( SAMPLES_BUFFER_SIZE * multiplicator ) # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
+            ptd.fill_samples_up_to_max_length ( tx_samples = tx_samples , max_samples_size = max_samples_size )
     if dbg : print ( f"{tx_samples.samples_4_pluto.size=}" )
     timestamp_group = ops_os.milis_timestamp ()
     if wrt : wrt_flat_tensor ( tx_samples = tx_samples , timestamp_group = timestamp_group )
@@ -124,13 +126,13 @@ print ( f"Czekam na komendy na IPv6 UDP {IP_SRC_ADDR}:{UDP_PORT}%{INTERFACE}" )
 try :
     while True :
 
-        payload_udp = b""
+        payload_udp = b''
         payload_udp , udp_sender_addr = udp_sock.recvfrom ( 1 ) # Odbieramy dane z bufora UDP, oczekując na komendy od skryptu test132-rx_large_data.py
         if dbg : print ( f"\n\r[UDP] Received { len ( payload_udp ) } byte(s): {payload_udp=}" )
 
         if payload_udp == ASCII_CAN : # ESCAPE - polecenie zamknięcia skryptu
             if dbg : print ( f"Received ASCII_CAN {payload_udp=}, stopping transmission & ending script!" )
-            payload_udp = b""
+            payload_udp = b''
             break
 
         elif payload_udp == ASCII_ENQ : # ENQUIRY TO send A NEW PACKET
@@ -140,16 +142,17 @@ try :
             tx_samples = None
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if dbg : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
-            payload_udp = b""
+            payload_udp = b''
 
 
-        elif payload_udp == ASCII_FF : # ENQUIRY TO PREPARE A NEW PACKET AND timestamp_group and send timestamp_group
-            if dbg : print ( f"Received ASCII_FF: {payload_udp=}, sending timestamp_group." )
-            tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_mode = frame_mode )
+        elif payload_udp == ASCII_S or payload_udp == ASCII_M or payload_udp == ASCII_L : # ENQUIRY TO PREPARE A NEW PACKET AND timestamp_group and send timestamp_group
+            ASCII_FRAME_SIZE = payload_udp
+            if dbg : print ( f"Received ASCII_FRAME_SIZE: {payload_udp=}, sending timestamp_group." )
+            tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_size = ASCII_FRAME_SIZE )
             if plt :
-                tx_samples.plot_active_symbols ( f"{script_filename}" )
-                tx_samples.plot_samples ( f"{script_filename}" )
-                tx_samples.plot_samples_4_pluto_spectrum ( f"{ script_filename } Samples 4 pluto spectrum" )
+                tx_samples.plot_active_symbols ( f"{script_filename} {timestamp_group}" )
+                tx_samples.plot_samples ( f"{script_filename} {timestamp_group}" )
+                tx_samples.plot_samples_4_pluto_spectrum ( f"{ script_filename } {timestamp_group} Samples 4 pluto spectrum" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if dbg : print ( f"Sent {timestamp_group=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
 
