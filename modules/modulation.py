@@ -7,12 +7,6 @@ from numpy.typing import NDArray
 from modules import ops_packet , filters , plot
 from scipy.signal import upfirdn , correlate
 
-
-with open ( "settings.json" , "r" ) as settings_json_file :
-    json_settings = json.load ( settings_json_file )
-    modulation = json_settings[ "bpsk" ]
-    filter = json_settings[ "rrc_filter" ]
-
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 

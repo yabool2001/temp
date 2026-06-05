@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from modules import modulation
 from torch.utils.data import Dataset
 
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 EPOCHS = 15
 CHUNK_SAMPLES_LEN = 8192
 
@@ -14,7 +14,7 @@ CHUNK_SAMPLES_LEN = 8192
 # ========================================================
 # NASZ AUTORSKI MODUŁ 1: ZESPOLONA KOMÓRKA BRAMKOWA
 # ========================================================
-class PureComplexLSTMCell(nn.Module):
+class PureComplexLSTMCell ( nn.Module ) :
     def __init__(self, input_size, hidden_size):
         super().__init__()
         self.hidden_size = hidden_size
@@ -56,27 +56,29 @@ class PureComplexLSTMCell(nn.Module):
 # ========================================================
 # NASZ AUTORSKI MODUŁ 2: SILNIK CZASOWY (Zastępuje nn.LSTM)
 # ========================================================
-class PureComplexLSTM(nn.Module):
+class PureComplexLSTM ( nn.Module ) :
+
     def __init__(self, input_size, hidden_size):
+
         super().__init__()
         # Powołujemy do życia pojedynczą bramkę (zdefiniowaną wyżej)
         self.cell = PureComplexLSTMCell(input_size, hidden_size)
 
-    def forward(self, x):
+    def forward ( self , x , hx = None ) :
+
         # Wejście x: [Batch, Czas (np. 4096), Cechy_Zespolone]
         outputs = []
-        hx = None
+        #hx = None
         
-        # Iterujemy po osi czasu kroczek po kroczku.
-        # Właśnie po to w głównym skrypcie odpalamy kompilator (max-autotune),
+        # Iterujemy po osi czasu kroczek po kroczku. Właśnie po to w głównym skrypcie odpalamy kompilator (max-autotune),
         # żeby sprzętowo zlepił tę pythonową pętlę w ultraszybki asembler!
-        for t in range(x.size(1)):
-            h, c = self.cell(x[:, t, :], hx)
-            hx = (h, c)
-            outputs.append(h)
+        for t in range ( x.size( 1 ) ) :
+            h, c = self.cell ( x[ : , t , : ] , hx )
+            hx = ( h , c ) # Tutaj faza nadpisuje się z każdym krokiem
+            outputs.append ( h )
             
         # Zwracamy posklejany, gotowy 3D tensor
-        return torch.stack(outputs, dim=1), hx
+        return torch.stack ( outputs , dim = 1 ) , hx # <-- ZWRÓĆ TUPLE: (wyniki, nowy_stan_hx)
 
 # ========================================================
 # 1. KROJOWNIA DANYCH DLA TWOJEGO y_train (.pt)
@@ -121,7 +123,7 @@ class BPSKDataset ( Dataset ) :
         # Szybkie cięcie matrycy bez kopiowania fizycznych bitów (Zero-Copy slicing)
         x_np = self.X_raw[start:end]
         X_tensor = torch.from_numpy(x_np).unsqueeze(0) # [1, 8192]
-        y_tensor = self.Y_raw[ start : end : modulation.SPS ]               # [8192]
+        y_tensor = self.Y_raw[start:end]               # [8192]
         
         # Cyfrowe AGC chroniące wejście modelu przed skokami amplitudy
         max_val = torch.max(torch.abs(X_tensor)) + 1e-9
@@ -148,17 +150,18 @@ class HardcoreComplexEqualizer ( nn.Module ) :
         
         self.fc = nn.Linear ( 64 , 1 , dtype = torch.complex64 )
 
-    def forward ( self , x ) :
+    def forward ( self , x , hx = None ) :
+
         # Wejście x: [Batch, 1, 4096]
         x = self.conv1 ( x )     # Wyjście: [Batch, 16, 4096] (Brak decymacji!)
         x = x.transpose ( 1 , 2 ) # Wyjście: [Batch, 4096, 16]
         
         # Tasiemiec na 4096 kroków wchodzi do LSTM
-        x_lstm, _ = self.lstm ( x ) # Wyjście: [Batch, 4096, 64]
+        x_lstm, hx_new = self.lstm ( x , hx ) # Wyjście: [Batch, 4096, 64]
         out = self.fc ( x_lstm )    # Wyjście: [Batch, 4096, 1]
         
         # Wypluwamy goły wektor zespolony (zespolony squelch!). 
-        return out.squeeze ( -1 )   # Zwraca: [Batch, 4096] (dtype=torch.complex64)
+        return out.squeeze ( -1 ) , hx_new   # Zwraca: [Batch, 4096] (dtype=torch.complex64)
 
 
 

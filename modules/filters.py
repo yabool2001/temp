@@ -10,10 +10,6 @@ from numpy.typing import NDArray
 from pathlib import Path
 from scipy.signal import lfilter , upfirdn , find_peaks , sosfilt , sosfiltfilt , tf2sos
 
-with open ( "settings.json" , "r" ) as settings_json_file :
-    settings = json.load ( settings_json_file )
-    filter = settings[ "rrc_filter" ]
-
 with open ( "settings.toml" , "rb" ) as settings_toml_file :
     toml_settings = tomllib.load ( settings_toml_file )
 

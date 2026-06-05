@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader
 # Zaciągamy moduł, do którego przeniosłeś architekturę i ładowarkę
 from modules import ml , plot
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"🔥 {device=}")
 
@@ -14,58 +13,57 @@ print(f"🔥 {device=}")
 model = ml.HardcoreComplexEqualizer().to(device)
 
 # Ładujemy Twój plik z ugotowanymi wagami z RTX'a
-model.load_state_dict ( torch.load ( "bpsk_modem_003.pth" , map_location = device , weights_only = True ) )
+model.load_state_dict ( torch.load ( "bpsk_modem.pth" , map_location = device , weights_only = True ) )
 
 # BEZWZGLĘDNIE: Blokujemy sieć! (Wyłącza aktualizację wag, włącza tryb analizy)
 model.eval ()
 
-# 2. ŁADUJEMY JEDNĄ PACZKĘ Z DYSKU (Twoja krojownia załatwi zrównanie ramki i AGC)
-dir_name = Path ( "pt.training" )
-lista_X = [ sorted ( dir_name.glob ( "*_X_train_samples.npy" ) )[ 0 ] ]
-lista_y = [ sorted ( dir_name.glob ( "*_y_train_tensor.pt" ) )[ 0 ] ]
+# 2. ŁADUJEMY GIGANTYCZNY STRUMIEŃ (Brak krojenia, Datasets i DataLoaderów!)
+dir_name = Path ( "np.inference" )
+lista_X = sorted ( dir_name.glob ( "*_X_train_samples.npy" ) )
+lista_y = sorted ( dir_name.glob ( "*_y_train_tensor.pt" ) )
 
-dataset = ml.BPSKDataset ( X_files = lista_X , y_files = lista_y , chunk_samples = ml.CHUNK_SAMPLES_LEN )
+# Bierzemy pierwsze z brzegu pliki
+plik_X = lista_X[0]
+plik_y = lista_y[0]
 
-# Bierzemy całkowicie losowy kawałek ze środka zbioru
-loader = DataLoader ( dataset , batch_size = 128 , shuffle = False )
+# Ładujemy cały plik prosto do płaskich tablic pamięci RAM
+surowy_sygnal = np.load(plik_X).astype(np.complex64)
+docelowy_sygnal = torch.load(plik_y, weights_only=True).numpy()
 
-with torch.no_grad():
-    # Wyciągamy wszystko z ładowarki. Żadnych pętli `for`!
-    batch_x, batch_y = next(iter(loader))
-    
-    # Pchamy na kartę i robimy demodulację 
-    pred_y = model(batch_x.to(device))
-    
-    # Spłaszczamy zrzucone paczki od razu w 3 osobne, gigantyczne tasiemce
-    sig_raw = batch_x.cpu().numpy().flatten().astype(np.complex128)
-    sig_target = batch_y.cpu().numpy().flatten().astype(np.complex128)
-    sig_ai = pred_y.cpu().numpy().flatten().astype(np.complex128)
+# Ucinamy ogon, aby całkowita długość dzieliła się przez SPS
+# (Wymóg sprzętowej decymacji z warstwy Conv1d)
+sps = ml.modulation.SPS
+reszta = len(surowy_sygnal) % sps
+if reszta != 0:
+    surowy_sygnal = surowy_sygnal[:-reszta]
+    docelowy_sygnal = docelowy_sygnal[:-reszta]
 
-'''
-sig_raw = []
-sig_ai = []
-sig_target = []
+# Transformacja do tensora 3D: [Batch=1, Kanały=1, Czas=CałySygnałZPliku]
+# Podwójne unsqueeze(0) zamienia płaską tablicę 1D w tensor pod AI
+batch_x = torch.from_numpy(surowy_sygnal).unsqueeze(0).unsqueeze(0).to(device)
+
+# TWARDE AGC
+# Zastępuje stare z "BPSKDataset" (które w małej klatce pompowało szum termiczny do jedynki)
+batch_x = batch_x / 16384.0
 
 # 3. DEMODULACJA AI W LOCIE
-print ( "🧠 Przepuszczam sygnał przez Equalizer CVNN..." )
-with torch.no_grad () : # Zdejmujemy obciążenie autogradu - sygnał ma tylko przepłynąć
-    for batch_x , batch_y in loader :
-        pred_y = model ( batch_x.to ( device ) )
+print ( f"🧠 Przepuszczam CAŁY sygnał naraz ({batch_x.size(2)} próbek) przez Equalizer CVNN..." )
+with torch.no_grad():
+    # Maszyna "połyka" wszystko w jednym przejściu. Faza PLL zostaje idealnie utrzymana!
+    pred_y = model(batch_x)
     
-# Ściągamy tensory do pamięci komputera i zamieniamy na proste Numpy pod Matplotliba
-sig_raw.append ( batch_x.cpu ().numpy ().flatten () )
-sig_ai.append ( batch_y.cpu ().numpy ().flatten () )
-sig_target.append ( pred_y.cpu ().numpy ().flatten () )
-sig_raw_all = np.concatenate ( sig_raw )
-sig_target_all = np.concatenate ( sig_target )
-sig_ai_all = np.concatenate ( sig_ai )
-'''
+# Ściągamy tensory do pamięci komputera i spłaszczamy
+sig_raw = surowy_sygnal.astype(np.complex128)
+sig_target = docelowy_sygnal.astype(np.complex128)
+sig_ai = pred_y.cpu().numpy().flatten().astype(np.complex128)
 
-plot.complex_waveform_v0_1_6 ( sig_raw , f"{sig_raw.size=}" )
-plot.complex_waveform_v0_1_6 ( sig_target , f"{sig_target.size=}" )
-#plot.plot_symbols ( sig_ai , f"{sig_ai.size=}" )
+# --- WYKRESY ---
+# UWAGA: Twój model robi teraz piękny zrzut decymacyjny (stride=sps), 
+# więc sig_ai jest po wyjściu z sieci SPS-razy krótsze od wejściowego sig_raw!
+# Decymujemy z powrotem na sucho również sig_target, by porównać je poprawnie na wykresie:
+sig_target_decimated = sig_target[::sps]
 
-# --- WYKRES 1: SUROWE WEJŚCIE Z RADIA sig_raw
-# --- WYKRES 2: ODZYSKANA KONSTELACJA AI sig_ai
-# --- WYKRES 3: DOMENA CZASU sig_raw
-
+plot.complex_waveform_v0_1_6 ( sig_raw , f"Oryginał RAW {sig_raw.size=}" )
+plot.complex_waveform_v0_1_6 ( sig_target_decimated , f"Target (zdecymowany) {sig_target_decimated.size=}" )
+plot.complex_waveform_v0_1_6 ( sig_ai , f"Odzyskane przez AI {sig_ai.size=}" )

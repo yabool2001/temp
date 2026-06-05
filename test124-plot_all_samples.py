@@ -12,9 +12,10 @@ obj : bool = True # obj=object czy chcesz to robic za pomoca klas w modules/pack
 
 #dir_name = Path ( "np.tensors" )
 #dir_name = Path ( "np.samples" )
-dir_name = Path ( "pt.training" )
+#dir_name = Path ( "pt.training" )
 #dir_name = Path ( "np.tensors_002_inference" )
 #dir_name = Path ( "np.tensors_003_inference" )
+dir_name = Path ( "np.inference" )
 
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 
