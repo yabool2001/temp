@@ -655,6 +655,38 @@ class RxSamples :
         self.tx_symbols = np.zeros ( self.raw_samples.size , dtype = np.complex128 )
         self.tx_symbols [ first_active_symbols_idx : first_active_symbols_idx + self.tx_active_symbols.size ] = self.tx_active_symbols
 
+    def clip_samples_and_create_tensor_4_training ( self , first_idx : np.uint32 = None , clipping_mode : str = 'none' ) -> None :
+        '''
+        clipping_mode = 'balanced' : Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
+        Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
+        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
+        clipping_mode = 'active_symbols_only' : Przycinanie ramki tak aby były tylko aktywne symbole BPSK, bez żadnych 0+j0,
+        co jest trybem treningowym bardzo trudnym, ale może być przydatny do eksperymentów i porównania z balanced.
+        clipping_mode = 'none' : brak przycinania, użycie całej ramki
+        '''
+        if first_idx >= self.samples.size :
+            raise ValueError ( f"{first_idx=} must be less than {self.samples.size}." )
+        last_sample_idx = first_idx + self.tx_active_symbols.size
+        match clipping_mode :
+            case 'balanced' :
+                i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
+                clip1 = ( ( first_idx - 1 ) // i ) * i
+                clip2 = ( last_sample_idx // i + 1) * i
+                # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
+                clip1 = np.maximum ( 0 , clip1 )
+                clip2 = np.minimum ( np.uint32 ( self.samples.size ) , clip2 )
+            case 'active_symbols_only' :
+                clip1 = first_idx
+                clip2 = last_sample_idx
+            case 'none' :
+                clip1 = 0
+                clip2 = np.uint32 ( self.samples.size )
+            case _ :
+                raise ValueError ( f"Invalid {clipping_mode=}. Valid options are 'balanced', 'active_symbols_only', 'none'." )
+        self.X_train_samples = self.samples [ clip1 : clip2 ]
+        self.y_train_tensor = torch.zeros ( clip2 - clip1 , dtype = torch.complex64 )
+        start_idx = first_idx - clip1
+
     def clip_samples_and_create_tensor_4_training_only_active_symbols ( self , first_idx : np.uint32 = None ) -> None :
         '''
         Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
@@ -669,7 +701,7 @@ class RxSamples :
         start_idx = first_idx - first_idx
         self.y_train_tensor[ start_idx : start_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
 
-    def clip_samples_and_create_tensor_4_training ( self , first_idx : np.uint32 = None ) -> None :
+    def clip_samples_and_create_tensor_4_training_old2 ( self , first_idx : np.uint32 = None ) -> None :
         '''
         Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
         Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
@@ -1211,9 +1243,6 @@ class TxSamples :
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
         return tx_frame
 
-
-
-#clipping_mode
     def create_samples4pluto_and_active_symbols ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
