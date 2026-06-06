@@ -23,6 +23,23 @@ import numpy as np , os , socket , sys , time as t , tomllib
 from pathlib import Path
 from modules import ops_os , packet , payload_test_data as ptd , sdr
 
+################
+### SETTINGS ###
+
+mode : str = 'inference' # Available modes: 'training', 'test' or "inference"
+
+dbg = True
+plt = True
+wrt = True
+del_dst = True
+
+lipkow_ap = True
+single_machine = True
+legion = True
+
+################
+################
+
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 script_filename = os.path.basename ( __file__ )
 
@@ -30,26 +47,22 @@ script_filename = os.path.basename ( __file__ )
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
-dir_name = "np.samples"
-Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+dst_dir = f"np.{mode}"
+Path ( dst_dir ).mkdir ( parents = True , exist_ok = True )
+if del_dst :
+    for file_path in Path ( dst_dir ).glob ( "*" ) :
+        if file_path.is_file () :
+            file_path.unlink ( missing_ok = True )
 
 if len ( sys.argv ) > 1 :
     tx_gain_float = float ( sys.argv[ 1 ] )
 else :
     tx_gain_float = float ( toml_settings["ADALM-Pluto"][ "TX_GAIN" ] )
 
-################
-### SETTINGS ###
-dbg = True
-plt = True
-wrt = True
-del_old = True
-
-lipkow_ap = True
-single_machine = True
-legion = True
-################
-################
+if mode in ('training', 'test', 'inference') :
+    if dbg : print ( f"Running in {mode=}." )
+else :
+    raise ValueError ( f"Unknown {mode=}. Available modes: 'training', 'test' or 'inference'." )
 
 if lipkow_ap :
     if single_machine :
@@ -84,10 +97,10 @@ SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples , timestamp_group : str ) -> None :
-    tx_samples.save_active_symbols_2_npf ( file_name = f"{timestamp_group}_tx_active_symbols" , dir_name = dir_name , add_timestamp = False ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
-    #tx_samples.save_samples_4_pluto_2_npf ( file_name = f"{timestamp_group}_tx_samples4pluto" , dir_name = dir_name , add_timestamp = False )
-    tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dir_name , add_timestamp = False )
-    if dbg : print ( f"Samples and corresponding symbols saved to npf type files in {dir_name=} {timestamp_group=}..." )
+    tx_samples.save_active_symbols_2_npf ( file_name = f"{timestamp_group}_tx_active_symbols" , dir_name = dst_dir , add_timestamp = False ) # wrersja bez rozbiegówki i wygaszenia, czyli tylko aktywne próbki z ramek, bez 0+j0
+    #tx_samples.save_samples_4_pluto_2_npf ( file_name = f"{timestamp_group}_tx_samples4pluto" , dir_name = dst_dir , add_timestamp = False )
+    tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dst_dir , add_timestamp = False )
+    if dbg : print ( f"Samples and corresponding symbols saved to npf type files in {dst_dir=} {timestamp_group=}..." )
 
 def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_size : bytes = ASCII_L ) -> tuple [ packet.TxSamples , str ] :
     tx_samples = packet.TxSamples ()
@@ -106,11 +119,6 @@ def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFE
     timestamp_group = ops_os.milis_timestamp ()
     if wrt : wrt_flat_tensor ( tx_samples = tx_samples , timestamp_group = timestamp_group )
     return tx_samples , timestamp_group
-
-if del_old :
-    for file_path in Path ( dir_name ).glob ( "*" ) :
-        if file_path.is_file () :
-            file_path.unlink ( missing_ok = True )
 
 tx_pluto = packet.TxPluto_v0_1_17 ( sn = sdr.PLUTO_TX_SN, tx_gain_float = tx_gain_float )
 if dbg : print ( f"\n{ script_filename= } { tx_pluto= }" )
@@ -143,7 +151,6 @@ try :
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if dbg : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
             payload_udp = b''
-
 
         elif payload_udp == ASCII_S or payload_udp == ASCII_M or payload_udp == ASCII_L : # ENQUIRY TO PREPARE A NEW PACKET AND timestamp_group and send timestamp_group
             ASCII_FRAME_SIZE = payload_udp

@@ -1,24 +1,13 @@
-import csv
-from fileinput import filename
-import numpy as np
-import os
-import time as t
-import tomllib
-import torch
-import zlib
+import numpy as np , os , torch , time as t , tomllib , zlib
 
+from fileinput import filename
 from adi import Pluto
 from dataclasses import dataclass , field
 from modules import corrections , filters , modulation, ml , ops_file, plot , sdr
 from numpy.typing import NDArray
-
 from pathlib import Path
 from scipy.signal import find_peaks
 from typing import Any
-
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
 
 np.set_printoptions ( threshold = np.inf , linewidth = np.inf ) # Ensures all array elements are displayed without truncation and prevents line wrapping for long output lines.
 
@@ -1222,6 +1211,9 @@ class TxSamples :
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
         return tx_frame
 
+
+
+#clipping_mode
     def create_samples4pluto_and_active_symbols ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )

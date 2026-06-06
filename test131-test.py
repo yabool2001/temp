@@ -1,3 +1,10 @@
+'''
+Prompt:
+W skrypcie test130-inference.py ładuję sample wejściowe (X_train) jako np.array a docelowy sygnał (y_train) jako tensor. Czy zgodnie ze sztuką pytorch to nie powinno być inference tylko test?
+test129-training.py, test130-inference.py, test130-real_inference.py i jeśli trzeba w modules/ml.py, żeby X i y były akceptowane jako np.complex128
+'''
+
+
 import torch
 import numpy as np
 from pathlib import Path
@@ -19,9 +26,9 @@ model.load_state_dict ( torch.load ( "bpsk_modem.pth" , map_location = device , 
 model.eval ()
 
 # 2. ŁADUJEMY GIGANTYCZNY STRUMIEŃ (Brak krojenia, Datasets i DataLoaderów!)
-dir_name = Path ( "np.inference" )
-lista_X = sorted ( dir_name.glob ( "*_X_train_samples.npy" ) )
-lista_y = sorted ( dir_name.glob ( "*_y_train_tensor.pt" ) )
+src_dir = Path ( "pt.test" )
+lista_X = sorted ( src_dir.glob ( "*_X_train_samples.npy" ) )
+lista_y = sorted ( src_dir.glob ( "*_y_train_tensor.pt" ) )
 
 # Bierzemy pierwsze z brzegu pliki
 plik_X = lista_X[0]

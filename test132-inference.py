@@ -3,10 +3,33 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 
 # Zaciągamy moduł, do którego przeniosłeś architekturę i ładowarkę
-from modules import ml , plot
+from modules import ml, ops_file , plot
+
+#######################################################################################################################
+### SETTINGS ##########################################################################################################
+#######################################################################################################################
+
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
+dbg : bool = True
+
+del_src_files : bool = False
+del_dst_files : bool = True
+
+#######################################################################################################################
+#######################################################################################################################
 
 script_filename = os.path.basename ( __file__ )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) 
+
+src_dir = Path ( "pt.inference" )
+dst_dir = Path ( "np.demod" )
+Path ( dst_dir ).mkdir ( parents = True , exist_ok = True )
+
+if del_dst_files :
+	for file_path in Path ( dst_dir ).glob ( "*" ) :
+		if file_path.is_file () :
+			file_path.unlink ( missing_ok = True )
 
 device = torch.device ( "cuda" if torch.cuda.is_available () else "cpu" )
 print ( f"🔥 {device=}" )
@@ -59,12 +82,19 @@ def demoduluj_na_zywo ( sciezka_do_pliku_npy: str ) -> np.ndarray :
 # UŻYCIE W TWOIM PROGRAMIE GŁÓWNYM
 # ==========================================
 if __name__ == "__main__":
-    
-    # Bierzemy plik z eteru
-    PLIK_RX = "np.inference/1780580221043_X_train_samples.npy"
+
+    # Use first file in the directory whose name is stored in the src_dir variable
+    PLIK_RX = sorted ( src_dir.glob ( "*_X_train_samples.npy" ) )[ 0 ]
+    if not PLIK_RX.exists () :
+        raise FileNotFoundError ( f"Brak plików *_X_train_samples.npy w {src_dir=}" )
+    # Extract timestamp group from filename
+    timestamp_group = PLIK_RX.stem.split ( "_X_train_samples" , 1)[ 0 ]
+    print ( f"{PLIK_RX=}")
 
     # Magia dzieje się w 1 linijce:
     odzyskane_symbole = demoduluj_na_zywo ( PLIK_RX )
+    filename_and_dirname = f"{dst_dir}/{timestamp_group}_demod.npy"
+    ops_file.save_complex_samples_2_npf ( filename_and_dirname , odzyskane_symbole )
     
     bity = (odzyskane_symbole.real > 0).astype(int)
     print("\nFragment zdekodowanego strumienia bitów:")
@@ -72,3 +102,7 @@ if __name__ == "__main__":
 
 plot.complex_waveform_v0_1_6 ( odzyskane_symbole , f"{odzyskane_symbole.size=}" )
 plot.real_waveform_v0_1_6 ( bity , f"{bity.size=}" )
+if del_src_files :
+	for file_path in Path ( src_dir ).glob ( "*" ) :
+		if file_path.is_file () :
+			file_path.unlink ( missing_ok = True )
