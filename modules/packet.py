@@ -1218,7 +1218,7 @@ class TxSamples :
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_4_pluto : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     # Symbole wzięte wprost z symboli z ramek
-    active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     # Symbole wzięte z próbkowaia samples_4_pluto w miejscach gdzie powinny być aktywne symbole, czyli w miejscach gdzie powinny być symbole z ramek, ale wzięte z próbkowania, a nie bezpośrednio z symboli ramek.
     # Te symbole mogą się różnić od tych z ramek, bo są wzięte z próbkowania.
     active_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
@@ -1283,7 +1283,7 @@ class TxSamples :
         if frames_bpsk_symbols.size > 0 :
             self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
             self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            self.active_symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
+            self.symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
             first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET )
             last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
             active_samples = self.samples.real[ first_active_symbol_idx : last_frame_end_idx ]
@@ -1295,11 +1295,11 @@ class TxSamples :
         if frames_bpsk_symbols.size > 0 :
             self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
             self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
+            self.symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
             first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
             last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
             active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
-            self.active_symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+            self.symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
 
     def create_samples4pluto_and_active_symbols_old1 ( self ) -> None :
 
@@ -1307,11 +1307,11 @@ class TxSamples :
         if frames_bpsk_symbols.size > 0 :
             self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
             self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
+            self.symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
             first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_FIRST_SAMPLE_OFFSET )
             last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
             active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
-            self.active_symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+            self.symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()
@@ -1332,11 +1332,16 @@ class TxSamples :
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples )
 
-    def save_active_symbols_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
+    def save_active_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
+        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
+        filename_and_dirname = f"{dir_name}/{filename}"
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.active_samples )
+
+    def save_symbols_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
         filename_and_dirname = f"{dir_name}/{filename}"
-        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.active_symbols )
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.symbols )
 
     def plot_samples ( self , title :str = "" , markers : bool = True ) -> None :
         if markers :
@@ -1352,9 +1357,9 @@ class TxSamples :
         else :
             plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" )
 
-    def plot_active_symbols ( self , title : str = "" ) -> None :
-        #plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols , title = f"{title} tx {self.active_symbols.size=}" )
-        plot.complex_waveform_v0_1_6 ( self.active_symbols , f"{title} {self.active_symbols.size=}" )
+    def plot_symbols ( self , title : str = "" ) -> None :
+        #plot.plot_bpsk_symbols_v2 ( symbols = self.symbols , title = f"{title} tx {self.symbols.size=}" )
+        plot.complex_waveform_v0_1_6 ( self.symbols , f"{title} {self.symbols.size=}" )
 
     def plot_active_samples ( self , title : str = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.active_samples , f"{title} {self.active_samples.size=}" )

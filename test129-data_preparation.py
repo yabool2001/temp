@@ -78,15 +78,16 @@ for timestamp_group in timestamp_groups :
 	for samples_file in samples_files :
 		rx_samples.rx ( file_name = str ( samples_file ) , concatenate = True )
 		print ( f"{rx_samples.concatenates=}" )
-	plot.complex_waveform_v0_1_6 ( rx_samples.raw_samples , f"{script_filename} {timestamp_group} concatenated rx_samples | {rx_samples.raw_samples.size=}" )
 	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
-	#rx_samples_frames_first_sample_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
-	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{src_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
+	frame_first_idxs : NDArray [ np.uint32 ] = np.array ( [ frame.first_symbol_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
+	packet_first_idxs : NDArray [ np.uint32 ] = np.array ( [ frame.packet_first_symbol_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
+	frame_last_idxs : NDArray [ np.uint32 ] = np.array ( [ ( frame.frame_end_abs_idx - 1 ) for frame in rx_samples.frames ] , dtype = np.uint32 )
+	rx_samples_idxs = np.concatenate ( [ frame_first_idxs , packet_first_idxs , frame_last_idxs ] )
+	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{src_dir.name}/{timestamp_group}_tx_symbols.npy" )
 	rx_samples.tx_samples = ops_file.open_samples_from_npf ( filename = f"{src_dir.name}/{timestamp_group}_tx_samples.npy" )
-	rx_samples_frame0_abs_idxs : NDArray [ np.uint32 ] = np.array ( [ rx_samples.frames[0].first_active_symbol_abs_idx , rx_samples.frames[0].packet_start_abs_idx , rx_samples.frames[0].first_active_symbol_abs_idx + rx_samples.tx_active_symbols.size , rx_samples.frames[0].frame_start_abs_idx + rx_samples.tx_active_symbols.size ] , dtype = np.uint32 )
 	if plt :
 		#rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples | " , mark_first_active_samples = True )
-		plot.complex_waveform_v0_1_6 ( rx_samples.samples , f"{script_filename} {timestamp_group} concatenated rx_samples | frame[0] idxs | {rx_samples.samples.size=}" , marker_peaks = rx_samples_frame0_abs_idxs )
+		plot.complex_waveform_v0_1_6 ( rx_samples.samples , f"{script_filename} {timestamp_group} concatenated rx_samples | frame[0] idxs | {rx_samples.samples.size=}" , marker_peaks = rx_samples_idxs )
 		#rx_samples.plot_symbols ( rx_samples.tx_active_symbols , title = f"{script_filename} {timestamp_group} tx_active_symbols" )
 
 	# Szukanie dopasowania nagłówka ramki zaczynając od rx
