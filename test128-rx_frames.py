@@ -38,8 +38,8 @@ single_machine = True
 legion = True
 
 Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 8 )
-frame_size : str = "L" # Available frame sizes: "S" - large, "M" - medium or "L" - large
+Nof_WRTS = int ( 3 )
+frame_size : str = "S" # Available frame sizes: "S" - small, "M" - medium or "L" - large
 
 ################
 ################

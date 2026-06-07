@@ -158,6 +158,7 @@ try :
             tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_size = ASCII_FRAME_SIZE )
             if plt :
                 tx_samples.plot_active_symbols ( f"{script_filename} {timestamp_group}" )
+                tx_samples.plot_active_samples ( f"{script_filename} {timestamp_group}" )
                 tx_samples.plot_samples ( f"{script_filename} {timestamp_group}" )
                 tx_samples.plot_samples_4_pluto_spectrum ( f"{ script_filename } {timestamp_group} Samples 4 pluto spectrum" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami

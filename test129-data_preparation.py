@@ -32,7 +32,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 #######################################################################################################################
 
 mode : str = 'inference' # 'training' , 'test' lub "inference"
-clipping_mode : str = 'balanced' # 'none', 'balanced', 'active_only' - przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia, 'active_only' - przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, "none" - nie przycinamy wcale (niezalecane do treningu)
+clipping_mode : str = 'none' # 'none', 'balanced', 'active_only' - przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia, 'active_only' - przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, "none" - nie przycinamy wcale (niezalecane do treningu)
 
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
@@ -82,14 +82,14 @@ for timestamp_group in timestamp_groups :
 	#rx_samples_frames_first_sample_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
 	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{src_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
 	rx_samples.tx_samples = ops_file.open_samples_from_npf ( filename = f"{src_dir.name}/{timestamp_group}_tx_samples.npy" )
-	my_idx1 : NDArray [ np.uint32 ] = np.array ( [ rx_samples.frames[0].frame_start_abs_first_sample_idx , rx_samples.frames[0].frame_start_abs_first_sample_idx + rx_samples.tx_active_symbols.size + filters.ADD_SAMPLES_TAIL_OFFSET ] , dtype = np.uint32 )
+	rx_samples_frame0_abs_idxs : NDArray [ np.uint32 ] = np.array ( [ rx_samples.frames[0].first_active_symbol_abs_idx , rx_samples.frames[0].packet_start_abs_idx , rx_samples.frames[0].first_active_symbol_abs_idx + rx_samples.tx_active_symbols.size , rx_samples.frames[0].frame_start_abs_idx + rx_samples.tx_active_symbols.size ] , dtype = np.uint32 )
 	if plt :
 		#rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples | " , mark_first_active_samples = True )
-		plot.complex_waveform_v0_1_6 ( rx_samples.samples , f"{script_filename} {timestamp_group} concatenated rx_samples | {rx_samples.samples.size=}" , marker_peaks = my_idx1 )
+		plot.complex_waveform_v0_1_6 ( rx_samples.samples , f"{script_filename} {timestamp_group} concatenated rx_samples | frame[0] idxs | {rx_samples.samples.size=}" , marker_peaks = rx_samples_frame0_abs_idxs )
 		#rx_samples.plot_symbols ( rx_samples.tx_active_symbols , title = f"{script_filename} {timestamp_group} tx_active_symbols" )
 
 	# Szukanie dopasowania nagłówka ramki zaczynając od rx
-	first_active_rx_sample_idx : np.uint32 = None
+	first_active_symbol_idx : np.uint32 = None
 	if rx_samples.frames is not None and len ( rx_samples.frames ) > 0 :
 		tx_samples = packet.RxSamples ()
 		tx_samples.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
@@ -97,23 +97,23 @@ for timestamp_group in timestamp_groups :
 		for rx_frame in rx_samples.frames :
 			for tx_frame in tx_samples.frames :
 				if dbg :
-					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.frame_start_abs_first_sample_idx}" )
-					print ( f"tx: {tx_frame.packet_len}	{packet.pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.frame_start_abs_first_sample_idx}" )
+					print ( f"rx: {rx_frame.packet_len}	{packet.pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.first_active_symbol_abs_idx}" )
+					print ( f"tx: {tx_frame.packet_len}	{packet.pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.first_active_symbol_abs_idx}" )
 				if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
-					first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx - tx_frame.frame_start_abs_first_sample_idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET
-					#first_active_rx_sample_idx = rx_frame.frame_start_abs_first_sample_idx
-					if dbg : print ( f"\r\nZnaleziono dopasowanie ramki: {timestamp_group=} {first_active_rx_sample_idx=}" )
-					my_idx2 = np.array ( [ first_active_rx_sample_idx , first_active_rx_sample_idx + rx_samples.tx_active_symbols.size ] , dtype = np.uint32 )
+					first_active_symbol_idx = rx_frame.first_active_symbol_abs_idx - tx_frame.first_active_symbol_abs_idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET
+					#first_active_symbol_idx = rx_frame.first_active_symbol_abs_idx
+					if dbg : print ( f"\r\nZnaleziono dopasowanie ramki: {timestamp_group=} {first_active_symbol_idx=}" )
+					my_idx2 = np.array ( [ first_active_symbol_idx , first_active_symbol_idx + rx_samples.tx_active_symbols.size ] , dtype = np.uint32 )
 					break
-			if first_active_rx_sample_idx is not None :
-				rx_samples.create_tx_symbols ( first_active_symbols_idx = first_active_rx_sample_idx )
+			if first_active_symbol_idx is not None :
+				rx_samples.create_tx_symbols ( first_active_symbols_idx = first_active_symbol_idx )
 				#if plt : rx_samples.plot_symbols ( rx_samples.tx_symbols , title = f"{script_filename} {timestamp_group} tx_symbols" )
 				break
 
-	if first_active_rx_sample_idx is not None :
-		rx_samples.clip_samples_and_create_tensor_4_training_only_active_symbols ( first_idx = first_active_rx_sample_idx )
+	if first_active_symbol_idx is not None :
+		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_active_symbol_idx , clipping_mode = clipping_mode )
 		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = my_idx2 )
-		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_rx_sample_idx )
+		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_active_symbol_idx )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )
 		if del_src_files :
 			for file_path in Path ( src_dir ).glob ( f"{timestamp_group}_*.*" ) :

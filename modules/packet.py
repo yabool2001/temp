@@ -483,7 +483,7 @@ class RxFrame_v0_1_18 :
     SPAN = filters.SPAN
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     header_bits : NDArray[ np.uint8 ] = field ( init = False )
-    frame_start_abs_first_sample_idx : np.uint32 = field ( init = False )
+    first_active_symbol_abs_idx : np.uint32 = field ( init = False )
     frame_end_abs_idx : np.uint32 = field ( init = False )
     packet_len : np.uint16 = field ( init = False )
     packet_start_abs_idx : NDArray[ np.uint32 ] = field ( init = False )
@@ -497,9 +497,10 @@ class RxFrame_v0_1_18 :
     def __post_init__ ( self ) -> None :
         if not self.frame_len_validation () :
             return self.frame_start_abs_idx
-        self.process_packet ()
+        self.process_frame ()
     
-    def process_packet ( self ) -> None :
+    def process_frame ( self ) -> None :
+        # Przetestować działanie sync_sequence_start_idx = filter.FIRST_TO_MIDDLE_SYMBOL_OFFSET, czyli 0, bo to jest offset od początku ramki do środka symbolu, a więc jeśli znajdę dopasowanie ramki, to jest ono w jednym z 4 punktów oddalonych o 0, 1/4 SPS, 1/2 SPS, 3/4 SPS od początku ramki. To jest ważne, bo jeśli znajdę dopasowanie ramki, to jest ono w jednym z tych 4 punktów i wtedy muszę zacząć czytać header i pakiet od tego punktu, a nie od początku ramki. Jeśli znajdę dopasowanie ramki i zacznę czytać header i pakiet od tego punktu, to będzie dobrze, bo ten punkt jest początkiem symbolu sync sequence i wtedy czytając co SPS próbkę będę czytał kolejne symbole sync sequence, a potem header i pakiet. Jeśli znajdę dopasowanie ramki i zacznę czytać header i pakiet od początku ramki, to będzie źle, bo ten punkt może być w połowie symbolu sync sequence i wtedy czytając co SPS próbkę będę czytał połowy symboli sync sequence i połowy symboli header i pakietu, co będzie błędne. Dlatego ważne jest, żeby sync_sequence_start_idx był równy filter.FIRST_TO_MIDDLE_SYMBOL_OFFSET, czyli 0.
         sync_sequence_start_idx = 0 #self.SPAN * self.SPS // 2 # Można wróć do sprzed zmiany w git: 81d3093def3219f03c37e046d4f5141864f28c2c
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.SPS )
         packet_len_start_idx = sync_sequence_end_idx
@@ -527,7 +528,7 @@ class RxFrame_v0_1_18 :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
                         #self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - ( self.frame_start_abs_idx % self.SPS ) # szukam pierwszego sample, który jest początkiem ramki, czyli tego, który jest podzielny przez SPS, bo jeśli znalazłem dopasowanie ramki, to jest ono w jednym z 4 punktów odd
-                        self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - filters.FIRST_TO_ACTIVE_SAMPLE_OFFSET
+                        self.first_active_symbol_abs_idx = self.frame_start_abs_idx
                         self.packet_start_abs_idx = self.frame_start_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.frame_end_abs_idx = self.frame_start_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.header_bits = np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] )
@@ -675,6 +676,7 @@ class RxSamples :
                 # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
                 clip1 = np.maximum ( 0 , clip1 )
                 clip2 = np.minimum ( np.uint32 ( self.samples.size ) , clip2 )
+                #start_idx = first_idx - clip1
             case 'active_symbols_only' :
                 clip1 = first_idx
                 clip2 = last_sample_idx
@@ -683,9 +685,11 @@ class RxSamples :
                 clip2 = np.uint32 ( self.samples.size )
             case _ :
                 raise ValueError ( f"Invalid {clipping_mode=}. Valid options are 'balanced', 'active_symbols_only', 'none'." )
+        self.y_train_tensor = torch.zeros ( self.samples.size , dtype = torch.complex64 )
+        self.y_train_tensor[ first_idx : first_idx + self.tx_active_symbols.size ] = torch.tensor ( self.tx_active_symbols , dtype = torch.complex64 )
         self.X_train_samples = self.samples [ clip1 : clip2 ]
-        self.y_train_tensor = torch.zeros ( clip2 - clip1 , dtype = torch.complex64 )
-        start_idx = first_idx - clip1
+        # Slicing bez kopiowania, a dzięki clone () ze zwolnieniem nieużywanej pamięci
+        self.y_train_tensor = self.y_train_tensor[ clip1 : clip2 ].clone ()
 
     def clip_samples_and_create_tensor_4_training_only_active_symbols ( self , first_idx : np.uint32 = None ) -> None :
         '''
@@ -772,8 +776,8 @@ class RxSamples :
 
     def plot_samples ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
         if mark_first_active_samples :
-            frames_first_sample_idx = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_sample_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_sample_idx )
+            frames_first_active_symbol_abs_idx = np.array ( [ frame.first_active_symbol_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_active_symbol_abs_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_active_symbol_abs_idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
 
@@ -1216,7 +1220,11 @@ class TxSamples :
     samples_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_4_pluto : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    # Symbole wzięte wprost z symboli z ramek
     active_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    # Symbole wzięte z próbkowaia samples_4_pluto w miejscach gdzie powinny być aktywne symbole, czyli w miejscach gdzie powinny być symbole z ramek, ale wzięte z próbkowania, a nie bezpośrednio z symboli ramek.
+    # Te symbole mogą się różnić od tych z ramek, bo są wzięte z próbkowania.
+    active_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     SPS = modulation.SPS
 
@@ -1235,7 +1243,7 @@ class TxSamples :
             raise ValueError ( "Error: payload_bytes must be provided." )
         tx_frame = self.create_tx_frame ( payload_bytes_np_arr = payload_bytes_np_arr )
         self.frames.append ( tx_frame )
-        self.create_samples4pluto_and_active_symbols ()
+        self.create_samples4pluto_active_symbols_and_active_samples ()
 
     def create_tx_frame ( self , payload_bytes_np_arr : NDArray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
 
@@ -1243,7 +1251,33 @@ class TxSamples :
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
         return tx_frame
 
-    def create_samples4pluto_and_active_symbols ( self ) -> None :
+    def test_accurcay ( self ) -> None :
+
+        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
+        if frames_bpsk_symbols.size > 0 :
+            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
+            #self.active_symbols = np.zeros ( frames_bpsk_symbols.size , dtype = np.complex64 )
+            self.active_symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
+            first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET )
+            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
+            active_samples = self.samples.real[ first_active_symbol_idx : last_frame_end_idx ]
+            self.active_samples = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+
+    def create_samples4pluto_active_symbols_and_active_samples ( self ) -> None :
+
+        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
+        if frames_bpsk_symbols.size > 0 :
+            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
+            #self.active_symbols = np.zeros ( frames_bpsk_symbols.size , dtype = np.complex64 )
+            self.active_symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
+            first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET )
+            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
+            active_samples = self.samples.real[ first_active_symbol_idx : last_frame_end_idx ]
+            self.active_samples = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+
+    def create_samples4pluto_and_active_symbols_old2 ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
@@ -1251,11 +1285,11 @@ class TxSamples :
             self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
             self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
             first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
-            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * modulation.SPS
+            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
             active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
             self.active_symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
 
-    def create_samples4pluto_and_active_symbols_old ( self ) -> None :
+    def create_samples4pluto_and_active_symbols_old1 ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
@@ -1263,7 +1297,7 @@ class TxSamples :
             self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
             self.active_symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
             first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_FIRST_SAMPLE_OFFSET )
-            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * modulation.SPS
+            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
             active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
             self.active_symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
 
@@ -1292,17 +1326,28 @@ class TxSamples :
         filename_and_dirname = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.active_symbols )
 
-    def plot_samples ( self , title = "" ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
+    def plot_samples ( self , title :str = "" , markers : bool = True ) -> None :
+        if markers :
+            idx = np.array ( [ filters.FIRST_MIDDLE_SYMBOL_OFFSET ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_peaks = idx )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
 
-    def plot_samples_4_pluto ( self , title = "" ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" )
+    def plot_samples_4_pluto ( self , title : str = "" , markers : bool = True ) -> None :
+        if markers :
+            idx = np.array ( [ filters.FIRST_MIDDLE_SYMBOL_OFFSET ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" , marker_peaks = idx )
+        else :
+            plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" )
 
-    def plot_active_symbols ( self , title = "" ) -> None :
+    def plot_active_symbols ( self , title : str = "" ) -> None :
         #plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols , title = f"{title} tx {self.active_symbols.size=}" )
         plot.complex_waveform_v0_1_6 ( self.active_symbols , f"{title} {self.active_symbols.size=}" )
 
-    def plot_samples_4_pluto_spectrum ( self , title = "" ) -> None :
+    def plot_active_samples ( self , title : str = "" ) -> None :
+        plot.complex_waveform_v0_1_6 ( self.active_samples , f"{title} {self.active_samples.size=}" )
+
+    def plot_samples_4_pluto_spectrum ( self , title : str = "" ) -> None :
         plot.spectrum_occupancy ( self.samples_4_pluto , 1024 , title )
 
     def __repr__ ( self ) -> str :
