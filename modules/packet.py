@@ -1251,18 +1251,29 @@ class TxSamples :
         tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
         return tx_frame
 
-    def test_accurcay ( self ) -> None :
+    def offsets_accuracy_test ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
-            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            #self.active_symbols = np.zeros ( frames_bpsk_symbols.size , dtype = np.complex64 )
-            self.active_symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
-            first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET )
-            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
-            active_samples = self.samples.real[ first_active_symbol_idx : last_frame_end_idx ]
-            self.active_samples = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+            samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
+            active_symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
+            plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} offset_accuracy_test {samples.size=}" )
+            plot.complex_waveform_v0_1_6 ( active_symbols , f"{script_filename} offset_accuracy_test {active_symbols.size=}" )
+            for i in range ( 4 ) :
+                first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET + i -1 )
+                last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
+                active_samples = samples.real[ first_active_symbol_idx : last_frame_end_idx ]
+                active_samples = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
+                idx = np.array ( [ first_active_symbol_idx ] , dtype = np.uint32 )
+                plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} offset_accuracy_test {first_active_symbol_idx=} {samples.size=}" , marker_peaks = idx )
+                plot.complex_waveform_v0_1_6 ( active_samples , f"{script_filename} offset_accuracy_test {first_active_symbol_idx=} {active_samples.size=}" )
+                # Porównaj active_samples z active_symbols i sprawdź czy są takie same
+                if np.array_equal ( active_samples , active_symbols ) :
+                    print ( f"!!!  Offsets accuracy 100% for {first_active_symbol_idx=}!" )
+                # A jak można porównać active_samples z active_symbols, żeby ocenić błąd, jeśli nie są takie same? Można policzyć ile symboli jest takich samych, a ile jest różnych, i wyliczyć procentową dokładność.
+                else :
+                    num_different = np.sum ( active_samples != active_symbols )
+                    print ( f"{num_different=} for {first_active_symbol_idx=}" )
 
     def create_samples4pluto_active_symbols_and_active_samples ( self ) -> None :
 
