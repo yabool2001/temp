@@ -644,6 +644,13 @@ class RxSamples :
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
+                    # Dodaj kolejne frame, które zostały wysłane w tym samym strumieniu danych.
+                    # Szansa, że jest kolejna ramka jest tylko wtedy jeśli poprzednia była cała.
+                    while ( frame.has_frame ) :
+                        frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ frame.frame_end_abs_idx : ] , first_symbol_abs_idx = frame.frame_end_abs_idx )
+                        if frame.has_header :
+                            self.frames.append ( frame )
+                            previous_processed_idx = frame.frame_end_abs_idx
                 else :
                     previous_processed_idx = idx
 
@@ -651,7 +658,7 @@ class RxSamples :
         '''
         clipping_mode = 'balanced' : Przycinanie ramki aby stosunek symboli BPSK do 0+j0 był ok. 80 do 20, co pomaga w treningu modelu.
         Nie powinno to być nigdy idealny 80/20, bo w rzeczywistych danych zawsze będzie pewna losowość, ale powinno być blisko tego.
-        Poza tym należy dabć o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
+        Poza tym należy dbać o to aby liczba sampli po przycięciu była wielokrotnością SPS i ml.CHUNK_SAMPLES_LEN.
         clipping_mode = 'active_symbols_only' : Przycinanie ramki tak aby były tylko aktywne symbole BPSK, bez żadnych 0+j0,
         co jest trybem treningowym bardzo trudnym, ale może być przydatny do eksperymentów i porównania z balanced.
         clipping_mode = 'none' : brak przycinania, użycie całej ramki
