@@ -35,10 +35,10 @@ del_dst = True
 
 lipkow_ap = True
 single_machine = True
-legion = True
+legion = False
 
 Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 3 )
+Nof_WRTS = int ( 4 )
 frame_size : str = "S" # Available frame sizes: "S" - small, "M" - medium or "L" - large
 
 ################
@@ -71,9 +71,9 @@ if lipkow_ap :
             IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
             INTERFACE = toml_settings["IF"][ "LEGION" ]
         else :
-            IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
-            IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_GO3" ]
-            INTERFACE = toml_settings["IF"][ "SURFACE_GO3" ]
+            IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+            IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]
+            INTERFACE = toml_settings["IF"][ "SURFACE_PRO9" ]
     else :
         IP_SRC_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "LEGION" ]
         IP_DST_ADDR = toml_settings[ "IP_V6_ADDR" ][ "Orange9D40" ][ "SURFACE_PRO9" ]

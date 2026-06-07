@@ -17,12 +17,9 @@ BETA = float ( toml_settings[ "rrc_filter" ][ "BETA" ] )
 SPAN = int ( toml_settings[ "rrc_filter" ][ "SPAN" ] )
 #SPS  = modulation.SPS
 SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
-ADD_SAMPLES_HEAD_OFFSET = np.uint32 ( 0 )
-ADD_SAMPLES_TAIL_OFFSET = np.uint32 ( 1 )
-FIRST_TO_ACTIVE_SAMPLE_OFFSET = np.uint32 ( SPS // 2 ) + ADD_SAMPLES_HEAD_OFFSET
 FIRST_TO_MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPS // 2 )
-FIRST_MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPAN * SPS // 2 ) # To jest wartość 22 dla SPAN = 11 i SPS = 4, czyli dokładnie połowa długości filtra RRC w próbkach (11 symboli * 4 próbki/symbol / 2)
-FIRST_SYMBOL_OFFSET = FIRST_MIDDLE_SYMBOL_OFFSET - FIRST_TO_ACTIVE_SAMPLE_OFFSET
+MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPAN * SPS // 2 ) # To jest wartość 22 dla SPAN = 11 i SPS = 4, czyli dokładnie połowa długości filtra RRC w próbkach (11 symboli * 4 próbki/symbol / 2)
+FIRST_SYMBOL_OFFSET = MIDDLE_SYMBOL_OFFSET - FIRST_TO_MIDDLE_SYMBOL_OFFSET
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
     """

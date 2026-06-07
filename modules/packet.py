@@ -476,17 +476,16 @@ class RxPacket_v0_1_18 :
 class RxFrame_v0_1_18 :
     
     samples_filtered : NDArray[ np.complex128 ]
-    frame_start_abs_idx : np.uint32
+    first_symbol_abs_idx : np.uint32
 
     # Pola uzupełnianie w __post_init__
     SPS = modulation.SPS
     SPAN = filters.SPAN
     header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     header_bits : NDArray[ np.uint8 ] = field ( init = False )
-    first_active_symbol_abs_idx : np.uint32 = field ( init = False )
     frame_end_abs_idx : np.uint32 = field ( init = False )
     packet_len : np.uint16 = field ( init = False )
-    packet_start_abs_idx : NDArray[ np.uint32 ] = field ( init = False )
+    packet_first_symbol_abs_idx : NDArray[ np.uint32 ] = field ( init = False )
     leftovers_start_abs_idx : np.uint32 = field ( init = False )
     has_header : bool = False # przydate jeśli nie wykryje pakietu/payload
     has_frame : bool = False # ustawiany dopiero po walidacji pakietu, wcześniej używamy tylko lokalnego has_header
@@ -496,12 +495,12 @@ class RxFrame_v0_1_18 :
     
     def __post_init__ ( self ) -> None :
         if not self.frame_len_validation () :
-            return self.frame_start_abs_idx
+            return self.first_symbol_abs_idx
         self.process_frame ()
     
     def process_frame ( self ) -> None :
         # Przetestować działanie sync_sequence_start_idx = filter.FIRST_TO_MIDDLE_SYMBOL_OFFSET, czyli 0, bo to jest offset od początku ramki do środka symbolu, a więc jeśli znajdę dopasowanie ramki, to jest ono w jednym z 4 punktów oddalonych o 0, 1/4 SPS, 1/2 SPS, 3/4 SPS od początku ramki. To jest ważne, bo jeśli znajdę dopasowanie ramki, to jest ono w jednym z tych 4 punktów i wtedy muszę zacząć czytać header i pakiet od tego punktu, a nie od początku ramki. Jeśli znajdę dopasowanie ramki i zacznę czytać header i pakiet od tego punktu, to będzie dobrze, bo ten punkt jest początkiem symbolu sync sequence i wtedy czytając co SPS próbkę będę czytał kolejne symbole sync sequence, a potem header i pakiet. Jeśli znajdę dopasowanie ramki i zacznę czytać header i pakiet od początku ramki, to będzie źle, bo ten punkt może być w połowie symbolu sync sequence i wtedy czytając co SPS próbkę będę czytał połowy symboli sync sequence i połowy symboli header i pakietu, co będzie błędne. Dlatego ważne jest, żeby sync_sequence_start_idx był równy filter.FIRST_TO_MIDDLE_SYMBOL_OFFSET, czyli 0.
-        sync_sequence_start_idx = 0 #self.SPAN * self.SPS // 2 # Można wróć do sprzed zmiany w git: 81d3093def3219f03c37e046d4f5141864f28c2c
+        sync_sequence_start_idx = filters.FIRST_TO_MIDDLE_SYMBOL_OFFSET # Można wróć do sprzed zmiany w git: 81d3093def3219f03c37e046d4f5141864f28c2c
         sync_sequence_end_idx = sync_sequence_start_idx + ( SYNC_SEQUENCE_LEN_BITS * self.SPS )
         packet_len_start_idx = sync_sequence_end_idx
         packet_len_end_idx = packet_len_start_idx + ( PACKET_LEN_LEN_BITS * self.SPS )
@@ -527,16 +526,14 @@ class RxFrame_v0_1_18 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
-                        #self.frame_start_abs_first_sample_idx = self.frame_start_abs_idx - ( self.frame_start_abs_idx % self.SPS ) # szukam pierwszego sample, który jest początkiem ramki, czyli tego, który jest podzielny przez SPS, bo jeśli znalazłem dopasowanie ramki, to jest ono w jednym z 4 punktów odd
-                        self.first_active_symbol_abs_idx = self.frame_start_abs_idx
-                        self.packet_start_abs_idx = self.frame_start_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
-                        self.frame_end_abs_idx = self.frame_start_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.packet_first_symbol_abs_idx = self.first_symbol_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.frame_end_abs_idx = self.first_symbol_abs_idx + packet_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.header_bits = np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] )
                         self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.header_bits )
-                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{self.has_header=},{self.frame_start_abs_idx=}" )
+                        add2log_packet ( f"{t.time()},{sync_sequence_start_idx=},{self.has_header=},{self.first_symbol_abs_idx=}" )
                         if not self.packet_len_validation ( packet_end_idx ) :
-                            add2log_packet ( f"{t.time()},{self.has_header=},{sync_sequence_start_idx=},{self.frame_start_abs_idx=}" )
-                            if settings["log"]["verbose_2"] : print ( f"{self.frame_start_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {self.has_header=}" )
+                            add2log_packet ( f"{t.time()},{self.has_header=},{sync_sequence_start_idx=},{self.first_symbol_abs_idx=}" )
+                            if settings["log"]["verbose_2"] : print ( f"{self.first_symbol_abs_idx=} {samples_name} {frame_name=} {has_sync_sequence=}, {self.has_header=}" )
                             return
                         packet = RxPacket_v0_1_18 ( samples_filtered = self.samples_filtered [ crc32_end_idx : packet_end_idx ] )
                         if packet.has_packet :
@@ -545,9 +542,9 @@ class RxFrame_v0_1_18 :
                             #self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] ) , sps = self.SPS )
                             self.packet = packet
                             add2log_packet(f"{t.time()},{packet.has_packet=},{crc32_end_idx=}")
-                            if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.frame_start_abs_idx=} {self.has_frame=}, {packet.has_packet=}" )
+                            if settings["log"]["verbose_2"] : print ( f"{sync_sequence_start_idx=} {has_sync_sequence=}, {self.first_symbol_abs_idx=} {self.has_frame=}, {packet.has_packet=}" )
                             return
-        if settings["log"]["verbose_2"] : print ( f"{self.frame_start_abs_idx=} {has_sync_sequence=}, {self.has_frame=}" )
+        if settings["log"]["verbose_2"] : print ( f"{self.first_symbol_abs_idx=} {has_sync_sequence=}, {self.has_frame=}" )
         return
 
     def samples2bits ( self , samples : NDArray[ np.complex128 ] ) -> NDArray[ np.uint8 ] :
@@ -561,8 +558,8 @@ class RxFrame_v0_1_18 :
         return pad_bits2bytes ( bits )
     
     def set_leftovers_idx_for_incomplete_frame ( self ) -> None :
-        if settings["log"]["verbose_2"] : print ( f"Samples at index { self.frame_start_abs_idx } is too close to the end of samples to contain a complete frame. Skipping." )
-        self.leftovers_start_abs_idx = self.frame_start_abs_idx - self.SPAN * self.SPS // 2 # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
+        if settings["log"]["verbose_2"] : print ( f"Samples at index { self.first_symbol_abs_idx } is too close to the end of samples to contain a complete frame. Skipping." )
+        self.leftovers_start_abs_idx = self.first_symbol_abs_idx - filters.FIRST_SYMBOL_OFFSET # Bez cofniecia się do początku filtra RRC nie ma wykrycia ramnki i pakietu w następnym wywołaniu
         self.has_leftovers = True
 
     def frame_len_validation ( self ) -> bool :
@@ -643,7 +640,7 @@ class RxSamples :
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET : ] , frame_start_abs_idx = idx + filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
+                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ idx + filters.FIRST_SYMBOL_OFFSET : ] , first_symbol_abs_idx = idx + filters.FIRST_SYMBOL_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
@@ -776,8 +773,8 @@ class RxSamples :
 
     def plot_samples ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
         if mark_first_active_samples :
-            frames_first_active_symbol_abs_idx = np.array ( [ frame.first_active_symbol_abs_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_active_symbol_abs_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_active_symbol_abs_idx )
+            frames_first_symbol_abs_idx = np.array ( [ frame.first_symbol_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_symbol_abs_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_symbol_abs_idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
 
@@ -1252,7 +1249,12 @@ class TxSamples :
         return tx_frame
 
     def offsets_accuracy_test ( self ) -> None :
-
+        '''
+        Zostawić tę funkcję do testowania dokładności offsetów samplowania, żeby mieć pewność że są one poprawne.
+        Funkcja ta tworzy samples z ramek, a następnie sprawdza czy symbole aktywne w samples są takie same jak symbole aktywne w ramkach,
+        biorąc pod uwagę offsety wynikające z filtracji i próbkowania.
+        Skrypt test126-compare_offsets.py jest napisany specjalnie do testowania tej funkcji.
+        '''
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
         if frames_bpsk_symbols.size > 0 :
             samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
@@ -1270,8 +1272,8 @@ class TxSamples :
                 # Porównaj active_samples z active_symbols i sprawdź czy są takie same
                 if np.array_equal ( active_samples , active_symbols ) :
                     print ( f"!!!  Offsets accuracy 100% for {first_active_symbol_idx=}!" )
-                # A jak można porównać active_samples z active_symbols, żeby ocenić błąd, jeśli nie są takie same? Można policzyć ile symboli jest takich samych, a ile jest różnych, i wyliczyć procentową dokładność.
                 else :
+                    # Jak nie ma pełnej zgodności active_samples z active_symbols, to policz ile jest niezgodnosci.
                     num_different = np.sum ( active_samples != active_symbols )
                     print ( f"{num_different=} for {first_active_symbol_idx=}" )
 
@@ -1281,7 +1283,6 @@ class TxSamples :
         if frames_bpsk_symbols.size > 0 :
             self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
             self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            #self.active_symbols = np.zeros ( frames_bpsk_symbols.size , dtype = np.complex64 )
             self.active_symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
             first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET )
             last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
@@ -1339,14 +1340,14 @@ class TxSamples :
 
     def plot_samples ( self , title :str = "" , markers : bool = True ) -> None :
         if markers :
-            idx = np.array ( [ filters.FIRST_MIDDLE_SYMBOL_OFFSET ] , dtype = np.uint32 )
+            idx = np.array ( [ filters.FIRST_SYMBOL_OFFSET ] , dtype = np.uint32 )
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_peaks = idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
 
     def plot_samples_4_pluto ( self , title : str = "" , markers : bool = True ) -> None :
         if markers :
-            idx = np.array ( [ filters.FIRST_MIDDLE_SYMBOL_OFFSET ] , dtype = np.uint32 )
+            idx = np.array ( [ filters.FIRST_SYMBOL_OFFSET ] , dtype = np.uint32 )
             plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" , marker_peaks = idx )
         else :
             plot.complex_waveform_v0_1_6 ( self.samples_4_pluto , f"{title} {self.samples_4_pluto.size=}" )

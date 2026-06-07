@@ -78,6 +78,7 @@ for timestamp_group in timestamp_groups :
 	for samples_file in samples_files :
 		rx_samples.rx ( file_name = str ( samples_file ) , concatenate = True )
 		print ( f"{rx_samples.concatenates=}" )
+	plot.complex_waveform_v0_1_6 ( rx_samples.raw_samples , f"{script_filename} {timestamp_group} concatenated rx_samples | {rx_samples.raw_samples.size=}" )
 	rx_samples.detect_frames ( deep = False , filter = True , correct = False , add_peak_at_0 = False )
 	#rx_samples_frames_first_sample_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
 	rx_samples.tx_active_symbols = ops_file.open_samples_from_npf ( filename = f"{src_dir.name}/{timestamp_group}_tx_active_symbols.npy" )
