@@ -9,7 +9,7 @@ from modules import ml, ops_file , plot
 ### SETTINGS ##########################################################################################################
 #######################################################################################################################
 
-src : str = 'test' # 'training' , 'test' lub "inference"
+src : str = 'inference' # 'training' , 'test' lub "inference"
 
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)

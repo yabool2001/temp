@@ -31,16 +31,16 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 ### SETTINGS ##########################################################################################################
 #######################################################################################################################
 
-mode : str = 'test' # 'training' , 'test' lub "inference"
-y_train_tensor_src : str = 'symbols' # 'symbols': do tworzenia X_train_samples używamy symboli tx (czyli próbek z pliku {timestamp_group}_tx_active_symbols.npy),
+mode : str = 'training' # 'training' , 'test' lub "inference"
+y_train_tensor_src : str = 'active_samples' # 'symbols': do tworzenia X_train_samples używamy symboli tx (czyli próbek z pliku {timestamp_group}_tx_active_symbols.npy),
 									# 'active_samples': do tworzenia X_train_samples używamy surowych próbek rx (czyli próbek z pliku {timestamp_group}_rx_samples_{timestamp}.npy)
 									# ale tylko tych które odpowiadają aktywnym symbolom tx, czyli tych które są w ramce i pozycjach odpowiadających symbolom tx.
-samples_filtered_4_X_train_samples : bool = False # czy do tworzenia X_train_samples używać surowych próbek (samples_raw) czy próbek po filtracji (samples_filtered)
+samples_filtered_4_X_train_samples : bool = True # czy do tworzenia X_train_samples używać surowych próbek (samples_raw) czy próbek po filtracji (samples_filtered)
 X_y_clipping_mode : str = 'balanced' # 'balanced': przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia,
 									# 'active_only': przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, 
 
 
-plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 
