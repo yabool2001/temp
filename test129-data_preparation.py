@@ -34,7 +34,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 mode : str = 'inference' # 'training' , 'test' lub "inference"
 clipping_mode : str = 'none' # 'none', 'balanced', 'active_only' - przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia, 'active_only' - przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, "none" - nie przycinamy wcale (niezalecane do treningu)
 
-plt : bool = False # Czy pokazać wykresy z próbkami i wykrytymi ramkami
+plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 
@@ -110,7 +110,7 @@ for timestamp_group in timestamp_groups :
 	if first_symbol_idx is not None :
 		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_symbol_idx , clipping_mode = clipping_mode )
 		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = rx_samples_idxs )
-		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_symbol_idx )
+		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = rx_samples_idxs )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )
 		if del_src_files :
 			for file_path in Path ( src_dir ).glob ( f"{timestamp_group}_*.*" ) :

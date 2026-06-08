@@ -526,7 +526,7 @@ class RxFrame_v0_1_18 :
                     if ( crc32_bytes_read == crc32_bytes_calculated ).all () :
                         packet_end_idx = crc32_end_idx + ( packet_len_uint16 * PACKET_BYTE_LEN_BITS * self.SPS )
                         self.has_header = True
-                        self.packet_first_symbol_abs_idx = self.first_symbol_abs_idx + crc32_end_idx # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
+                        self.packet_first_symbol_abs_idx = self.first_symbol_abs_idx + crc32_end_idx - filters.FIRST_TO_MIDDLE_SYMBOL_OFFSET # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.frame_end_abs_idx = self.first_symbol_abs_idx + packet_end_idx - filters.FIRST_TO_MIDDLE_SYMBOL_OFFSET # używać tylko jeśli self.has_packet, inaczej może być poza zakresem sampli
                         self.header_bits = np.concatenate ( [ sync_sequence_bits , packet_len_bits , crc32_bits ] )
                         self.header_bpsk_symbols = modulation.bits_2_bpsk_symbols_v0_1_18 ( self.header_bits )
