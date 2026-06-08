@@ -26,10 +26,10 @@ import tomllib
 ################
 ### SETTINGS ###
 
-mode : str = 'inference' # Available modes: 'training', 'test' or "inference"
+mode : str = 'training' # Available modes: 'training', 'test' or "inference"
 
 dbg = True
-plt = True
+plt = False
 wrt = True
 del_dst = True
 
@@ -38,8 +38,8 @@ single_machine = True
 legion = True
 
 Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 4 )
-frame_size : str = "S" # Available frame sizes: "S" - small, "M" - medium or "L" - large
+Nof_WRTS = int ( 8 )
+frame_size : str = "L" # Available frame sizes: "S" - small, "M" - medium or "L" - large
 
 ################
 ################
@@ -126,7 +126,7 @@ else :
 
 rx_pluto = packet.RxPluto_v0_1_17 ( sn = sdr.PLUTO_RX_SN , gain_control_mode_chan0 = gain_control_mode_chan0 , rx_gain_chan0_int = rx_gain_chan0_int )
 rx_samples = packet.RxSamples ()
-if dbg : print ( f"\n{script_filename=} {rx_samples.samples.size=}" )
+if dbg : print ( f"\n{script_filename=} {rx_samples.samples_raw.size=}" )
 
 # UDP socket setup
 udp_sock = socket.socket ( socket.AF_INET6 , socket.SOCK_DGRAM )

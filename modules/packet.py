@@ -588,8 +588,6 @@ class RxSamples :
     samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     X_train_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    tx_active_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    tx_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     y_train_tensor : torch.Tensor = field ( default_factory = lambda : torch.tensor ( [] , dtype = torch.complex64 ) , init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     first_symbol_idx : np.uint32 = None # Pierwszy symbol pierwszej ramki.
@@ -600,7 +598,6 @@ class RxSamples :
     CONCATENATE_THS : int = 10
 
     def __post_init__ ( self ) -> None :
-
         pass
 
     def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex128 ] :
@@ -674,7 +671,7 @@ class RxSamples :
         
         self.first_symbol_idx = None
         if self.frames is not None and len ( self.frames ) > 0 :
-            tx_symbols = self.open_and_load_npf ( filename_and_dirname = f"{src_dir.name}/{timestamp_group}_tx_{symbols_src}.npy" )
+            self.tx_symbols = self.open_and_load_npf ( filename_and_dirname = f"{src_dir.name}/{timestamp_group}_tx_{symbols_src}.npy" )
             tx_samples = type ( self ) ()
             #tx_samples = self.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
             tx_samples.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
@@ -692,7 +689,7 @@ class RxSamples :
         if self.first_symbol_idx is not None :
             self.X_train_samples = self.samples_filtered.copy () if X_train_samples_filtered else self.samples_raw.copy ()
             self.y_train_tensor = torch.zeros ( self.samples_filtered.size if X_train_samples_filtered else self.samples_raw.size , dtype = torch.complex64 )
-            self.y_train_tensor[ self.first_symbol_idx : self.first_symbol_idx + tx_symbols.size ] = torch.tensor ( tx_symbols , dtype = torch.complex64 )
+            self.y_train_tensor[ self.first_symbol_idx : self.first_symbol_idx + self.tx_symbols.size ] = torch.tensor ( self.tx_symbols , dtype = torch.complex64 )
             return self.first_symbol_idx
         else :
             if settings["log"]["verbose_1"] : print ( f"ERROR: No matching frame found for timestamp_group {timestamp_group} in both rx and tx samples." )
@@ -713,7 +710,7 @@ class RxSamples :
             case 'balanced' :
                 i = ml.CHUNK_SAMPLES_LEN * 10 # mnożnik ma na celu niedopuszczenie do zbyt wysokiego ratio, stosunku symboli BPSK do 0+j0
                 clip1 = ( ( self.first_symbol_idx - 1 ) // i ) * i
-                clip2 = ( last_sample_idx // i + 1) * i
+                clip2 = ( last_sample_idx // i + 1 ) * i
                 # Clamping (zapewnienie że nie wyskoczymy poza zakres indeksowania arrayu)
                 clip1 = np.maximum ( 0 , clip1 )
                 clip2 = np.minimum ( np.uint32 ( self.X_train_samples.size ) , clip2 )
@@ -749,10 +746,6 @@ class RxSamples :
 
     def plot_tx_symbols ( self , title : str = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.tx_symbols , f"{title} {self.tx_symbols.size=}" )
-    def plot_tx_active_samples ( self , title : str = "" ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.tx_active_samples , f"{title} {self.tx_active_samples.size=}" )
-    def plot_tx_samples ( self , title : str = "" ) -> None :
-        plot.complex_waveform_v0_1_6 ( self.tx_samples , f"{title} {self.tx_samples.size=}" )
 
     def plot_samples ( self , title : str = "" , samples_filtered : bool = False , mark_samples : bool = True ) -> None :
         samples = self.samples_filtered if samples_filtered else self.samples_raw

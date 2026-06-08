@@ -31,17 +31,17 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 ### SETTINGS ##########################################################################################################
 #######################################################################################################################
 
-mode : str = 'inference'							# 'training' , 'test' lub "inference"
-y_train_tensor_src : str = 'symbols'				# 'symbols': do tworzenia X_train_samples używamy symboli tx (czyli próbek z pliku {timestamp_group}_tx_active_symbols.npy),
-													# 'active_samples': do tworzenia X_train_samples używamy surowych próbek rx (czyli próbek z pliku {timestamp_group}_rx_samples_{timestamp}.npy)
-													# ale tylko tych które odpowiadają aktywnym symbolom tx, czyli tych które są w ramce i pozycjach odpowiadających symbolom tx.
-samples_filtered_4_X_train_samples : bool = False	# czy do tworzenia X_train_samples używać surowych próbek (samples_raw) czy próbek po filtracji (samples_filtered)
-X_y_clipping_mode : str = 'balanced' 				# 'balanced': przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia,
-													# 'active_only': przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, 
+mode : str = 'training' # 'training' , 'test' lub "inference"
+y_train_tensor_src : str = 'symbols' # 'symbols': do tworzenia X_train_samples używamy symboli tx (czyli próbek z pliku {timestamp_group}_tx_active_symbols.npy),
+									# 'active_samples': do tworzenia X_train_samples używamy surowych próbek rx (czyli próbek z pliku {timestamp_group}_rx_samples_{timestamp}.npy)
+									# ale tylko tych które odpowiadają aktywnym symbolom tx, czyli tych które są w ramce i pozycjach odpowiadających symbolom tx.
+samples_filtered_4_X_train_samples : bool = False # czy do tworzenia X_train_samples używać surowych próbek (samples_raw) czy próbek po filtracji (samples_filtered)
+X_y_clipping_mode : str = 'balanced' # 'balanced': przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia,
+									# 'active_only': przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, 
 
 
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
-wrt : bool = False # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
+wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
 
 del_src_files : bool = False
@@ -85,14 +85,10 @@ for timestamp_group in timestamp_groups :
 		rx_samples.rx ( file_name = str ( samples_file ) , concatenate = True )
 		if dbg : print ( f"{rx_samples.concatenates=}" )
 	rx_samples.detect_frames ( deep = False , samples_filtered = True , correct_samples = False , add_peak_at_0 = False )
-	frame_first_idxs : NDArray [ np.uint32 ] = np.array ( [ frame.first_symbol_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
-	packet_first_idxs : NDArray [ np.uint32 ] = np.array ( [ frame.packet_first_symbol_abs_idx for frame in rx_samples.frames ] , dtype = np.uint32 )
-	frame_last_idxs : NDArray [ np.uint32 ] = np.array ( [ ( frame.frame_end_abs_idx - 1 ) for frame in rx_samples.frames ] , dtype = np.uint32 )
-	rx_samples_idxs = np.concatenate ( [ frame_first_idxs , packet_first_idxs , frame_last_idxs ] )
 	if plt : rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples " , samples_filtered = False , mark_samples = True )
 	first_symbol_idx = rx_samples.create_X_train_samples_and_y_train_tensor ( src_dir = src_dir , timestamp_group = timestamp_group , X_train_samples_filtered = samples_filtered_4_X_train_samples , symbols_src = y_train_tensor_src )
 	if first_symbol_idx is not None :
-		if plt : rx_samples.plot_X_and_y ( title = f"{script_filename} {timestamp_group} X_train_samples and y_train_tensor before clipping" , mark_samples = True )
+		#if plt : rx_samples.plot_X_and_y ( title = f"{script_filename} {timestamp_group} X_train_samples and y_train_tensor before clipping" , mark_samples = True )
 		rx_samples.clip_X_train_samples_and_y_train_tensor ( clipping_mode = X_y_clipping_mode )
 		if plt : rx_samples.plot_X_and_y ( title = f"{script_filename} {timestamp_group} X_train_samples and y_train_tensor after clipping" , mark_samples = False )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )

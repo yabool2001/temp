@@ -26,12 +26,12 @@ from modules import ops_os , packet , payload_test_data as ptd , sdr
 ################
 ### SETTINGS ###
 
-mode : str = 'inference' # Available modes: 'training', 'test' or "inference"
+mode : str = 'training' # Available modes: 'training', 'test' or "inference"
 
 no_frames : int = 2 # Number of frames to transmit in one samples. WORKS ONLY FOR S and M frame sizes
 
 dbg = True
-plt = True
+plt = False
 wrt = True
 del_dst = True
 
