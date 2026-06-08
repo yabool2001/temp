@@ -584,14 +584,15 @@ class RxFrame_v0_1_18 :
 class RxSamples :
 
     # Pola uzupełnianie w __post_init__
-    raw_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples_raw : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     X_train_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_active_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    y_train_tensor : torch.Tensor = field ( init = False )
+    y_train_tensor : torch.Tensor = field ( default_factory = lambda : torch.tensor ( [] , dtype = torch.complex64 ) , init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
+    first_symbol_idx : np.uint32 = None # Pierwszy symbol pierwszej ramki.
     concatenates : int = 0
     frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
     SPS = modulation.SPS
@@ -602,7 +603,7 @@ class RxSamples :
 
         pass
 
-    def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> None :
+    def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex128 ] :
 
         if sdr_ctx is not None :
             samples = sdr_ctx.rx ()
@@ -618,41 +619,84 @@ class RxSamples :
         if concatenate :
             if self.concatenates < self.CONCATENATE_THS :
                 self.concatenates += 1
-                #self.raw_samples = np.concatenate ( [ self.raw_samples , samples ] )
-                self.raw_samples = np.append ( self.raw_samples , samples ) # to samo co powyżej, ale append jest szybszy dla 1 elementu
+                #samples_raw = np.concatenate ( [ self.samples_raw , samples ] )
+                self.samples_raw = np.append ( self.samples_raw , samples ) # to samo co powyżej, ale append jest szybszy dla 1 elementu
+                self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples_raw )
             else :
                 raise MemoryError ( f"{self.concatenates=}. To prevent modem performance issues, further concatenation is blocked." )
         else :
-            self.raw_samples = samples
-
-    def detect_frames ( self , deep : bool = False , filter : bool = False , correct : bool = False , add_peak_at_0 : bool = False ) -> None :
-        
-        if correct and not filter :
-            raise ValueError ( "Cannot apply correction without filtering. You must set filter=True to apply correction!" )
-        if filter :
-            self.samples = filters.apply_rrc_rx_convolve_v0_1_18 ( self.raw_samples )
-            if correct :
-                self.samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+            self.samples_raw = samples
+            self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples_raw )
+        if self.samples_raw.size == self.samples_filtered.size :
+            return samples
         else :
-            self.samples = self.raw_samples
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
+            print ( ( f"{self.samples_raw.size=} {self.samples_filtered.size=}"))
+            raise ValueError ( f"ERROR! samples_raw.size != samples_filtered.size." )
+
+    def detect_frames ( self , deep : bool = False , samples_filtered : bool = True , correct_samples : bool = False , add_peak_at_0 : bool = False ) -> None :
+        
+        if correct_samples and not samples_filtered :
+            raise ValueError ( "Cannot apply correction without filtering. You must set filter=True to apply correction!" )
+        samples = self.samples_filtered.copy () if samples_filtered else self.samples_raw.copy ()
+        if correct_samples :
+            samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
         if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ idx + filters.FIRST_SYMBOL_OFFSET : ] , first_symbol_abs_idx = idx + filters.FIRST_SYMBOL_OFFSET )
+                frame = RxFrame_v0_1_18 ( samples_filtered = samples [ idx + filters.FIRST_SYMBOL_OFFSET : ] , first_symbol_abs_idx = idx + filters.FIRST_SYMBOL_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
                     # Dodaj kolejne frame, które zostały wysłane w tym samym strumieniu danych.
                     # Szansa, że jest kolejna ramka jest tylko wtedy jeśli poprzednia była cała.
                     while ( frame.has_frame ) :
-                        frame = RxFrame_v0_1_18 ( samples_filtered = self.samples [ frame.frame_end_abs_idx : ] , first_symbol_abs_idx = frame.frame_end_abs_idx )
+                        frame = RxFrame_v0_1_18 ( samples_filtered = samples [ frame.frame_end_abs_idx : ] , first_symbol_abs_idx = frame.frame_end_abs_idx )
                         if frame.has_header :
                             self.frames.append ( frame )
                             previous_processed_idx = frame.frame_end_abs_idx
                 else :
                     previous_processed_idx = idx
+
+    def create_X_train_samples_and_y_train_tensor ( self , src_dir : Path , timestamp_group : str , X_train_samples_filtered : bool = False , symbols_src : str = None ) -> np.uint32 :
+
+        if src_dir is None or timestamp_group is None or symbols_src is None :
+            raise ValueError ( "ERROR: src_dir, timestamp_group, and symbols_src must be provided." )
+        
+        self.first_symbol_idx = None
+        if self.frames is not None and len ( self.frames ) > 0 :
+            tx_symbols = self.open_and_load_npf ( filename_and_dirname = f"{src_dir.name}/{timestamp_group}_tx_{symbols_src}.npy" )
+            tx_samples = RxSamples ( )
+            #tx_samples = self.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
+            tx_samples.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
+            tx_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = True )
+            for rx_frame in self.frames :
+                for tx_frame in tx_samples.frames :
+                    if settings["log"]["verbose_0"] : print ( f"rx: {rx_frame.packet_len}	{pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.first_symbol_abs_idx}" )
+                    if settings["log"]["verbose_0"] : print ( f"tx: {tx_frame.packet_len}	{pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.first_symbol_abs_idx}" )
+                    if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
+                        self.first_symbol_idx = rx_frame.first_symbol_abs_idx - tx_frame.first_symbol_abs_idx + filters.FIRST_SYMBOL_OFFSET
+                        if settings["log"]["verbose_0"] : print ( f"\r\nRamka {timestamp_group=} dopasowana w: {self.first_symbol_idx=}" )
+                        break
+                if self.first_symbol_idx is not None :
+                    break
+        if self.first_symbol_idx is not None :
+            self.X_train_samples = self.samples_filtered.copy () if X_train_samples_filtered else self.samples_raw.copy ()
+            self.y_train_tensor = torch.zeros ( self.samples_filtered.size if X_train_samples_filtered else self.samples_raw.size , dtype = torch.complex64 )
+            self.y_train_tensor[ self.first_symbol_idx : self.first_symbol_idx + tx_symbols.size ] = torch.tensor ( tx_symbols , dtype = torch.complex64 )
+            return self.first_symbol_idx
+        else :
+            if settings["log"]["verbose_1"] : print ( f"ERROR: No matching frame found for timestamp_group {timestamp_group} in both rx and tx samples." )
+            return None
+
+    def aggregate_frame_and_packet_idxs ( self ) -> NDArray [ np.uint32 ] :
+
+        frame_first_idxs : NDArray [ np.uint32 ] = np.array ( [ frame.first_symbol_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+        packet_first_idxs : NDArray [ np.uint32 ] = np.array ( [ frame.packet_first_symbol_abs_idx for frame in self.frames ] , dtype = np.uint32 )
+        frame_last_idxs : NDArray [ np.uint32 ] = np.array ( [ ( frame.frame_end_abs_idx - 1 ) for frame in self.frames ] , dtype = np.uint32 )
+        return np.concatenate ( [ frame_first_idxs , packet_first_idxs , frame_last_idxs ] )
 
     def clip_samples_and_create_tensor_4_training ( self , first_idx : np.uint32 = None , clipping_mode : str = 'none' ) -> None :
         '''
@@ -755,12 +799,16 @@ class RxSamples :
         start_idx = first_idx - clip1
         self.y_train_tensor[ start_idx : start_idx + self.tx_symbols.size ] = torch.tensor ( self.tx_symbols , dtype = torch.complex64 )
 
+    def open_and_load_npf ( self , filename_and_dirname : str ) -> NDArray[ np.complex128 ] :
+
+        return ops_file.open_samples_from_npf ( filename_and_dirname )
+    
     def save_samples_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = False ) -> None :
 
         filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
         Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
         filename_and_dirname = f"{dir_name}/{filename}"
-        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.raw_samples )
+        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples_raw )
 
     def save_train_data ( self , timestamp_group : str , dir_name : str , add_timestamp : bool = False ) -> None :
 
@@ -772,23 +820,28 @@ class RxSamples :
         filename_and_dirname = f"{dir_name}/{filename}"
         torch.save ( self.y_train_tensor , filename_and_dirname )
 
-    def plot_tx_symbols ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
+    def plot_tx_symbols ( self , title : str = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.tx_symbols , f"{title} {self.tx_symbols.size=}" )
-    def plot_tx_active_samples ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
+    def plot_tx_active_samples ( self , title : str = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.tx_active_samples , f"{title} {self.tx_active_samples.size=}" )
-    def plot_tx_samples ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
+    def plot_tx_samples ( self , title : str = "" ) -> None :
         plot.complex_waveform_v0_1_6 ( self.tx_samples , f"{title} {self.tx_samples.size=}" )
 
-    def plot_samples ( self , title : str = "" , mark_all_samples : bool = False , mark_first_active_samples : bool = True ) -> None :
-        if mark_first_active_samples :
-            frames_first_symbol_abs_idx = np.array ( [ frame.first_symbol_abs_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}, {frames_first_symbol_abs_idx.size=}" , marker_squares = mark_all_samples , marker_peaks = frames_first_symbol_abs_idx )
+    def plot_samples ( self , title : str = "" , samples_filtered : bool = False , mark_samples : bool = True ) -> None :
+        samples = self.samples_filtered if samples_filtered else self.samples_raw
+        if mark_samples :
+            plot.complex_waveform_v0_1_6 ( samples , f"{title} {samples.size=}" , marker_peaks = self.aggregate_frame_and_packet_idxs () )
         else :
-            plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" )
+            plot.complex_waveform_v0_1_6 ( samples , f"{title} {samples.size=}" )
+
+    def plot_X_and_y ( self , title : str = "" , mark_samples : bool = True ) -> None :
+        marker_idxs = self.aggregate_frame_and_packet_idxs () if mark_samples else None
+        plot.complex_waveform_v0_1_6 ( self.X_train_samples , title = f"{title} {self.X_train_samples.size=}" , marker_peaks = marker_idxs )
+        plot.flat_tensor_v0_1_18 ( self.y_train_tensor , title = f"{title} {self.y_train_tensor.shape=}" , marker_idx = marker_idxs )
 
     def __repr__ ( self ) -> str :
 
-        return ( f"{self.samples.size=}, {self.samples.dtype=}")
+        return ( f"{self.samples_raw.size=}, {self.samples_raw.dtype=}")
 
 @dataclass ( slots = True , eq = False )
 class RxPluto_v0_1_17 :
