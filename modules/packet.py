@@ -668,7 +668,7 @@ class RxSamples :
         self.first_symbol_idx = None
         if self.frames is not None and len ( self.frames ) > 0 :
             tx_symbols = self.open_and_load_npf ( filename_and_dirname = f"{src_dir.name}/{timestamp_group}_tx_{symbols_src}.npy" )
-            tx_samples = RxSamples ( )
+            tx_samples = type ( self ) ()
             #tx_samples = self.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
             tx_samples.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
             tx_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = True )
