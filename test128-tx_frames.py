@@ -37,7 +37,7 @@ del_dst = True
 
 lipkow_ap = True
 single_machine = True
-legion = False
+legion = True
 
 ################
 ################

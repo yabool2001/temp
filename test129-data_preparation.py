@@ -102,14 +102,14 @@ for timestamp_group in timestamp_groups :
 				if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
 					first_symbol_idx = rx_frame.first_symbol_abs_idx - tx_frame.first_symbol_abs_idx + filters.FIRST_SYMBOL_OFFSET
 					if dbg : print ( f"\r\nZnaleziono dopasowanie ramki: {timestamp_group=} {first_symbol_idx=}" )
-					my_idx2 = np.array ( [ first_symbol_idx , first_symbol_idx + rx_samples.tx_symbols.size ] , dtype = np.uint32 )
+					#my_idx2 = np.array ( [ first_symbol_idx , first_symbol_idx + rx_samples.tx_symbols.size ] , dtype = np.uint32 )
 					break
 			if first_symbol_idx is not None :
 				break
 
 	if first_symbol_idx is not None :
 		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_symbol_idx , clipping_mode = clipping_mode )
-		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = my_idx2 )
+		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = rx_samples_idxs )
 		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = first_symbol_idx )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )
 		if del_src_files :
