@@ -13,6 +13,16 @@ from torch.utils.data import DataLoader
 # Zaciągamy moduł, do którego przeniosłeś architekturę i ładowarkę
 from modules import ml , plot
 
+##################################
+### SETTINGS #####################
+##################################
+
+mode : str = 'test' # 'training' , 'test' lub "inference"
+output_decimation : bool = False # Czy zdekodowany sygnał AI ma być zdecymowany (próbkowany co SPS) czy w pełnej rozdzielczości (co próbkę)
+
+##################################
+##################################
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"🔥 {device=}")
 
@@ -26,7 +36,7 @@ model.load_state_dict ( torch.load ( "bpsk_modem.pth" , map_location = device , 
 model.eval ()
 
 # 2. ŁADUJEMY GIGANTYCZNY STRUMIEŃ (Brak krojenia, Datasets i DataLoaderów!)
-src_dir = Path ( "pt.test" )
+src_dir = Path ( f"pt.{mode}" )
 lista_X = sorted ( src_dir.glob ( "*_X_train_samples.npy" ) )
 lista_y = sorted ( src_dir.glob ( "*_y_train_tensor.pt" ) )
 
@@ -69,7 +79,10 @@ sig_ai = pred_y.cpu().numpy().flatten().astype(np.complex128)
 # UWAGA: Twój model robi teraz piękny zrzut decymacyjny (stride=sps), 
 # więc sig_ai jest po wyjściu z sieci SPS-razy krótsze od wejściowego sig_raw!
 # Decymujemy z powrotem na sucho również sig_target, by porównać je poprawnie na wykresie:
-sig_target_decimated = sig_target[::sps]
+if output_decimation:
+    sig_target_decimated = sig_target[::sps]
+else:
+    sig_target_decimated = sig_target
 
 plot.complex_waveform_v0_1_6 ( sig_raw , f"Oryginał RAW {sig_raw.size=}" )
 plot.complex_waveform_v0_1_6 ( sig_target_decimated , f"Target (zdecymowany) {sig_target_decimated.size=}" )

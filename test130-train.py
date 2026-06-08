@@ -10,8 +10,16 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
+##################################
+### SETTINGS #####################
+##################################
+
 #src_dir = Path ( "" )
 src_dir = Path ( "pt.training" )
+
+##################################
+##################################
+
 
 if __name__ == "__main__":
     

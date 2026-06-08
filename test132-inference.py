@@ -9,6 +9,8 @@ from modules import ml, ops_file , plot
 ### SETTINGS ##########################################################################################################
 #######################################################################################################################
 
+src : str = 'test' # 'training' , 'test' lub "inference"
+
 plt : bool = True # Czy pokazać wykresy z próbkami i wykrytymi ramkami
 wrt : bool = True # Czy zapisać y_train_tensor i przyciąć próbki do treningu (wymagane do treningu, ale nie do analizy)
 dbg : bool = True
@@ -22,7 +24,7 @@ del_dst_files : bool = True
 script_filename = os.path.basename ( __file__ )
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) 
 
-src_dir = Path ( "pt.inference" )
+src_dir = Path ( f"pt.{src}" )
 dst_dir = Path ( "np.demod" )
 Path ( dst_dir ).mkdir ( parents = True , exist_ok = True )
 

@@ -45,3 +45,11 @@ Epoka [13/15] | Błąd EVM (MSE): 0.11797 | Czas epoki: 113.66 s
 
 ## 2026.05.20 praca w Lipkowie
 *   **`np.tensors_004`** zawiera 2 x 8 oryginalnych sampli wygenerowane przez `test134-tx_large_frames.py` i zapisanych przez `test134-rx_large_frames.py`. Sample były transmitowane przez radia połączone tłumikiem 30 dB. tx transmitował z `gain = -10.0`, a rx odbierał w trybie `slow_attack`.
+
+## Na samym początku wyniki były super
+Epoka [01/15] | Błąd EVM (MSE): 0.20830 | Czas epoki: 35.05 s
+Epoka [02/15] | Błąd EVM (MSE): 0.21843 | Czas epoki: 35.90 s
+Epoka [03/15] | Błąd EVM (MSE): 0.21799 | Czas epoki: 36.58 s
+Epoka [04/15] | Błąd EVM (MSE): 0.21015 | Czas epoki: 36.40 s
+Epoka [05/15] | Błąd EVM (MSE): 0.21007 | Czas epoki: 35.20 s
+Epoka [06/15] | Błąd EVM (MSE): 0.21789 | Czas epoki: 35.29 s
