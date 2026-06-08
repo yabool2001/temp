@@ -108,9 +108,11 @@ for timestamp_group in timestamp_groups :
 				break
 
 	if first_symbol_idx is not None :
-		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_symbol_idx , clipping_mode = clipping_mode )
 		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" , marker_peaks = rx_samples_idxs )
 		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" , marker_idx = rx_samples_idxs )
+		rx_samples.clip_samples_and_create_tensor_4_training ( first_idx = first_symbol_idx , clipping_mode = clipping_mode )
+		if plt : plot.complex_waveform_v0_1_6 ( rx_samples.X_train_samples , title = f"{script_filename} {timestamp_group} X_train_samples {rx_samples.X_train_samples.size=}" )
+		if plt : plot.flat_tensor_v0_1_18 ( rx_samples.y_train_tensor , title = f"{script_filename} {timestamp_group} y_train_tensor" )
 		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )
 		if del_src_files :
 			for file_path in Path ( src_dir ).glob ( f"{timestamp_group}_*.*" ) :
