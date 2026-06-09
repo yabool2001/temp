@@ -1,5 +1,13 @@
 # Dziennik projektu
 
+## 2026.06.09 Teraz mam fatalne wyniki uczenia
+Epoka [01/15] | Błąd EVM (MSE): 0.47239 | Czas epoki: 55.06 s
+Epoka [02/15] | Błąd EVM (MSE): 0.47119 | Czas epoki: 53.93 s
+Epoka [03/15] | Błąd EVM (MSE): 0.47103 | Czas epoki: 53.65 s
+Epoka [04/15] | Błąd EVM (MSE): 0.47085 | Czas epoki: 53.69 s
+Epoka [05/15] | Błąd EVM (MSE): 0.47099 | Czas epoki: 53.70 s
+Epoka [06/15] | Błąd EVM (MSE): 0.47101 | Czas epoki: 53.57 s
+
 ## 2026.06.04 wprowadziłem adaptacyjny learning rate w test129-training.py
 
 ```python

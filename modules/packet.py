@@ -678,11 +678,11 @@ class RxSamples :
             tx_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = True )
             for rx_frame in self.frames :
                 for tx_frame in tx_samples.frames :
-                    if settings["log"]["verbose_0"] : print ( f"rx: {rx_frame.packet_len}	{pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.first_symbol_abs_idx}" )
-                    if settings["log"]["verbose_0"] : print ( f"tx: {tx_frame.packet_len}	{pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.first_symbol_abs_idx}" )
+                    if settings["log"]["verbose_2"] : print ( f"rx: {rx_frame.packet_len}	{pad_bits2bytes ( rx_frame.header_bits )}	{rx_frame.first_symbol_abs_idx}" )
+                    if settings["log"]["verbose_2"] : print ( f"tx: {tx_frame.packet_len}	{pad_bits2bytes ( tx_frame.header_bits )}	{tx_frame.first_symbol_abs_idx}" )
                     if np.array_equal ( rx_frame.header_bits , tx_frame.header_bits ) :
                         self.first_symbol_idx = rx_frame.first_symbol_abs_idx - tx_frame.first_symbol_abs_idx + filters.FIRST_SYMBOL_OFFSET
-                        if settings["log"]["verbose_0"] : print ( f"\r\nRamka {timestamp_group=} dopasowana w: {self.first_symbol_idx=}" )
+                        if settings["log"]["verbose_1"] : print ( f"\r\nRamka {timestamp_group=} dopasowana w: {self.first_symbol_idx=}" )
                         break
                 if self.first_symbol_idx is not None :
                     break

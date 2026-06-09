@@ -63,20 +63,20 @@ if __name__ == "__main__":
     #model = torch.compile ( model , mode = "max-autotune" )
 
     # Nowoczesny wariant Adama (AdamW) z lekkim hamulcem wag dla lepszej stabilności
-    optimizer = torch.optim.AdamW ( model.parameters () , lr = ml.LEARNING_RATE , weight_decay = 1e-4 )
+    optimizer = torch.optim.AdamW ( model.parameters () , lr = ml.LEARNING_RATE , weight_decay = ml.WEIGHT_DECAY )
     
     # Najlepsze rozwiązanie: automatyczny scheduler zmniejszający LR przy stagnacji
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau ( optimizer , mode = 'min' , factor = 0.1 , patience = 2 )
-    
+    #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau ( optimizer , mode = 'min' , factor = 0.1 , patience = 2 )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR ( optimizer , T_max = ml.EPOCHS, eta_min = 1e-7 )
+
     # Minimalizacja błędu średniokwadratowego = fizyczny zjazd z EVM
     criterion = nn.MSELoss ()
 
-    EPOCHS = ml.EPOCHS
     print ( "\n🚀 Rozpoczynam trening CVNN (Minimalizacja EVM)..." )
     print ( "🚨 UWAGA: Przy pierwszej przetworzonej paczce ekran CAŁKOWICIE ZAMARZNIE." )
     print ( "🚨 Karta testuje wtedy warianty asemblera w pamięci. Czekaj cierpliwie!\n" )
     
-    for epoch in range ( EPOCHS ) :
+    for epoch in range ( ml.EPOCHS ) :
         model.train ()
         total_loss = 0.0
         
@@ -92,7 +92,7 @@ if __name__ == "__main__":
             # Przewidywanie CVNN
             # W TYM MIEJSCU (przy pierwszej iteracji pierwszej epoki) wystąpi zawiecha!
             # TorchInductor właśnie kompiluje "max-autotune".
-            predictions = model(batch_x)
+            predictions = model ( batch_x )
             
             # Liczymy fizyczny błąd w kanale radiowym
             #loss = criterion(predictions, batch_y)
@@ -103,6 +103,11 @@ if __name__ == "__main__":
             
             # Wsteczna propagacja gradientów Wirtingera (magia zespolonego autogradu)
             loss.backward ()
+            # 🔥 OCHRONA PRZED EKSPLOZJĄ GRADIENTÓW (Gradient Clipping)
+            # Bezwzględnie ucina skrajnie duże wektory wywoływane nagłym szumem kanału.
+            # Dzięki temu wagi nigdy więcej nie zostaną wystrzelone w kosmos!
+            torch.nn.utils.clip_grad_norm_ ( model.parameters () , max_norm = 1.0 )
+
             optimizer.step ()
             
             total_loss += loss.item ()
@@ -111,10 +116,11 @@ if __name__ == "__main__":
         avg_loss = total_loss / len ( loader )
         
         # Aktualizacja schedulera: jeśli wymacana dolina jest płaska przez 2 epoki, tnie bazowy LR!
-        scheduler.step ( avg_loss )
+        scheduler.step ()
+        current_lr = scheduler.get_last_lr ()[ 0 ]
         
         # Oczekiwany rezultat: Epoka 1 potrwa np. 40 sekund, od Epoki 2 czasy pikują na dno!
-        print ( f"Epoka [{epoch+1:02d}/{EPOCHS}] | Błąd EVM (MSE): {avg_loss:.5f} | Czas epoki: {epoch_time:.2f} s")
+        print ( f"Epoka [{epoch+1:02d}/{ml.EPOCHS}] | Błąd EVM (MSE): {avg_loss:.5f} | Czas epoki: {epoch_time:.2f} s | LR: {current_lr:.7f}" )
     print ( "\n✅ Trening zakończony! Zespolony potwór został wytrenowany." )
     
     # Zrzucamy wyuczoną fizykę na twardy dysk!
