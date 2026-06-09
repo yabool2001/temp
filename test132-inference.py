@@ -3,7 +3,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 
 # Zaciągamy moduł, do którego przeniosłeś architekturę i ładowarkę
-from modules import ml, ops_file , plot
+from modules import ml, modulation, ops_file , plot
 
 #######################################################################################################################
 ### SETTINGS ##########################################################################################################
@@ -106,16 +106,19 @@ if __name__ == "__main__":
     filename_and_dirname = f"{dst_dir}/{timestamp_group}_demod.npy"
     ops_file.save_complex_samples_2_npf ( filename_and_dirname , samples_demod )
     
-    # ===== KROK 3: SLICER (TWARDA DECYZJA) =====
+    # ===== KROK 3: SLICER & DECIMATION (TWARDA DECYZJA) =====
     # Zamieniamy miękkie wyjście z sieci na twarde punkty konstelacji BPSK (+1 / -1)
-    bpsk_symbols = np.where(samples_demod.real > 0, 1.0 + 0j, -1.0 + 0j)
+    sps = modulation.SPS
+    offset = modulation.SPS // 2
+    symbols_decimated = samples_demod[ offset : : sps ]
+    bpsk_symbols = np.where ( symbols_decimated.real > 0 , 1.0 + 0j , -1.0 + 0j )
 
-    bity = (samples_demod.real > 0).astype(int)
+    bity = (symbols_decimated.real > 0).astype(int)
     print("\nFragment zdekodowanego strumienia bitów:")
-    print(bity[:13])
+    print(bity[10035:10043])
 
-plot.complex_waveform_v0_1_6 ( samples_demod , f"{timestamp_group}_{samples_demod.size=}" )
-plot.complex_waveform_v0_1_6 ( bpsk_symbols , f"{timestamp_group}_{bpsk_symbols.size=}" )
+plot.complex_waveform_v0_1_6 ( samples_demod , f"after demodulation {timestamp_group}_{samples_demod.size=}" )
+plot.complex_waveform_v0_1_6 ( bpsk_symbols , f"after decimation and slicing {timestamp_group}_{bpsk_symbols.size=}" )
 
 if del_src_files :
 	for file_path in Path ( src_dir ).glob ( "*" ) :
