@@ -50,7 +50,7 @@ def demoduluj_na_zywo ( sciezka_do_pliku_npy: str ) -> np.ndarray :
     model.load_state_dict ( torch.load ( "bpsk_modem.pth" , map_location = device , weights_only = True ) )
     
     # KRYTYCZNE: Blokujemy sieć do odczytu (tryb ewaluacji). 
-    model.eval()
+    model.eval ()
 
     # 2. NASŁUCH Z ANTENY (Czytamy cały plik wejściowy X!)
     print(f"📡 Wczytuję surowy eter z: {sciezka_do_pliku_npy}")

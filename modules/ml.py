@@ -17,9 +17,18 @@ CHUNK_SAMPLES_LEN = 8192
 # ========================================================
 class PureComplexLSTMCell ( nn.Module ) :
     def __init__ ( self , input_size , hidden_size ) :
+        
         super ().__init__ ()
         self.hidden_size = hidden_size
+        
         # Prawdziwa zespolona warstwa liniowa. To tu sieć "zrozumie" obroty Eulera, mieszając osie Real i Imag na krzemie karty graficznej.
+        # Wartość 4 poniżej wynika wyłącznie z matematycznej definicji komórki LSTM, niezależnie od tego, czy przetwarza ona sygnał radiowy
+        # z PlutoSDR, czy tłumaczy tekst z języka angielskiego na polski. Każde klasyczne LSTM (w tym nasze zespolone) składa się z dokładnie
+        # 4 wewnętrznych zaworów (bramek):
+        # i_gate (Input gate - decyduje, co nowego zapisać do pamięci),
+        # f_gate (Forget gate - decyduje, co wymazać z pamięci),
+        # c_gate (Cell candidate - generuje nową propozycję wiedzy do zapisu),
+        # o_gate (Output gate - decyduje, co z pamięci wyrzucić na zewnątrz jako wynik).
         self.W = nn.Linear ( input_size + hidden_size , 4 * hidden_size , dtype = torch.complex64 )
 
     def forward ( self , x , hx = None ) :
