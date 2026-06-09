@@ -4,13 +4,13 @@ import numpy as np , os
 import torch
 from numpy.typing import NDArray
 
-from modules import plot
+from modules import modulation , plot
 
 script_filename = os.path.basename ( __file__ )
 
 dir_name = Path ( "np.tensors" )
 dir_name = Path ( "pt.training" )
-dir_name = Path ( "np.inference" )
+dir_name = Path ( "pt.inference" )
 
 tensor_files = sorted ( dir_name.glob ( "*.pt" ) )
 
@@ -19,6 +19,7 @@ if not tensor_files :
 
 for tensor_file in tensor_files :
 	loaded_tensor = torch.load ( tensor_file )
+	loaded_tensor = loaded_tensor[ : : modulation.SPS]
 	if not isinstance ( loaded_tensor , torch.Tensor ) :
 		raise TypeError ( f"Plik {tensor_file} nie zawiera torch.Tensor" )
 	if "flat" in tensor_file.name.lower() :
