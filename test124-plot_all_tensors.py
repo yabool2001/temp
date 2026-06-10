@@ -19,7 +19,7 @@ if not tensor_files :
 
 for tensor_file in tensor_files :
 	loaded_tensor = torch.load ( tensor_file )
-	loaded_tensor = loaded_tensor[ 2 : : modulation.SPS]
+	loaded_tensor = loaded_tensor
 	if not isinstance ( loaded_tensor , torch.Tensor ) :
 		raise TypeError ( f"Plik {tensor_file} nie zawiera torch.Tensor" )
 	if "flat" in tensor_file.name.lower() :

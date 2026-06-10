@@ -1,11 +1,8 @@
-import json
-import numpy as np
-import tomllib
+import numpy as np , tomllib
 
 from numpy.lib.stride_tricks import sliding_window_view
 from numpy.typing import NDArray
-from modules import ops_packet , filters , plot
-from scipy.signal import upfirdn , correlate
+from modules import ops_packet , filters
 
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
@@ -19,16 +16,6 @@ def cw ( buffer_size , scale: str ) -> np.complex128 :
     # ADALM-Pluto secure scale 2^14 
     iq = np.ones ( buffer_size ) * scale + 0j  # Stała wartość kompleksowa (DC na I, Q=0)
     return iq
-
-def bpsk_modulation ( bpsk_symbols ) :
-    zeros = np.zeros_like ( bpsk_symbols )
-    zeros[bpsk_symbols == -1] = 180
-    x_radians = zeros*np.pi/180.0 # sin() and cos() takes in radians
-    samples = np.cos(x_radians) + 1j*0 # this produces our QPSK complex symbols
-    #samples = np.repeat(symbols, 4) # 4 samples per symbol (rectangular pulses) ale to robi rrc
-    samples *= 2**14 # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1 like some SDRs
-    # plot_tx_waveform ( samples )
-    pass
 
 def create_bpsk_symbols_v0_1_6_fastest_short ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     return np.require ( bits , np.uint8 , ['C'] ) * 2.0 - 1.0 + 0j
@@ -63,31 +50,21 @@ def samples_2_bpsk_symbols_v0_1_18 ( samples : NDArray[ np.complex128 ] ) -> NDA
     Próbki > 0 przechodzą na 1+0j, a próbki <= 0 na -1+0j.
     """
     samples = np.asarray ( samples )
-    return np.where ( np.real ( samples ) > 0.0 , 1.0 + 0j , -1.0 + 0j ).astype ( np.complex128 )
+    return np.where ( samples.real > 0.0 , 1.0 + 0j , -1.0 + 0j ).astype ( np.complex128 )
 
 def create_bpsk_symbols_v0_1_6_fastest ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     bits = np.require ( bits , dtype = np.uint8 , requirements = [ 'C' ] )  # gwarantuje uint8 + contiguous
     return ( bits * 2.0 - 1.0 ).astype ( np.complex128 )
-
 def create_bpsk_symbols_v0_1_6 ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     # Map 0 -> -1, 1 -> +1
     return np.where ( bits == 1 , 1.0 + 0j , -1.0 + 0j ).astype ( np.complex128 )
-
-
 def create_bpsk_symbols_v0_1_5 ( bits ) -> np.complex128 :
     # Map 0 -> -1, 1 -> +1
     symbols_real = np.where ( bits == 1 , 1.0 , -1.0 ).astype ( np.float64 )
     # return complex symbols (Q=0)
     return ( symbols_real + 0j ).astype( np.complex128 )
-
 def create_bpsk_symbols ( bits ) :
     return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.int64 )
-
-def modulate_bpsk ( bits , sps = 4 , beta = 0.35 , span = 11 ) :
-    symbols = create_bpsk_symbols ( bits )
-    rrc = filters.rrc_filter_v4 ( sps , beta , span )
-    shaped = upfirdn ( rrc , symbols , up = sps )
-    return ( shaped + 0j ).astype ( np.complex128 )
 
 def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
     """
@@ -97,54 +74,12 @@ def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
     upsampled[ ::sps ] = symbols
     return upsampled
 
-def bpsk_symbols_2_bits ( symbols ) :
-    return ( symbols.real > 0 ).astype ( int )
-
-def signal_correlation(samples, lag=1):
-    """
-    Detekcja obecności sygnału na podstawie korelacji między sąsiednimi próbkami.
-
-    samples  : kompleksowe próbki z RX (np. z PyADI)
-    lag      : opóźnienie w próbkach (1 = sąsiednie)
-
-    Zwraca: (float) wartość korelacji (0–1 przy szumie, wyżej przy sygnale)
-    """
-    if len(samples) <= lag:
-        return 0.0
-
-    x = samples[:-lag]
-    y = samples[lag:]
-
-    corr = np.vdot(x, y)
-    norm = np.sqrt(np.vdot(x, x).real * np.vdot(y, y).real)
-
-    corr_norm = np.abs(corr) / (norm + 1e-12)
-    return corr_norm
-
 def generate_barker13_bpsk_samples_v0_1_7 ( clipped = False ) -> NDArray[ np.complex128 ] :
     symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
     samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
     if clipped :
         tail_length = ( filters.SPAN - 1 ) // 2 * SPS  # Oblicz ogon filtra RRC
         samples = samples[ : -tail_length ]  # Przytnij ogon na końcu
-    return samples
-
-def get_barker13_bpsk_samples_v0_1_3 ( clipped = False ) -> NDArray[ np.complex128 ] :
-    symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
-    samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
-    if clipped :
-        samples = samples[ :72 ] #Uwaga to tylko chyba dobrze działa dla SPS=4
-        #samples = samples[ 18:72 ]
-    #plot.plot_complex_waveform ( samples , "  barker13 samples")
-    return samples
-
-def get_barker13_bpsk_samples ( sps , rrc_beta , rrc_span , clipped = False ) :
-    symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
-    samples = filters.apply_tx_rrc_filter ( symbols , sps , rrc_beta , rrc_span , True )
-    if clipped :
-        samples = samples[ :72 ]
-        #samples = samples[ 18:72 ]
-    #plot.plot_complex_waveform ( samples , "  barker13 samples")
     return samples
 
 def zero_quadrature ( samples : NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] :
@@ -186,9 +121,6 @@ def fast_normalized_cross_correlation ( signal , template ) :
     corr = np.dot(windows_norm, template)
 
     return corr
-
-
-import numpy as np
 
 def fft_normalized_cross_correlation(signal, template):
     """
