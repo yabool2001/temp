@@ -1,17 +1,17 @@
 # Dziennik projektu
 
 prompt
-Słuchaj, to nie zadziałało, bo problem chyba jest gdzie indziej. Żeby Ci to udowodnić wykorzystałem jako sygnał wejściowy wyraźny sygnał zapisany w pliku 1781011870731_X_train_samples.npy (wykres w zał.) z mocnym CFO ale dużym SNR, dzięki czemu z łatwością go zdemodulowałem i wyraźnie odczytałem gdzie zaczyna się pierwszy barker13 - od sampla #40139 (bez decymacji) - widać to w sygnale -imag.
 
-Następnie od sampla #40139 odczytałem sample (bez decymacji), które wypluła nasza funkcja demod() bazująca na modelu AI wytrenowanym z błędem EVM (MSE) na poziomie 0.05819 (bpsk_modem_v0.1.27.pth) - pamiętasz. Nie zgadza się to z tym, co jest od sampla #40139 w sygnale podanym na wejściu modelu AI. Popatrz:
-
-⚠️ Barker13 NIE jest idealnie zachowany po demodulacji AI!
-
-Źródło: [(-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j)]
-
-Po AI: [(-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j)]
-
-Załączam kody aktualne.
+Sprawdziłem Twoją hipotezę na swój sposób, tj.:
+# Opuszczam pierwsze 20 sampli po samplu #40139 (first_symbol_abs_idx) to jest: 20 / modulation.SPS = 5 symboli, żeby ominąć początkowe artefakty z zimnego startu LSTM i
+# 1. Decymuję kolejne 100 sampli z każdym racjonalnym offsetem pomimo, że znam dokładnie to co wysłałem do demodulatora AI i wiem precyzyjnie, gdzie jest pierwszy sample, a gdzie idealny modulation.SPS // 2 = 2. Ale chcę sprawdzić wszytskie opcja offset jak zadziałają.
+# 2. Porównuję wynik z idealnymi symbolami BPSK, które powinny być dokładnie takie same, przy jakims offset i idealna liczba symboli i liczę ile jest niezgodności  między idealnymi symbolami a tymi z AI, żeby mieć miarę jakości demodulacji AI. To są wyniki:
+perfect_offset=0: Po AI, w pierwszych 100 decymowanych symbolach, jest 22 niezgodności w porównaniu do idealnych symboli BPSK!
+perfect_offset=1: Po AI, w pierwszych 100 decymowanych symbolach, jest 23 niezgodności w porównaniu do idealnych symboli BPSK!
+perfect_offset=2: Po AI, w pierwszych 100 decymowanych symbolach, jest 28 niezgodności w porównaniu do idealnych symboli BPSK!
+perfect_offset=3: Po AI, w pierwszych 100 decymowanych symbolach, jest 53 niezgodności w porównaniu do idealnych symboli BPSK!
+Załączam również aktualny kod i obrazki z symbolami po decymacji po 5 samplach barkera13
+Wynik nie napawa optymizmem. Wychodzi na to, że próbujemy działać na chybił trafił bez głębokiej analizy i root cause analysis. A bardzo bym chciał żebyś solidnie przejrzał załączony kod.
 
 ## 2026.06.09 Teraz mam fatalne wyniki uczenia
 Epoka [01/15] | Błąd EVM (MSE): 0.47239 | Czas epoki: 55.06 s
