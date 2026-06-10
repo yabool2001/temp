@@ -1,5 +1,18 @@
 # Dziennik projektu
 
+prompt
+Słuchaj, to nie zadziałało, bo problem chyba jest gdzie indziej. Żeby Ci to udowodnić wykorzystałem jako sygnał wejściowy wyraźny sygnał zapisany w pliku 1781011870731_X_train_samples.npy (wykres w zał.) z mocnym CFO ale dużym SNR, dzięki czemu z łatwością go zdemodulowałem i wyraźnie odczytałem gdzie zaczyna się pierwszy barker13 - od sampla #40139 (bez decymacji) - widać to w sygnale -imag.
+
+Następnie od sampla #40139 odczytałem sample (bez decymacji), które wypluła nasza funkcja demod() bazująca na modelu AI wytrenowanym z błędem EVM (MSE) na poziomie 0.05819 (bpsk_modem_v0.1.27.pth) - pamiętasz. Nie zgadza się to z tym, co jest od sampla #40139 w sygnale podanym na wejściu modelu AI. Popatrz:
+
+⚠️ Barker13 NIE jest idealnie zachowany po demodulacji AI!
+
+Źródło: [(-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j)]
+
+Po AI: [(-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (1+0j), (1+0j), (1+0j), (1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j), (-1+0j)]
+
+Załączam kody aktualne.
+
 ## 2026.06.09 Teraz mam fatalne wyniki uczenia
 Epoka [01/15] | Błąd EVM (MSE): 0.47239 | Czas epoki: 55.06 s
 Epoka [02/15] | Błąd EVM (MSE): 0.47119 | Czas epoki: 53.93 s
