@@ -17,9 +17,9 @@ y_train_tensor_file_name = "pt.inference/1781011870731_y_train_tensor.pt"
 ai_samples_file_name = "np.demod/1781011870731_ai_demod_samples.npy"
 ai_symbols_file_name = "np.demod/1781011870731_ai_symbols.npy"
 timestamp_group = X_train_samples_file_name.split ( "_X_train_samples" , 1 )[ 0 ]
-first_symbol_abs_idx = 40130 # 20 to jest offset na zimny rozbieg ML/AI, który jest potrzebny, bo LSTM potrzebuje rozbiegu, żeby zacząć dobrze działać. Bez tego rozbiegu, pierwsze 2048 próbek (warmup) są "zjedzone" i nie mają wpływu na wynik, co powoduje, że pierwsze 20 symboli (20*4096/8192=10) jest zniekształconych. Ten offset 20 jest dobrany eksperymentalnie, żeby idealnie wyrównać początek ramek z idealnymi symbolami BPSK.
+first_symbol_abs_idx = 40139
 #last_symbol_abs_idx = 40470
-last_symbol_abs_idx = first_symbol_abs_idx + 120
+last_symbol_abs_idx = first_symbol_abs_idx + 1000
 
 if obj :
 	X_train_samples = packet.RxSamples ()
