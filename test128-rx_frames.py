@@ -26,7 +26,7 @@ import tomllib
 ################
 ### SETTINGS ###
 
-mode : str = 'inference' # Available modes: 'training', 'test' or "inference"
+mode : str = 'training' # Available modes: 'training', 'test' or "inference"
 
 dbg = True
 plt = False
@@ -182,5 +182,5 @@ finally :
         samples_files = sorted ( Path ( dst_dir ).glob ( "*_rx_samples_*.npy" ) )
         for samples_file in samples_files :
             samples : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( str ( samples_file ) )
-            plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} {samples_file.name}")
+            plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} {samples_file.name} {samples.size=}")
     exit ( 0 )

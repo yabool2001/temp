@@ -866,6 +866,7 @@ class TxSamples :
 
     payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
     samples_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
+    radio_preamble_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( settings[ "RADIO_PREAMBLE_BYTES" ] , dtype = np.uint8 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_4_pluto : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     # Symbole wzięte wprost z symboli z ramek
@@ -931,38 +932,20 @@ class TxSamples :
     def create_samples4pluto_active_symbols_and_active_samples ( self ) -> None :
 
         frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
+        radio_preamble_bits : NDArray [ np.complex128 ] = bytes2bits ( self.radio_preamble_bytes )
+        radio_preamble_bpsk_symbols : NDArray [ np.complex128 ] = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( radio_preamble_bits )
         if frames_bpsk_symbols.size > 0 :
             self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
+            # Specjalnie tylko do samples_4_pluto używam preambuły radiowej, żeby nigdzie indziej się nie wliczała - na razie.
+            bpsk_symbols_with_preamble = np.concatenate ( [ radio_preamble_bpsk_symbols , frames_bpsk_symbols ] ).astype ( np.complex128 )
+            samples_with_preamble = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( bpsk_symbols_with_preamble ) ).astype ( np.complex128 , copy = False )
+            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_with_preamble , scale = 1.0 )
+            
             self.symbols = np.repeat ( frames_bpsk_symbols , self.SPS ).astype ( np.complex128 , copy = False )
             first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET )
             last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
             active_samples = self.samples.real[ first_active_symbol_idx : last_frame_end_idx ]
             self.active_samples = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
-
-    def create_samples4pluto_and_active_symbols_old2 ( self ) -> None :
-
-        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
-        if frames_bpsk_symbols.size > 0 :
-            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            self.symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
-            first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_ACTIVE_SAMPLE_OFFSET )
-            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
-            active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
-            self.symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
-
-    def create_samples4pluto_and_active_symbols_old1 ( self ) -> None :
-
-        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
-        if frames_bpsk_symbols.size > 0 :
-            self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-            self.samples_4_pluto = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
-            self.symbols = np.zeros ( self.samples_4_pluto.size , dtype = np.complex64 )
-            first_active_symbol_idx = np.uint32 ( filters.PEAK_TO_FIRST_SAMPLE_OFFSET )
-            last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
-            active_samples = self.samples_4_pluto.real[ first_active_symbol_idx : last_frame_end_idx ]
-            self.symbols = np.where ( active_samples < 0.0 , np.complex128 ( -1.0 + 0j ) , np.complex128 ( 1.0 + 0j ) )
 
     def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
         sdr_ctx.tx_destroy_buffer ()

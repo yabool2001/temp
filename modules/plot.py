@@ -690,6 +690,8 @@ def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ]
                             my_title : str = "") -> None :
     signal_specs : list[ tuple[ str , NDArray[ np.complex64 ] , str , str ] ] = []
 
+    ths : int = 10000  # Threshold for maximum allowed size of input arrays
+
     if X_train_samples is not None :
         normalized_x_train_samples = np.asarray ( X_train_samples , dtype = np.complex64 )
         if normalized_x_train_samples.size > 0 :
@@ -697,8 +699,8 @@ def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ]
                 raise ValueError ( "X_train_samples musi być tablicą 1D." )
             if not np.iscomplexobj ( normalized_x_train_samples ) :
                 raise ValueError ( "X_train_samples musi zawierać wartości zespolone." )
-            if normalized_x_train_samples.size > 1000 :
-                raise ValueError ( "ERROR! X_train_samples exceeds the maximum allowed size of 1000." )
+            if normalized_x_train_samples.size > ths :
+                raise ValueError ( f"ERROR! X_train_samples exceeds the maximum allowed size of {ths}." )
             x_train_samples_peak = np.max ( np.abs ( normalized_x_train_samples ) )
             if x_train_samples_peak > 0 :
                 normalized_x_train_samples = normalized_x_train_samples / x_train_samples_peak
@@ -715,8 +717,8 @@ def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ]
                 raise ValueError ( "y_train_tensor musi być tensorem lub tablicą 1D." )
             if not np.iscomplexobj ( y_train_tensor_np ) :
                 raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
-            if y_train_tensor_np.size > 1000 :
-                raise ValueError ( "ERROR! y_train_tensor exceeds the maximum allowed size of 1000." )
+            if y_train_tensor_np.size > ths :
+                raise ValueError ( f"ERROR! y_train_tensor exceeds the maximum allowed size of {ths}." )
             signal_specs.append ( ( "y_train_tensor" , np.asarray ( y_train_tensor_np , dtype = np.complex64 ) , 'red' , 'orange' ) )
 
     if ai_samples is not None :
@@ -726,8 +728,8 @@ def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ]
                 raise ValueError ( "ai_samples musi być tablicą 1D." )
             if not np.iscomplexobj ( ai_samples_np ) :
                 raise ValueError ( "ai_samples musi zawierać wartości zespolone." )
-            if ai_samples_np.size > 1000 :
-                raise ValueError ( "ERROR! ai_samples exceeds the maximum allowed size of 1000." )
+            if ai_samples_np.size > ths :
+                raise ValueError ( f"ERROR! ai_samples exceeds the maximum allowed size of {ths}." )
             signal_specs.append ( ( "ai_samples" , ai_samples_np , 'purple' , 'brown' ) )
 
     if ai_symbols is not None :
@@ -737,8 +739,8 @@ def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ]
                 raise ValueError ( "ai_symbols musi być tablicą 1D." )
             if not np.iscomplexobj ( ai_symbols_np ) :
                 raise ValueError ( "ai_symbols musi zawierać wartości zespolone." )
-            if ai_symbols_np.size > 1000 :
-                raise ValueError ( "ERROR! ai_symbols exceeds the maximum allowed size of 1000." )
+            if ai_symbols_np.size > ths :
+                raise ValueError ( f"ERROR! ai_symbols exceeds the maximum allowed size of {ths}." )
             signal_specs.append ( ( "ai_symbols" , ai_symbols_np , 'black' , 'gray' ) )
 
     if len ( signal_specs ) == 0 :

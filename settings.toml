@@ -5,6 +5,8 @@ PAYLOAD_1BYTE_DEC = [ 80 ]
 PAYLOAD_1BYTE_HEX = [ 0x50 ]
 BARKER7_BITS = [ 0 , 0 , 0 , 1 , 1 , 0 , 1 ]
 BARKER13_BITS = [ 0 , 0 , 0 , 0 , 0 , 1 , 1 , 0 , 0 , 1 , 0 , 1 , 0 ]
+RADIO_PREAMBLE_BITS = [ 1 , 1 , 1 , 1 , 0 , 0 , 0 , 0 , 1 , 1 , 1 , 1 , 0 , 0 , 0 , 0 , 1 , 0 , 1 , 0 , 1 , 0 , 1 , 0 , 1 , 0 , 1 , 0 , 1 , 0 , 1 , 0 ]
+RADIO_PREAMBLE_BYTES = [ 240 , 240 , 170 , 170 ]
 PADDING_BITS = [ 0 , 0 , 0 ]                                            # Padding to 16 bits for BARKER13 (added at the end - LSB)
 PAYLOAD_4BYTES_DEC = [ 15, 15 , 15 , 15 ]
 PAYLOAD_NONE = []
@@ -56,7 +58,7 @@ SURFACE_GO3 = "fe80::339e:6cea:f65b:ee40"
 LEGION = "fe80::97e9:b4e9:6c68:985c"
 
 [bpsk]
-SPS = 4                             # samples per symbol
+SPS = 8                             # samples per symbol
 
 [rrc_filter]
 BETA = 0.35                         # roll-off factor default = 0.35
