@@ -5,7 +5,7 @@ from modules import ml, modulation, ops_file , plot
 
 src : str = 'inference'
 model_version : str = '_v0.1.27' 
-plt : bool = True 
+plt : bool = False 
 dbg : bool = True
 wrt : bool = True
 del_src_files : bool = False
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # =========================================================================
     ai_demod_samples = demod ( str ( rx_filename_and_dirname ) )
     if wrt : ops_file.save_complex_samples_2_npf ( f"{dst_dir}/{timestamp_group}_ai_demod_samples.npy" , ai_demod_samples )
-    ai_symbols : NDArray[ np.complex128 ] = modulation.samples_2_bpsk_symbols_v0_1_18 ( ai_demod_samples )
+    ai_symbols : NDArray[ np.complex128 ] = modulation.samples_2_bpsk_symbols_v0_1_18 ( ai_demod_samples.real )
     if wrt : ops_file.save_complex_samples_2_npf ( f"{dst_dir}/{timestamp_group}_ai_symbols.npy" , ai_symbols )
     barker13_dst = ai_symbols [ first_symbol_abs_idx : first_symbol_abs_idx + 13 * modulation.SPS ].copy ()
     print ( barker13_dst.tolist())

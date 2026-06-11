@@ -682,44 +682,67 @@ def y_train_tensor_as_flat_tensor_v0_1_18 (
         marker_peaks = marker_peaks
     )
 
-def samples_and_tensor_1k ( X_train_samples : NDArray[ np.complex128 ] ,
-                            y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
-                            ai_samples : NDArray[ np.complex128 ] ,
-                            ai_symbols : NDArray[ np.complex128 ] ,
+def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ] ] = None ,
+                            y_train_tensor : Optional[ torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ] = None ,
+                            ai_samples : Optional[ NDArray[ np.complex128 ] ] = None ,
+                            ai_symbols : Optional[ NDArray[ np.complex128 ] ] = None ,
                             idxs : Optional[ NDArray[ np.uint32 ] ] = None,
                             my_title : str = "") -> None :
-    if X_train_samples.size == 0 or ai_samples.size == 0 or ai_symbols.size == 0 :
-        raise ValueError ( "Wejściowe tablice nie mogą być puste." )
-    if X_train_samples.ndim != 1 or ai_samples.ndim != 1 or ai_symbols.ndim != 1 :
-        raise ValueError ( "X_train_samples, ai_samples i ai_symbols muszą być tablicami 1D." )
-    if not np.iscomplexobj ( X_train_samples ) or not np.iscomplexobj ( ai_samples ) or not np.iscomplexobj ( ai_symbols ) :
-        raise ValueError ( "X_train_samples, ai_samples i ai_symbols muszą zawierać wartości zespolone." )
+    signal_specs : list[ tuple[ str , NDArray[ np.complex64 ] , str , str ] ] = []
 
-    if isinstance ( y_train_tensor , torch.Tensor ) :
-        y_train_tensor_np = y_train_tensor.detach ().cpu ().numpy ()
-    else :
-        y_train_tensor_np = np.asarray ( y_train_tensor )
+    if X_train_samples is not None :
+        normalized_x_train_samples = np.asarray ( X_train_samples , dtype = np.complex64 )
+        if normalized_x_train_samples.size > 0 :
+            if normalized_x_train_samples.ndim != 1 :
+                raise ValueError ( "X_train_samples musi być tablicą 1D." )
+            if not np.iscomplexobj ( normalized_x_train_samples ) :
+                raise ValueError ( "X_train_samples musi zawierać wartości zespolone." )
+            if normalized_x_train_samples.size > 1000 :
+                raise ValueError ( "ERROR! X_train_samples exceeds the maximum allowed size of 1000." )
+            x_train_samples_peak = np.max ( np.abs ( normalized_x_train_samples ) )
+            if x_train_samples_peak > 0 :
+                normalized_x_train_samples = normalized_x_train_samples / x_train_samples_peak
+            signal_specs.append ( ( "X_train_samples" , normalized_x_train_samples , 'blue' , 'green' ) )
 
-    if y_train_tensor_np.size == 0 :
-        raise ValueError ( "Wejściowy y_train_tensor jest pusty." )
-    if y_train_tensor_np.ndim != 1 :
-        raise ValueError ( "y_train_tensor musi być tensorem lub tablicą 1D." )
-    if not np.iscomplexobj ( y_train_tensor_np ) :
-        raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
-    if X_train_samples.size > 1000 or y_train_tensor_np.size > 1000 or ai_samples.size > 1000 or ai_symbols.size > 1000 :
-        raise ValueError ( "ERROR! One of the input arrays exceeds the maximum allowed size of 1000." )
+    if y_train_tensor is not None :
+        if isinstance ( y_train_tensor , torch.Tensor ) :
+            y_train_tensor_np = y_train_tensor.detach ().cpu ().numpy ()
+        else :
+            y_train_tensor_np = np.asarray ( y_train_tensor )
 
-    normalized_x_train_samples = np.asarray ( X_train_samples , dtype = np.complex64 )
-    x_train_samples_peak = np.max ( np.abs ( normalized_x_train_samples ) )
-    if x_train_samples_peak > 0 :
-        normalized_x_train_samples = normalized_x_train_samples / x_train_samples_peak
+        if y_train_tensor_np.size > 0 :
+            if y_train_tensor_np.ndim != 1 :
+                raise ValueError ( "y_train_tensor musi być tensorem lub tablicą 1D." )
+            if not np.iscomplexobj ( y_train_tensor_np ) :
+                raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
+            if y_train_tensor_np.size > 1000 :
+                raise ValueError ( "ERROR! y_train_tensor exceeds the maximum allowed size of 1000." )
+            signal_specs.append ( ( "y_train_tensor" , np.asarray ( y_train_tensor_np , dtype = np.complex64 ) , 'red' , 'orange' ) )
 
-    signal_specs = [
-        ( "X_train_samples" , normalized_x_train_samples , 'blue' , 'green' ) ,
-        ( "y_train_tensor" , np.asarray ( y_train_tensor_np , dtype = np.complex64 ) , 'red' , 'orange' ) ,
-        ( "ai_samples" , np.asarray ( ai_samples , dtype = np.complex64 ) , 'purple' , 'brown' ) ,
-        ( "ai_symbols" , np.asarray ( ai_symbols , dtype = np.complex64 ) , 'black' , 'gray' ) ,
-    ]
+    if ai_samples is not None :
+        ai_samples_np = np.asarray ( ai_samples , dtype = np.complex64 )
+        if ai_samples_np.size > 0 :
+            if ai_samples_np.ndim != 1 :
+                raise ValueError ( "ai_samples musi być tablicą 1D." )
+            if not np.iscomplexobj ( ai_samples_np ) :
+                raise ValueError ( "ai_samples musi zawierać wartości zespolone." )
+            if ai_samples_np.size > 1000 :
+                raise ValueError ( "ERROR! ai_samples exceeds the maximum allowed size of 1000." )
+            signal_specs.append ( ( "ai_samples" , ai_samples_np , 'purple' , 'brown' ) )
+
+    if ai_symbols is not None :
+        ai_symbols_np = np.asarray ( ai_symbols , dtype = np.complex64 )
+        if ai_symbols_np.size > 0 :
+            if ai_symbols_np.ndim != 1 :
+                raise ValueError ( "ai_symbols musi być tablicą 1D." )
+            if not np.iscomplexobj ( ai_symbols_np ) :
+                raise ValueError ( "ai_symbols musi zawierać wartości zespolone." )
+            if ai_symbols_np.size > 1000 :
+                raise ValueError ( "ERROR! ai_symbols exceeds the maximum allowed size of 1000." )
+            signal_specs.append ( ( "ai_symbols" , ai_symbols_np , 'black' , 'gray' ) )
+
+    if len ( signal_specs ) == 0 :
+        raise ValueError ( "Brak danych do wyświetlenia." )
 
     marker_colors = [ 'magenta' , 'cyan' , 'gold' , 'limegreen' ]
     fig = go.Figure ()
@@ -757,7 +780,7 @@ def samples_and_tensor_1k ( X_train_samples : NDArray[ np.complex128 ] ,
         )
 
     fig.update_layout (
-        title = f"X_train_samples vs y_train_tensor vs ai_samples vs ai_symbols {my_title}" ,
+        title = f"Combined graph {my_title}" ,
         xaxis_title = "Numer próbki" ,
         yaxis_title = "Amplituda" ,
         xaxis = dict ( rangeslider_visible = True ) ,
