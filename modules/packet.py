@@ -784,82 +784,43 @@ class RxPluto_v0_1_17 :
         return ( f"{ self.pluto_rx_ctx= }" if self.sn is not None else f"There's no ADALM-Pluto connected!" )
 
 @dataclass ( slots = True , eq = False )
-class TxPacket_v0_1_18 :
+class TxPacket :
     
     payload_bytes : NDArray[ np.uint8 ]
     
     # Pola uzupełnianie w __post_init__
-    bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bytes : NDArray[ np.uint8 ] = field ( init = False )
-    bits : NDArray[ np.uint8 ] = field ( init = False )
     len : np.uint16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         crc32_bytes = create_crc32_bytes ( self.payload_bytes )
         self.bytes = np.concatenate ( [ self.payload_bytes , crc32_bytes ] )
         self.len = np.uint16 ( len ( self.payload_bytes ) + len ( crc32_bytes ) )  # payload + crc32
-        self.bits = bytes2bits ( self.bytes )
-        self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.bits )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.payload_bytes= }, { self.bytes= }, { self.len= }" )
+        return ( f"{self.bytes=}, {self.len=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxFrame :
 
-    tx_packet : TxPacket_v0_1_18
+    tx_packet : TxPacket
         
     # Pola uzupełnianie w __post_init__
-    frame_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
-    frame_start_abs_first_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
     header_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    bytes : NDArray[ np.uint8 ] = field ( init = False )
-    bits : NDArray[ np.uint8 ] = field ( init = False )
-    header_bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
     bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
-    bpsk_symbols_flat_tensor : NDArray[ np.complex64 ] = field ( init = False )
-    samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        sync_sequence_bits : NDArray[ np.uint8 ] = self.create_sync_sequence_bits ()
-        packet_len_bits : NDArray[ np.uint8 ] = self.create_packet_len_bits ()
-        self.header_bytes = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
-        crc32_bytes = self.create_crc32_bytes ( self.header_bytes )
-        self.bytes = np.concatenate ( [ self.header_bytes , crc32_bytes , self.tx_packet.bytes ] )
-        self.bits = self.create_frame_bits ()
-        self.bpsk_symbols = self.create_frame_bpsk_symbols ()
-        self.bpsk_symbols_flat_tensor = self.bpsk_symbols_2_flat_tensor ()
-        self.samples4pluto = self.create_samples4pluto ()
-
-    def create_sync_sequence_bits ( self ) -> NDArray[ np.uint8 ] :
-        return BARKER13_BITS
-
-    def create_packet_len_bits ( self ) -> NDArray[ np.uint8 ] :
-        return dec2bits ( self.tx_packet.len , PACKET_LEN_LEN_BITS )
-
-    def create_crc32_bytes ( self , frame_main_bytes ) -> NDArray[ np.uint8 ] :
-        return create_crc32_bytes ( frame_main_bytes )
-    
-    def create_frame_bits ( self ) -> NDArray[ np.uint8 ] :
-        return bytes2bits ( self.bytes )
-
-    def create_frame_bpsk_symbols ( self ) -> NDArray[ np.complex128 ] :
-        return modulation.create_bpsk_symbols_v0_1_6_fastest_short ( self.bits )
-
-    def bpsk_symbols_2_flat_tensor ( self ) -> NDArray[ np.complex64 ] :
-        '''Stworzenie flat_tensor reprezentujacego cały przebieg bpsk_symbols.
-        Wstawienie -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
-        '''
-        bpsk_symbols_flat_tensor = np.repeat ( self.bpsk_symbols , modulation.SPS ).astype ( np.complex64 , copy = False )
-        return bpsk_symbols_flat_tensor
-
-    def create_samples4pluto ( self ) -> NDArray[ np.complex128 ] :
-        samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( self.bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-        return sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
+        sync_sequence_bits : NDArray[ np.uint8 ] = BARKER13_BITS
+        packet_len_bits : NDArray[ np.uint8 ] = dec2bits ( dec = self.tx_packet.len , num_bits = PACKET_LEN_LEN_BITS )
+        some_bytes : NDArray[ np.uint8 ] = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
+        crc32_bytes = create_crc32_bytes ( bytes = some_bytes )
+        self.header_bytes = np.concatenate ( [ some_bytes , crc32_bytes ] )
+        bits : NDArray[ np.uint8 ] = bytes2bits ( bytes = np.concatenate ( [ self.header_bytes , self.tx_packet.bytes ] ) )
+        self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits = bits )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{self.bytes.size=}, {self.bpsk_symbols.size=}, {self.bpsk_symbols_flat_tensor.size=}, {self.samples4pluto.size=}" )
+            f"{self.bpsk_symbols.size=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples :
@@ -896,7 +857,7 @@ class TxSamples :
 
     def create_tx_frame ( self , payload_bytes_np_arr : NDArray[ np.uint8 ] ) -> TxFrame :
 
-        tx_frame_payload = TxPacket_v0_1_18 ( payload_bytes = payload_bytes_np_arr )
+        tx_frame_payload = TxPacket ( payload_bytes = payload_bytes_np_arr )
         tx_frame = TxFrame ( tx_packet = tx_frame_payload )
         return tx_frame
 

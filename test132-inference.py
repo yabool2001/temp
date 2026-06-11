@@ -5,7 +5,7 @@ from modules import ml, modulation, ops_file , plot
 
 src : str = 'inference'
 model_version : str = '_v0.1.28v2' 
-plt : bool = False 
+plt : bool = True 
 dbg : bool = True
 wrt : bool = True
 del_src_files : bool = False
@@ -102,11 +102,16 @@ if __name__ == "__main__":
     timestamp_group = rx_filename_and_dirname.stem.split ( "_X_train_samples" , 1 )[ 0 ]
     print ( f"{rx_filename_and_dirname=}")
     
-    tx_active_samples_filename_and_dirname = "pt.inference/1781194806741_y_train_tensor.pt"
-    tx_active_samples : torch.Tensor = torch.load ( tx_active_samples_filename_and_dirname )
+    y_train_tensor_filename_and_dirname = "pt.inference/1781194806741_y_train_tensor.pt"
+    y_train_tensor : torch.Tensor = torch.load ( y_train_tensor_filename_and_dirname )
+    y_train_symbols = y_train_tensor.cpu().numpy()
+    # y_train_symbols nie znam długości aktywnych sampli lub symboli a więc robię to co poniżej
+    tx_active_samples_filename_and_dirname = "np.inference/1781194806741_tx_active_samples.npy"
+    tx_active_samples : NDArray[ np.complex128 ] = np.load ( tx_active_samples_filename_and_dirname )
     
-    first_symbol_abs_idx = 66196
-    first_symbol_abs_idx = first_symbol_abs_idx + tx_active_samples.size (0)
+    first_symbol_abs_idx = 2524072
+    #last_symbol_abs_idx = first_symbol_abs_idx + 100
+    last_symbol_abs_idx = first_symbol_abs_idx + tx_active_samples.size
     
     # =========================================================================
     # KROK 1: MIĘKKA DEMODULACJA AI
@@ -118,24 +123,25 @@ if __name__ == "__main__":
     
     
     for sampling_offset in range ( modulation.SPS ) :
-        tx_active_samples_decymated = tx_active_samples.real [ first_symbol_abs_idx + sampling_offset : first_symbol_abs_idx + 100 * modulation.SPS + sampling_offset : modulation.SPS ]
-        ai_symbols_decymated = ai_symbols.real [ first_symbol_abs_idx + sampling_offset : first_symbol_abs_idx + 100 * modulation.SPS + sampling_offset : modulation.SPS ]
-        num_mismatches = np.sum ( tx_active_samples_decymated.real != ai_symbols_decymated.real )
-        print ( f"{sampling_offset=}: Po AI, w pierwszych 100 decymowanych symbolach, jest {num_mismatches} niezgodności w porównaniu do idealnych symboli BPSK!" )
+        y_train_symbols_decimated : NDArray[ np.complex128 ] = y_train_symbols [ first_symbol_abs_idx + sampling_offset : last_symbol_abs_idx + sampling_offset : modulation.SPS ]
+        ai_symbols_decimated : NDArray[ np.complex128 ] = ai_symbols [ first_symbol_abs_idx + sampling_offset : last_symbol_abs_idx + sampling_offset : modulation.SPS ]
+        num_mismatches = np.sum ( y_train_symbols_decimated.real != ai_symbols_decimated.real )
+        print ( f"{sampling_offset=}: Po AI, w {(y_train_symbols_decimated.size/modulation.SPS)=} decymowanych symbolach, jest {num_mismatches} niezgodności w porównaniu do idealnych symboli BPSK!" )
+        mismatch_idx = np.where ( y_train_symbols_decimated.real != ai_symbols_decimated.real)[0]
+        print("Indeksy niezgodnych symboli:", mismatch_idx)
         # Jak znaleźć gdzie jest ten mismatch? Możesz wypisać oba ciągi i porównać je element po elemencie, np.:
-        # for i in range ( len ( tx_active_samples_decymated ) ) :
-        #     print ( f"Index {i}: AI symbol = {ai_symbols_decymated[i]} vs Ideal BPSK symbol = {tx_active_samples_decymated[i]}" )
+        # for i in range ( len ( y_train_symbols_decimated ) ) :
+        #     print ( f"Index {i}: AI symbol = {ai_symbols_decimated[i]} vs Ideal BPSK symbol = {y_train_symbols_decimated[i]}" )
         # To pozwoli Ci zobaczyć dokładnie, które symbole się różnią i od czego zaczynają się te różnice. Możesz też użyć np. 
-        mismatch_idx = np.flatnonzero(tx_active_samples_decymated != ai_symbols_decymated)
-        for i in mismatch_idx:
-            global_idx = first_symbol_abs_idx + sampling_offset + i * modulation.SPS
-            print( f"local_idx={i}, global_idx={global_idx}, "f"AI={ai_symbols_decymated[i]}, IDEAL={tx_active_samples_decymated[i]}")
+        #mismatch_idx = np.flatnonzero(y_train_symbols_decimated.real != ai_symbols_decimated.real)
+        #for i in mismatch_idx:
+        #    global_idx = first_symbol_abs_idx + sampling_offset + i * modulation.SPS
+        #    print( f"local_idx={i}, global_idx={global_idx}, "f"AI={ai_symbols_decimated[i]}, IDEAL={y_train_symbols_decimated[i]}")
     
     if plt:
         plot.complex_waveform_v0_1_6 ( ai_demod_samples , f"{script_filename} AI samples {timestamp_group} {ai_demod_samples.size=}" )
-        plot.complex_waveform_v0_1_6 ( ai_symbols , f"{script_filename} AI symbols {timestamp_group} {ai_symbols.size=}" )
-        plot.complex_waveform_v0_1_6 ( ai_symbols_decymated , f"{script_filename} AI decymated {timestamp_group} {ai_symbols_decymated.size=}" )
-        plot.complex_waveform_v0_1_6 ( tx_active_samples_decymated , f"{script_filename} BPSK decymated {timestamp_group} {tx_active_samples_decymated.size=}" )
+        plot.real_waveform_v0_1_6 ( ai_symbols.real[ first_symbol_abs_idx : last_symbol_abs_idx ] , f"{script_filename} AI symbols.real {timestamp_group} {ai_symbols.size=}" )
+        plot.real_waveform_v0_1_6 ( y_train_symbols.real[ first_symbol_abs_idx : last_symbol_abs_idx ] , f"{script_filename} y_train symbols.real {timestamp_group} {y_train_symbols.size=}" )
 
     if del_src_files :
         for file_path in Path ( src_dir ).glob ( "*" ) :

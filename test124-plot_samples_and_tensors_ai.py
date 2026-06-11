@@ -19,7 +19,10 @@ ai_symbols_file_name = "np.demod/1781194806741_ai_symbols.npy"
 timestamp_group = X_train_samples_file_name.split ( "_X_train_samples" , 1 )[ 0 ]
 first_symbol_abs_idx = 66196
 #last_symbol_abs_idx = 40470
-last_symbol_abs_idx = first_symbol_abs_idx + 1000
+# y_train_symbols nie znam długości aktywnych sampli lub symboli a więc robię to co poniżej
+tx_active_samples_filename_and_dirname = "np.inference/1781194806741_tx_active_samples.npy"
+tx_active_samples : NDArray[ np.complex128 ] = np.load ( tx_active_samples_filename_and_dirname )
+last_symbol_abs_idx = first_symbol_abs_idx + tx_active_samples.size
 
 if obj :
 	X_train_samples = packet.RxSamples ()
