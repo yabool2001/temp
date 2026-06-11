@@ -7,6 +7,7 @@ src : str = 'inference'
 model_version : str = '_v0.1.27' 
 plt : bool = True 
 dbg : bool = True
+wrt : bool = True
 del_src_files : bool = False
 del_dst_files : bool = True
 
@@ -102,17 +103,18 @@ if __name__ == "__main__":
     print ( f"{rx_filename_and_dirname=}")
     samples_src : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( str ( rx_filename_and_dirname ) )
     symbols_src : NDArray[ np.complex128 ] = modulation.samples_2_bpsk_symbols_v0_1_18 ( -samples_src.imag )
-    first_symbol_abs_idx = 40139
+    first_symbol_abs_idx = 40139 + 20
     barker13_src = symbols_src [ first_symbol_abs_idx : first_symbol_abs_idx + 13 * modulation.SPS ].copy () # Kopiujemy, żeby nie mieć problemów z widokami i mutowalnością w dalszej części
     print ( barker13_src.tolist () ) 
 
     # =========================================================================
     # KROK 1: MIĘKKA DEMODULACJA AI
     # =========================================================================
-    samples_dst_demod = demod ( str ( rx_filename_and_dirname ) )
-    ops_file.save_complex_samples_2_npf ( f"{dst_dir}/{timestamp_group}_demod.npy" , samples_dst_demod )
-    symbols_dst : NDArray[ np.complex128 ] = modulation.samples_2_bpsk_symbols_v0_1_18 ( samples_dst_demod )
-    barker13_dst = symbols_dst [ first_symbol_abs_idx : first_symbol_abs_idx + 13 * modulation.SPS ].copy ()
+    ai_demod_samples = demod ( str ( rx_filename_and_dirname ) )
+    if wrt : ops_file.save_complex_samples_2_npf ( f"{dst_dir}/{timestamp_group}_ai_demod_samples.npy" , ai_demod_samples )
+    ai_symbols : NDArray[ np.complex128 ] = modulation.samples_2_bpsk_symbols_v0_1_18 ( ai_demod_samples )
+    if wrt : ops_file.save_complex_samples_2_npf ( f"{dst_dir}/{timestamp_group}_ai_symbols.npy" , ai_symbols )
+    barker13_dst = ai_symbols [ first_symbol_abs_idx : first_symbol_abs_idx + 13 * modulation.SPS ].copy ()
     print ( barker13_dst.tolist())
     if np.array_equal ( barker13_src , barker13_dst ) :
         print ( "✅ Barker13 idealnie zachowany po demodulacji AI!" )
@@ -126,16 +128,16 @@ if __name__ == "__main__":
     # 2. Porównujemy z idealnymi symbolami BPSK, które powinny być dokładnie takie same, bo to jest idealny offset i idealna liczba symboli
     # i licze ile jest niezgodności  między idealnymi symbolami a tymi z AI, żeby mieć miarę jakości demodulacji AI
     for perfect_offset in range ( modulation.SPS ) :
-        next_symbols_src_decymated = symbols_src [ first_symbol_abs_idx + 20 + perfect_offset : first_symbol_abs_idx + 20 + 100 * modulation.SPS + perfect_offset : modulation.SPS ]
-        next_symbols_dst_decymated = symbols_dst [ first_symbol_abs_idx + 20 + perfect_offset : first_symbol_abs_idx + 20 + 100 * modulation.SPS + perfect_offset : modulation.SPS ]
+        next_symbols_src_decymated = symbols_src [ first_symbol_abs_idx + perfect_offset : first_symbol_abs_idx + 100 * modulation.SPS + perfect_offset : modulation.SPS ]
+        next_symbols_dst_decymated = ai_symbols [ first_symbol_abs_idx + perfect_offset : first_symbol_abs_idx + 100 * modulation.SPS + perfect_offset : modulation.SPS ]
         num_mismatches = np.sum ( next_symbols_src_decymated != next_symbols_dst_decymated )
         print ( f"{perfect_offset=}: Po AI, w pierwszych 100 decymowanych symbolach, jest {num_mismatches} niezgodności w porównaniu do idealnych symboli BPSK!" )
     
     if plt:
-        plot.complex_waveform_v0_1_6 ( samples_dst_demod , f"{script_filename} Fala AI {timestamp_group} {samples_dst_demod.size=}" )
-        plot.complex_waveform_v0_1_6 ( symbols_dst , f"{script_filename} Symbole BPSK {timestamp_group} {symbols_dst.size=}" )
-        plot.complex_waveform_v0_1_6 ( next_symbols_dst_decymated , f"{script_filename} Fala AI {timestamp_group} {next_symbols_dst_decymated.size=}" )
-        plot.complex_waveform_v0_1_6 ( next_symbols_src_decymated , f"{script_filename} Symbole BPSK {timestamp_group} {next_symbols_src_decymated.size=}" )
+        plot.complex_waveform_v0_1_6 ( ai_demod_samples , f"{script_filename} AI samples {timestamp_group} {ai_demod_samples.size=}" )
+        plot.complex_waveform_v0_1_6 ( ai_symbols , f"{script_filename} AI symbols {timestamp_group} {ai_symbols.size=}" )
+        plot.complex_waveform_v0_1_6 ( next_symbols_dst_decymated , f"{script_filename} AI decymated {timestamp_group} {next_symbols_dst_decymated.size=}" )
+        plot.complex_waveform_v0_1_6 ( next_symbols_src_decymated , f"{script_filename} BPSK decymated {timestamp_group} {next_symbols_src_decymated.size=}" )
 
     if del_src_files :
         for file_path in Path ( src_dir ).glob ( "*" ) :

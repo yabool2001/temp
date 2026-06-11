@@ -682,6 +682,89 @@ def y_train_tensor_as_flat_tensor_v0_1_18 (
         marker_peaks = marker_peaks
     )
 
+def samples_and_tensor_1k ( X_train_samples : NDArray[ np.complex128 ] ,
+                            y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
+                            ai_samples : NDArray[ np.complex128 ] ,
+                            ai_symbols : NDArray[ np.complex128 ] ,
+                            idxs : Optional[ NDArray[ np.uint32 ] ] = None,
+                            my_title : str = "") -> None :
+    if X_train_samples.size == 0 or ai_samples.size == 0 or ai_symbols.size == 0 :
+        raise ValueError ( "Wejściowe tablice nie mogą być puste." )
+    if X_train_samples.ndim != 1 or ai_samples.ndim != 1 or ai_symbols.ndim != 1 :
+        raise ValueError ( "X_train_samples, ai_samples i ai_symbols muszą być tablicami 1D." )
+    if not np.iscomplexobj ( X_train_samples ) or not np.iscomplexobj ( ai_samples ) or not np.iscomplexobj ( ai_symbols ) :
+        raise ValueError ( "X_train_samples, ai_samples i ai_symbols muszą zawierać wartości zespolone." )
+
+    if isinstance ( y_train_tensor , torch.Tensor ) :
+        y_train_tensor_np = y_train_tensor.detach ().cpu ().numpy ()
+    else :
+        y_train_tensor_np = np.asarray ( y_train_tensor )
+
+    if y_train_tensor_np.size == 0 :
+        raise ValueError ( "Wejściowy y_train_tensor jest pusty." )
+    if y_train_tensor_np.ndim != 1 :
+        raise ValueError ( "y_train_tensor musi być tensorem lub tablicą 1D." )
+    if not np.iscomplexobj ( y_train_tensor_np ) :
+        raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
+    if X_train_samples.size > 1000 or y_train_tensor_np.size > 1000 or ai_samples.size > 1000 or ai_symbols.size > 1000 :
+        raise ValueError ( "ERROR! One of the input arrays exceeds the maximum allowed size of 1000." )
+
+    normalized_x_train_samples = np.asarray ( X_train_samples , dtype = np.complex64 )
+    x_train_samples_peak = np.max ( np.abs ( normalized_x_train_samples ) )
+    if x_train_samples_peak > 0 :
+        normalized_x_train_samples = normalized_x_train_samples / x_train_samples_peak
+
+    signal_specs = [
+        ( "X_train_samples" , normalized_x_train_samples , 'blue' , 'green' ) ,
+        ( "y_train_tensor" , np.asarray ( y_train_tensor_np , dtype = np.complex64 ) , 'red' , 'orange' ) ,
+        ( "ai_samples" , np.asarray ( ai_samples , dtype = np.complex64 ) , 'purple' , 'brown' ) ,
+        ( "ai_symbols" , np.asarray ( ai_symbols , dtype = np.complex64 ) , 'black' , 'gray' ) ,
+    ]
+
+    marker_colors = [ 'magenta' , 'cyan' , 'gold' , 'limegreen' ]
+    fig = go.Figure ()
+
+    for signal_idx , ( signal_name , signal_values , real_color , imag_color ) in enumerate ( signal_specs ) :
+        x_axis = np.arange ( signal_values.size )
+        fig.add_trace ( go.Scattergl ( x = x_axis , y = signal_values.real , mode = 'lines' , name = f'{signal_name} I (real)' , line = dict ( color = real_color ) ) )
+        fig.add_trace ( go.Scattergl ( x = x_axis , y = signal_values.imag , mode = 'lines' , name = f'{signal_name} Q (imag)' , line = dict ( color = imag_color , dash = 'dash' ) ) )
+
+        if idxs is None :
+            continue
+
+        valid_idxs = np.asarray ( idxs , dtype = np.int_ )
+        valid_idxs = valid_idxs[ ( valid_idxs >= 0 ) & ( valid_idxs < signal_values.size ) ]
+        if valid_idxs.size == 0 :
+            continue
+
+        fig.add_trace (
+            go.Scattergl (
+                x = valid_idxs ,
+                y = signal_values.real[ valid_idxs ] ,
+                mode = 'markers' ,
+                name = f'{signal_name} peaks I' ,
+                marker = dict ( symbol = 'triangle-up' , size = 10 , color = marker_colors[ signal_idx ] , line = dict ( color = real_color , width = 1 ) )
+            )
+        )
+        fig.add_trace (
+            go.Scattergl (
+                x = valid_idxs ,
+                y = signal_values.imag[ valid_idxs ] ,
+                mode = 'markers' ,
+                name = f'{signal_name} peaks Q' ,
+                marker = dict ( symbol = 'triangle-down' , size = 10 , color = marker_colors[ signal_idx ] , line = dict ( color = imag_color , width = 1 ) )
+            )
+        )
+
+    fig.update_layout (
+        title = f"X_train_samples vs y_train_tensor vs ai_samples vs ai_symbols {my_title}" ,
+        xaxis_title = "Numer próbki" ,
+        yaxis_title = "Amplituda" ,
+        xaxis = dict ( rangeslider_visible = True ) ,
+        legend = dict ( orientation = "h" , yanchor = "bottom" , y = 1.02 , xanchor = "center" , x = 0.5 ) ,
+        height = 700
+    )
+    fig.show ()
 
 def samples_and_tensor (
     samples : NDArray[ np.complex128 ] ,
