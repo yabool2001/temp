@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 1e-5
-EPOCHS = 50
+EPOCHS = 20
 CHUNK_SAMPLES_LEN = 8192
 
 

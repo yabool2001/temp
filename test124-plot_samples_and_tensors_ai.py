@@ -12,12 +12,12 @@ dbg : bool = True
 plt : bool = True
 obj : bool = True # obj=object czy chcesz to robic za pomoca klas w modules/packet.py czy tylko funkcji w modules/ops_file.py
 
-X_train_samples_file_name = "pt.inference/1781011870731_X_train_samples.npy"
-y_train_tensor_file_name = "pt.inference/1781011870731_y_train_tensor.pt"
-ai_samples_file_name = "np.demod/1781011870731_ai_demod_samples.npy"
-ai_symbols_file_name = "np.demod/1781011870731_ai_symbols.npy"
+X_train_samples_file_name = "pt.inference/1781194806741_X_train_samples.npy"
+y_train_tensor_file_name = "pt.inference/1781194806741_y_train_tensor.pt"
+ai_samples_file_name = "np.demod/1781194806741_ai_demod_samples.npy"
+ai_symbols_file_name = "np.demod/1781194806741_ai_symbols.npy"
 timestamp_group = X_train_samples_file_name.split ( "_X_train_samples" , 1 )[ 0 ]
-first_symbol_abs_idx = 40139
+first_symbol_abs_idx = 66196
 #last_symbol_abs_idx = 40470
 last_symbol_abs_idx = first_symbol_abs_idx + 1000
 

@@ -805,7 +805,7 @@ class TxPacket_v0_1_18 :
         return ( f"{ self.payload_bytes= }, { self.bytes= }, { self.len= }" )
 
 @dataclass ( slots = True , eq = False )
-class TxFrame_v0_1_18 :
+class TxFrame :
 
     tx_packet : TxPacket_v0_1_18
         
@@ -865,16 +865,16 @@ class TxFrame_v0_1_18 :
 class TxSamples :
 
     payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
-    samples_start_abs_idx : np.uint32 = field ( init = False , default = np.uint32 ( 0 ) )
+
     radio_preamble_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( settings[ "RADIO_PREAMBLE_BYTES" ] , dtype = np.uint8 ) , init = False )
     samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     samples_4_pluto : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    # Symbole wzięte wprost z symboli z ramek
+    # symbols to symbole wzięte z frames
     symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    # Symbole wzięte z próbkowaia samples_4_pluto w miejscach gdzie powinny być aktywne symbole, czyli w miejscach gdzie powinny być symbole z ramek, ale wzięte z próbkowania, a nie bezpośrednio z symboli ramek.
-    # Te symbole mogą się różnić od tych z ramek, bo są wzięte z próbkowania.
+    # active_samples to symbole wzięte z próbkowania samples w miejscach gdzie powinny być aktywne symbole, ale nie z symboli ramek.
+    # Dlatego te symbole mogą się różnić od tych z ramek, bo są wzięte z próbkowania.
     active_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
+    frames : list[ TxFrame ] = field ( init = False , default_factory = list )
     SPS = modulation.SPS
 
     def __post_init__ ( self ) -> None :
@@ -894,10 +894,10 @@ class TxSamples :
         self.frames.append ( tx_frame )
         self.create_samples4pluto_active_symbols_and_active_samples ()
 
-    def create_tx_frame ( self , payload_bytes_np_arr : NDArray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
+    def create_tx_frame ( self , payload_bytes_np_arr : NDArray[ np.uint8 ] ) -> TxFrame :
 
         tx_frame_payload = TxPacket_v0_1_18 ( payload_bytes = payload_bytes_np_arr )
-        tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
+        tx_frame = TxFrame ( tx_packet = tx_frame_payload )
         return tx_frame
 
     def offsets_accuracy_test ( self ) -> None :
@@ -1003,289 +1003,6 @@ class TxSamples :
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.bpsk_symbols.size= }, { self.samples_4_pluto.size= }" )
-
-@dataclass ( slots = True , eq = False )
-class TxSamples_v0_1_18 :
-    '''Są 2 tryby tworzenia tx_samples. 
-    1. samples_w_muting:
-        Concatenując sample utworzone w tx_frames. Wtedy mamy ładne przerwy między ramkami,
-        bo każda ramka jest filtrowana osobno i pomiędzy ramkami są przerwy bez sygnału z symbolami.
-    2. samples_wo_muting:
-        Tworząc ciągłe samples w tx_samples na podstawie symboli bpsk z tx_frames.
-        Wtedy nie ma przerw między ramkami, bo tworzymy ciągły strumień symboli bpsk z ramek i filtrujemy go jako całość.'''
-    payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
-    payload_bits : list | tuple | np.ndarray[ np.uint8 ] | None = None
-
-    # Pola uzupełnianie w __post_init__
-    bytes : np.ndarray[ np.uint8 ] = field ( init = False )
-    bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
-    samples : NDArray[ np.complex128 ] = field ( init = False )
-    samples4pluto : NDArray[ np.complex128 ] = field ( init = False )
-    flat_tensor : NDArray[ np.complex128 ] = field ( init = False )
-    frames : list[ TxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
-
-    samples4pluto_wo_mute : NDArray[ np.complex128 ] = field ( init = False )
-    samples_flat_tensor_wo_mute : NDArray[ np.complex64 ] = field ( init = False )
-    symbols_flat_tensor_wo_mute : torch.Tensor = field ( init = False )
-    active_symbols_wo_mute : NDArray[ np.complex128 ] = field ( init = False )
-
-    SPS = modulation.SPS
-
-    def __post_init__ ( self ) -> None :
-        self.create_empty_complex_samples ()
-        if self.payload_bytes is not None and len ( self.payload_bytes ) > 0 :
-            self.add_frame ( payload_bytes = self.payload_bytes )
-        elif self.payload_bits is not None and len ( self.payload_bits ) > 0 :
-            self.add_frame ( payload_bits = self.payload_bits )
-
-    def create_empty_complex_samples ( self ) -> None :
-        self.bytes = np.array ( [] , dtype = np.uint8 )
-        self.bpsk_symbols = np.array ( [] , dtype = np.complex128 )
-        self.flat_tensor = np.array ( [] , dtype = np.complex128 )
-        self.samples = np.array ( [] , dtype = np.complex128 )
-        self.samples4pluto = np.array ( [] , dtype = np.complex128 )
-        self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
-        self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 )
-        self.symbols_flat_tensor_wo_mute = torch.empty ( 0 , dtype = torch.complex64 )
-
-    def create_tx_frame ( self , payload_bytes : np.ndarray[ np.uint8 ] ) -> TxFrame_v0_1_18 :
-        tx_frame_payload = TxPacket_v0_1_18 ( payload_bytes = payload_bytes )
-        tx_frame = TxFrame_v0_1_18 ( tx_packet = tx_frame_payload )
-        return tx_frame
-
-    def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
-        if payload_bytes is not None and len ( payload_bytes ) > 0 :
-            payload_bytes_arr = np.asarray ( payload_bytes , dtype = np.uint8 ).ravel ()
-            if payload_bytes_arr.max () > 255 :
-                raise ValueError ( "Error: Payload has not all values in 0 - 255!" )
-            if len ( payload_bytes_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
-                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-        elif payload_bits is not None and len ( payload_bits ) > 0 :
-            payload_bits_arr = np.asarray ( payload_bits , dtype = np.uint8 ).ravel ()
-            if payload_bits_arr.max () > 1 :
-                raise ValueError ( "Error: Payload has not all values only: zeros or ones!" )
-            if len ( payload_bits_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN * 8 :
-                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-            payload_bytes_arr = pad_bits2bytes ( payload_bits_arr )
-        else :
-            raise ValueError ( "Either payload_bytes or payload_bits must be provided." )
-        tx_frame = self.create_tx_frame ( payload_bytes = payload_bytes_arr )
-        tx_frame.frame_start_abs_idx = np.uint32 ( self.samples4pluto.size + ( filters.SPAN * self.SPS // 2 ) )
-        tx_frame.frame_start_abs_first_idx = np.uint32 ( self.samples4pluto.size + ( ( filters.SPAN * self.SPS // 2 ) - ( modulation.SPS//2 ) ) )
-        self.frames.append ( tx_frame )
-        self.add_bytes ( tx_frame.bytes ) # Nie powinno być payload_bytes_arr bo wtedy w bytes będzie tylko payload bez sync sequence i packet len.
-        self.add_symbols ( tx_frame.bpsk_symbols )
-        self.add_samples4pluto ( tx_frame.samples4pluto )
-        self.create_samples4pluto_wo_muting_and_flat_tensor ()
-
-    def add_bytes ( self , payload_bytes_arr : NDArray[ np.uint8 ] ) -> None :
-        if payload_bytes_arr.size < 1 :
-            raise ValueError ( "Error: There are no bytes to add!" )
-        self.bytes = np.concatenate ( [ self.bytes , payload_bytes_arr ] )
-
-    def add_symbols ( self , bpsk_symbols : NDArray[ np.complex128 ] ) -> None :
-        if bpsk_symbols.size < 1 :
-            raise ValueError ( "Error: There are no symbols to add!" )
-        self.bpsk_symbols = np.concatenate ( [ self.bpsk_symbols , bpsk_symbols ] )
-
-    def add_samples4pluto ( self , samples4pluto : NDArray[ np.complex128 ] ) -> None :
-        if samples4pluto.size < 1 :
-            raise ValueError ( "Error: There are no samples to add!" )
-        self.samples4pluto = np.concatenate ( [ self.samples4pluto , samples4pluto ] )
-
-    def create_samples4pluto ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None , payload_bits : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
-        self.frames.clear ()
-        self.create_empty_complex_samples ()
-        self.add_frame ( payload_bytes = payload_bytes , payload_bits = payload_bits )
-
-    def create_samples4pluto_wo_muting_and_flat_tensor ( self ) -> None :
-        self.samples4pluto_wo_mute = np.array ( [] , dtype = np.complex128 )
-        self.samples_flat_tensor_wo_mute = np.array ( [] , dtype = np.complex64 ) # razem z rozbiegówką i wygaszeniem filtra, czyli z 0+j0 na początku i na końcu, ale bez przerw między ramkami, bo tworzymy ciągły strumień symboli bpsk z ramek i filtrujemy go jako całość.
-        self.symbols_flat_tensor_wo_mute = torch.empty ( 0 , dtype = torch.complex64 ) # to co w self.samples_flat_tensor_wo_mute tylko bez 0+j0
-        frames_bpsk_symbols : NDArray [ np.complex128 ] = np.concatenate ( [ frame.bpsk_symbols for frame in self.frames ] ).astype ( np.complex128 , copy = False )
-        if frames_bpsk_symbols.size > 0 :
-
-            samples_filtered = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( frames_bpsk_symbols ) ).astype ( np.complex128 , copy = False )
-            self.samples4pluto_wo_mute = sdr.scale_to_pluto_dac_v0_1_11 ( samples = samples_filtered , scale = 1.0 )
-
-            self.samples_flat_tensor_wo_mute = np.zeros ( self.samples4pluto_wo_mute.size , dtype = np.complex64 )
-            first_frame_start_idx = np.uint32 ( filters.PEAK_TO_FIRST_SAMPLE_OFFSET )
-            last_frame_end_idx = first_frame_start_idx + frames_bpsk_symbols.size * modulation.SPS
-            active_samples = self.samples4pluto_wo_mute.real[ first_frame_start_idx : last_frame_end_idx ]
-            #active_symbols = np.where ( active_samples < 0.0 , -1.0 + 0.0j , 1.0 + 0.0j ).astype ( np.complex64 , copy = False )
-            '''Ponieważ język Python domyślnie traktuje zadeklarowane z klawiatury wartości -1.0+0.0j jako 128-bitowe, funkcja np.where pod spodem uformuje tymczasową tablicę
-            complex128. Kiedy następnie nałożysz .astype(np.complex64), biblioteka NumPy, by uniknąć uszkodzeń pamięci, i tak stworzy nową, pomniejszoną w bajtach tablicę w tle,
-            całkowicie ignorując dopisek copy = False (zgodnie zresztą ze swoją oficjalną dokumentacją dla zmiany rozmiaru bloku pamięci).Aby zoptymalizować to do absolutnego,
-            purystycznego maksimum (czyli dosłownie zera zbędnych alokacji i konwersji pamięciowych na procesorze), możesz przekazać mniejszy typ rzutowany bezpośrednio
-            do wnętrza funkcji np.where. Wtedy dodawanie metody .astype(...) na końcu nie będzie w ogóle potrzebne.'''
-            active_symbols = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
-            self.samples_flat_tensor_wo_mute[ first_frame_start_idx : last_frame_end_idx ] = active_symbols
-            # Poniżej Problemem było to, że active_symbols miało już długość symbols * SPS, a potem było jeszcze raz błędnie krojone zakresem liczonym względem samples4pluto_wo_mute,
-            # co ucinało dane.
-            #self.symbols_wo_mute = active_symbols[ first_frame_start_idx : last_frame_end_idx ].astype ( np.complex128 , copy = False )
-            self.active_symbols_wo_mute = active_symbols.astype ( np.complex128 , copy = False )
-            self.symbols_flat_tensor_wo_mute =  torch.from_numpy ( active_symbols.astype ( np.complex64 , copy = False ) )
-
-    def tx ( self , sdr_ctx : Pluto , repeat : np.uint32 = 1 ) -> None :
-        sdr_ctx.tx_destroy_buffer ()
-        sdr_ctx.tx_cyclic_buffer = False
-        if repeat < 1 or repeat > 4294967295 :
-            raise ValueError ( "Error: reapt value is out of the range! Allowed range is 1 to 4294967295." )
-        while repeat :
-            sdr_ctx.tx ( self.samples4pluto_wo_mute ) # Uwaga w innych nie wprowadziłem tej zmiany, tj. wo_mute
-            repeat -= 1
-
-    def tx_cyclic ( self , sdr_ctx : Pluto ) -> None :
-        sdr_ctx.tx_destroy_buffer ()
-        sdr_ctx.tx_cyclic_buffer = True
-        sdr_ctx.tx ( self.samples4pluto )
-
-    def stop_tx_cyclic ( self , sdr_ctx : Pluto ) -> None :
-        sdr_ctx.tx_destroy_buffer ()
-        sdr_ctx.tx_cyclic_buffer = False
-
-    def tx_incremeant_payload_and_repeat ( self , sdr_ctx : Pluto , n_o_bytes : np.uint16 = 1 , n_o_repeats : np.uint32 = 1 ) -> None :
-        sdr_ctx.tx_destroy_buffer ()
-        sdr_ctx.tx_cyclic_buffer = False
-        bytes = np.zeros ( n_o_bytes , dtype = np.uint8 )
-        while n_o_repeats :
-            self.create_samples4pluto ( payload_bytes = bytes )
-            sdr_ctx.tx ( self.samples4pluto)
-            print ( f"\n\r  { n_o_repeats }: Transmitted payload bytes: { bytes }" )
-            for i in range ( n_o_bytes - 1 , -1 , -1 ) :
-                bytes [ i ] = np.uint8( ( int(bytes [ i ]) + 1 ) % 256 )
-                if bytes [ i ] != 0 :
-                    break
-            n_o_repeats -= 1
-
-    def tx_random_payload ( self , sdr_ctx : Pluto , repeats : np.uint32 = 100 ) -> None :
-        sdr_ctx.tx_destroy_buffer ()
-        sdr_ctx.tx_cyclic_buffer = False
-        rng = np.random.default_rng ()
-        print ( f"\n\r Start random transmition {repeats} times." )
-        while repeats :
-            sdr_ctx.tx_destroy_buffer ()
-            sdr_ctx.tx_cyclic_buffer = False
-            payload_len = rng.integers ( 1 , 1501 )
-            payload_bytes = rng.integers ( 0 , 256 , size = payload_len , dtype = np.uint8 )
-            self.create_samples4pluto ( payload_bytes = payload_bytes )
-            sdr_ctx.tx ( self.samples4pluto)
-            repeats -= 1
-        print ( f"\n\r Stop random transmition" )
-
-    def plot_symbols ( self , title = "" , constellation : bool = False ) -> None :
-        plot.plot_symbols ( self.bpsk_symbols , f"{title} {self.bpsk_symbols.size=}" )
-        if constellation :
-            plot.complex_symbols_v0_1_6 ( self.bpsk_symbols , f"{title}" )
-
-    def plot_complex_samples4pluto ( self , title = "" , marker_peaks : bool = False ) -> None :
-        if marker_peaks :
-            frames_start_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in self.frames ] , dtype = np.uint32 )
-        else :
-            frames_start_idx : NDArray [ np.uint32 ] = np.array ( [] , dtype = np.uint32 )
-        plot.complex_waveform_v0_1_6 ( self.samples4pluto , f"{title} {self.samples4pluto.size=}" , marker_squares = False , marker_peaks = frames_start_idx )
-
-    def plot_complex_samples4pluto_wo_mute ( self , title = "" , mark_frames_first_sample : bool = False ) -> None :
-        if mark_frames_first_sample :
-            idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.complex_waveform_v0_1_6 ( self.samples4pluto_wo_mute , f"{title} {self.samples4pluto_wo_mute.size=}" , marker_squares = False , marker_peaks = idx )
-        else :
-            plot.complex_waveform_v0_1_6 ( self.samples4pluto_wo_mute , f"{title} {self.samples4pluto_wo_mute.size=}" )
-
-    def plot_samples_spectrum ( self , title = "" ) -> None :
-        plot.spectrum_occupancy ( self.samples4pluto , 1024 , title )
-
-    def plot_flat_tensor ( self , title : str = "tx flat tensor" , marker_idx : bool = False ) -> None :
-        if marker_idx :
-            frames_start_abs_first_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title , marker_idx = frames_start_abs_first_idx )
-        else :
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.flat_tensor , title = title )
-
-    def plot_symbols_flat_tensor_wo_mute ( self , title : str = "tx symbols flat tensor wo. mute" , marker_idx : bool = False ) -> None :
-        if marker_idx :
-            frames_start_abs_first_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.symbols_flat_tensor_wo_mute , title = f"{title} tx {self.symbols_flat_tensor_wo_mute.shape=}" , marker_idx = frames_start_abs_first_idx )
-        else :
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.symbols_flat_tensor_wo_mute , title = f"{title} tx {self.symbols_flat_tensor_wo_mute.shape=}" )
-
-    def plot_samples_flat_tensor_wo_mute ( self , title : str = "" , mark_frames_first_sample : bool = False ) -> None :
-        if mark_frames_first_sample :
-            idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_first_idx for frame in self.frames ] , dtype = np.uint32 )
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.samples_flat_tensor_wo_mute , title = f"{title} tx {self.samples_flat_tensor_wo_mute.shape=}" , marker_idx = idx )
-        else :
-            plot.flat_tensor_v0_1_18 ( flat_tensor = self.samples_flat_tensor_wo_mute , title = f"{title} tx {self.samples_flat_tensor_wo_mute.shape=}" )
-
-    def plot_active_symbols_wo_mute ( self , title : str = "" , mark_frames_first_sample : bool = False ) -> None :
-        if mark_frames_first_sample :
-            idx : NDArray [ np.uint32 ] = np.array ( [ ( frame.frame_start_abs_first_idx - ( filters.SPAN * self.SPS // 2 ) + ( modulation.SPS//2 ) ) for frame in self.frames ] , dtype = np.uint32 )
-            plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols_wo_mute , title = f"{title} tx {self.active_symbols_wo_mute.size=}" )
-        else :
-            plot.plot_bpsk_symbols_v2 ( symbols = self.active_symbols_wo_mute , title = f"{title} tx {self.active_symbols_wo_mute.size=}" )
-
-    def samples4pluto_2_flat_tensor ( self ) -> None :
-        '''Stworzenie flat_tensor w self.flat_tensor reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
-        oraz wstawienie 0+0j wszędzie tam gdzie w przebiegu samples4pluto nie ma symboli wynikajacych z ramek. Dodatkowo wstawiam 0+j0 wszędzie tam gdzie jest przejście z -1+j0 na 1+j0 lub z 1+j0 na -1+j0, czyli tam gdzie jest zmiana symbolu.
-        '''
-        self.flat_tensor = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
-        for frame in self.frames :
-            frame_start_idx = np.uint32 ( frame.frame_start_abs_first_idx )
-            frame_end_idx = frame_start_idx + frame.bpsk_symbols.size * self.SPS
-            if frame_start_idx >= self.flat_tensor.size or frame.bpsk_symbols.size == 0 :
-                continue
-            if frame_end_idx > self.flat_tensor.size :
-                frame_end_idx = self.flat_tensor.size
-            symbols_repeated = np.repeat ( frame.bpsk_symbols , self.SPS )[:frame_end_idx - frame_start_idx]
-            self.flat_tensor [ frame_start_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex64 , copy = False )
-
-    def save_frames2flat_tensor ( self , filename : str , dir_name : str ) -> None :
-        # It's not the actual y_train, but a reference truth for validating rx data (after receiving the frame).
-        # Złożenie wszystkich bpsk_symbols z wszystkich ramek w jeden strumień w kolejności wysyłania
-        # oraz proste powielenie każdego symbolu self.SPS razy.
-        tensor_filename = f"{dir_name}/{filename}.pt"
-        if self.frames :
-            all_symbols = np.concatenate ( [ np.repeat ( frame.bpsk_symbols , self.SPS ) for frame in self.frames ] ).astype ( np.complex64 , copy = False )
-        else :
-            all_symbols = np.array ( [] , dtype = np.complex64 )
-        frames_bpsk_symbols = torch.from_numpy ( all_symbols )
-        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
-        torch.save ( frames_bpsk_symbols , tensor_filename )
-
-    def save_samples_2_flat_tensor ( self , filename : str , dir_name : str ) -> None :
-        '''Stworzenie symboli bpsk reprezentujacych cały przebieg samples4pluto. Wstawienie par -1+0j, 1+0j dla każdego symbolu reprezentujacego symbol w ramce
-        oraz wstawienie 0+0j wszędzie tam gdzie w przebiegu samples4pluto nie ma symboli wynikajacych z ramek.'''
-        tensor_filename = f"{dir_name}/{filename}.pt"
-        frame_symbols = np.zeros ( self.samples4pluto.size , dtype = np.complex64 )
-        for frame in self.frames :
-            frame_start_idx = np.uint32 ( frame.frame_start_abs_idx )
-            frame_end_idx = frame_start_idx + frame.bpsk_symbols.size * self.SPS
-            if frame_start_idx >= frame_symbols.size or frame.bpsk_symbols.size == 0 :
-                continue
-            if frame_end_idx > frame_symbols.size :
-                frame_end_idx = frame_symbols.size
-            symbols_repeated = np.repeat ( frame.bpsk_symbols , self.SPS )[:frame_end_idx - frame_start_idx]
-            frame_symbols [ frame_start_idx : frame_end_idx ] = symbols_repeated.astype ( np.complex64 , copy = False )
-        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
-        torch.save ( torch.from_numpy ( frame_symbols ) , tensor_filename )
-
-    def save_symbols_flat_tensor_wo_mute_2_pt ( self , file_name : str , dir_name : str ) -> None :
-        tensor_filename = f"{dir_name}/{file_name}.pt"
-        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
-        torch.save ( self.symbols_flat_tensor_wo_mute , tensor_filename )
-
-    def save_complex_samples4pluto_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = True ) -> None :
-        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
-        filename_and_dirname = f"{dir_name}/{filename}"
-        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.samples4pluto )
-
-    def save_active_symbols_wo_mute_2_npf ( self , file_name : str , dir_name : str , add_timestamp : bool = True ) -> None :
-        Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
-        filename = ops_file.add_timestamp_2_filename ( file_name ) if add_timestamp else file_name
-        filename_and_dirname = f"{dir_name}/{filename}"
-        ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.active_symbols_wo_mute )
-
-    def __repr__ ( self ) -> str :
-        return ( f"{ self.bpsk_symbols.size= }, { self.samples4pluto.size= }" )
 
 @dataclass ( slots = True , eq = False )
 class TxPluto_v0_1_17 :
