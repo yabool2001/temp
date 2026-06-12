@@ -10,7 +10,7 @@ dbg : bool = True
 plt : bool = True
 obj : bool = True # obj=object czy chcesz to robic za pomoca klas w modules/packet.py czy tylko funkcji w modules/ops_file.py
 
-dir_name = Path ( "pt.inference" )
+dir_name = Path ( "np.test" )
 
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 

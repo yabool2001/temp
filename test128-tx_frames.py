@@ -99,7 +99,7 @@ SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples , timestamp_group : str ) -> None :
-    tx_samples.save_active_samples_2_npf ( file_name = f"{timestamp_group}_tx_active_samples" , dir_name = dst_dir , add_timestamp = False )
+    tx_samples.save_symbols_from_samples_2_npf ( file_name = f"{timestamp_group}_tx_symbols_from_samples" , dir_name = dst_dir , add_timestamp = False )
     tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dst_dir , add_timestamp = False )
     if dbg : print ( f"Samples and corresponding symbols saved to npf type files in {dst_dir=} {timestamp_group=}..." )
 
@@ -162,7 +162,7 @@ try :
             if dbg : print ( f"Received ASCII_FRAME_SIZE: {payload_udp=}, sending timestamp_group." )
             tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_size = ASCII_FRAME_SIZE )
             if plt :
-                tx_samples.plot_active_samples ( f"{script_filename} {timestamp_group}" )
+                tx_samples.plot_symbols_from_samples ( f"{script_filename} {timestamp_group}" )
                 tx_samples.plot_samples ( f"{script_filename} {timestamp_group}" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if dbg : print ( f"Sent {timestamp_group=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
