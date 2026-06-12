@@ -824,7 +824,7 @@ class TxFrame :
         
     # Pola uzupełnianie w __post_init__
     header_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
+    #bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         sync_sequence_bits : NDArray[ np.uint8 ] = BARKER13_BITS
@@ -832,8 +832,9 @@ class TxFrame :
         header_first_3_bytes : NDArray[ np.uint8 ] = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
         crc32_bytes = create_crc32_bytes ( bytes = header_first_3_bytes )
         self.header_bytes = np.concatenate ( [ header_first_3_bytes , crc32_bytes ] )
-        bits : NDArray[ np.uint8 ] = bytes2bits ( bytes = np.concatenate ( [ self.header_bytes , self.tx_packet.bytes ] ) )
-        self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits = bits )
+        # Jak się okaże, że się obejdzie bez tego to usunąć, bo symbols to jest dublowanie danych z header_bytes, tx_packet.payload_bytes i tx_packet.crc32_bytes, a to jest niepotrzebne zużycie pamięci, bo można zawsze wygenerować symbols z header_bytes i tx_packet.bytes, więc nie ma potrzeby przechowywania ich w TxFrame, a jeśli będzie potrzeba to można je wygenerować na żądanie z header_bytes i tx_packet.
+        #bits : NDArray[ np.uint8 ] = bytes2bits ( bytes = np.concatenate ( [ self.header_bytes , self.tx_packet.bytes ] ) )
+        #self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits = bits )
 
     def __repr__ ( self ) -> str :
         return (
@@ -857,20 +858,19 @@ class TxSamples :
 
     def __post_init__ ( self ) -> None :
 
-        if self.payload_bytes is not None and len ( self.payload_bytes ) > 0 :
+        if self.payload_bytes is not None :
             self.add_frame ( payload_bytes = self.payload_bytes )
 
-    def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
+    def add_frame ( self , payload_bytes : list | tuple | NDArray[ np.uint8 ] = None ) -> None :
 
         tx_frame = self.create_tx_frame ( payload_bytes = payload_bytes )
         self.frames.append ( tx_frame )
         self.create_samples4pluto_active_symbols_and_active_samples ()
 
-    def create_tx_frame ( self , payload_bytes : NDArray[ np.uint8 ] ) -> TxFrame :
+    def create_tx_frame ( self , payload_bytes : list | tuple | NDArray[ np.uint8 ] ) -> TxFrame :
 
-        tx_frame_payload = TxPacket ( payload_bytes = payload_bytes )
-        tx_frame = TxFrame ( tx_packet = tx_frame_payload )
-        return tx_frame
+        tx_packet = TxPacket ( payload_bytes = payload_bytes )
+        return TxFrame ( tx_packet = tx_packet )
 
     def offsets_accuracy_test ( self ) -> None :
         '''
