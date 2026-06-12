@@ -19,7 +19,9 @@ SPAN = int ( toml_settings[ "rrc_filter" ][ "SPAN" ] )
 SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
 FIRST_TO_MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPS // 2 )
 MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPAN * SPS // 2 ) # To jest wartość 22 dla SPAN = 11 i SPS = 4, czyli dokładnie połowa długości filtra RRC w próbkach (11 symboli * 4 próbki/symbol / 2)
-# Używane w packet.TxSamples.create_samples_and_symbols_from_samples() 
+# Używane w:
+#  packet.TxSamples.create_samples_and_symbols_from_samples ()
+#  packet.RxSamples.detect_frames () gdzie jest przekazywany do konstruktora klasy RxFrame jako frame_first_sample_idx
 FIRST_SYMBOL_OFFSET = np.uint32 ( MIDDLE_SYMBOL_OFFSET - FIRST_TO_MIDDLE_SYMBOL_OFFSET )
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
@@ -271,17 +273,17 @@ def apply_rrc_rx_filter_v0_1_6 ( rx_samples: NDArray[ np.complex128 ] ) -> NDArr
     
     return filtered.astype ( np.complex128 )  # Gwarancja complex128
 
-def apply_rrc_rx_convolve_v0_1_18 ( rx_samples : NDArray [ np.complex128 ] ) -> NDArray[ np.complex128 ] :
+def apply_rrc_rx_convolve_v0_1_18 ( rx_samples : NDArray[ np.complex64 ] | NDArray [ np.complex128 ] ) -> NDArray[ np.complex64 ] :
     """
     Filtruje odebrane próbki filtrem RRC z wykorzystaniem splotu (convolution).
     Splot automatycznie omija problemy ze stabilnością układów FIR 
     oraz perfekcyjnie niweluje opóźnienie grupowe.
 
     Parametry:
-        rx_samples: Odebrane próbki (complex128) z SDR.
+        rx_samples: Załadowane próbki z pliku (np.complex64) Odebrane próbki (complex128) z SDR.
 
     Zwraca:
-        Przefiltrowane próbki (complex128) z wycentrowanymi pikami i zachowaną długością.
+        Przefiltrowane próbki (complex64) z wycentrowanymi pikami i zachowaną długością.
     """
     # 1. Pobieramy tapy z Twojej zoptymalizowanej funkcji rrc_filter_v4
     rrc_taps = rrc_filter_v4 ( BETA , SPS , SPAN )
@@ -294,7 +296,7 @@ def apply_rrc_rx_convolve_v0_1_18 ( rx_samples : NDArray [ np.complex128 ] ) -> 
     
     aligned_samples = np.convolve ( rx_samples , rrc_taps , mode = 'same' )
 
-    return aligned_samples.astype ( np.complex128 )
+    return aligned_samples.astype ( np.complex64 )
 
 def apply_rrc_rx_sosfilt_v0_1_18 ( rx_samples: NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] :
     """

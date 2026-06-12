@@ -98,9 +98,9 @@ def save_float64_samples_2_npf ( filename : str , samples : NDArray[ np.float64 
         print ( f"Nie udało się zapisać {filename}: {exc}" )
         raise
 
-def open_samples_from_npf ( filename : str ) -> NDArray[ np.complex128 ] :
+def open_samples_from_npf ( filename : str ) -> NDArray[ np.complex64 ] :
     try :
-        samples = np.load ( filename ).astype ( np.complex128 , copy = False )
+        samples = np.load ( filename ).astype ( np.complex64 , copy = False )
     except OSError as exc :
         print ( f"ERROR: Nie mogę załadować sampli z pliku {filename}: {exc}" )
         raise
@@ -122,10 +122,10 @@ def open_real_float64_samples_from_npf ( filename : str ) -> NDArray[ np.float64
         raise
     return samples
 
-def open_csv_and_load_np_complex128 ( filename ) :
+def open_csv_and_load_np_complex ( filename ) -> NDArray[ np.complex64 ]:
     data = np.loadtxt ( filename , delimiter = ',' , skiprows=1 )  # pomija nagłówek
     samples = data[ : , 0 ] + 1j * data[ : , 1 ]
-    return samples.astype ( np.complex128 )
+    return samples.astype ( np.complex64 )
 
 def append_symbols_2_csv ( csv_writer , symbols ) :
     for symbol in symbols :

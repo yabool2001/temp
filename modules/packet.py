@@ -80,6 +80,7 @@ def bits_2_int ( bits : np.ndarray ) -> int:
         result = (result << 1) | int ( bit )
     return result
 
+CONCATENATE_THS : int = 10 # Ograniczenie na liczbę próbek dołączanych do siebie w celu uniknięcia zbyt długich tablic w pamięci.
 BARKER13_BITS = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
 SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
 SYNC_SEQUENCE_LEN_SAMPLES = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
@@ -473,7 +474,7 @@ class RxPacket_v0_1_18 :
         )
 
 @dataclass ( slots = True , eq = False )
-class RxFrame_v0_1_18 :
+class RxFrame :
     
     samples_filtered : NDArray[ np.complex128 ]
     first_symbol_abs_idx : np.uint32
@@ -584,23 +585,24 @@ class RxFrame_v0_1_18 :
 class RxSamples :
 
     # Pola uzupełnianie w __post_init__
-    samples_raw : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
-    samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
+    samples_raw : NDArray[ np.complex64 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex64 ) , init = False )
+    #samples_filtered : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     X_train_samples : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     tx_symbols : NDArray[ np.complex128 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex128 ) , init = False )
     y_train_tensor : torch.Tensor = field ( default_factory = lambda : torch.tensor ( [] , dtype = torch.complex64 ) , init = False )
     sync_sequence_peaks : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     first_symbol_idx : np.uint32 = None # Pierwszy symbol pierwszej ramki.
     concatenates : int = 0
-    frames : list[ RxFrame_v0_1_18 ] = field ( init = False , default_factory = list )
+    frames : list[ RxFrame ] = field ( init = False , default_factory = list )
     SPS = modulation.SPS
     SPAN = filters.SPAN
     CONCATENATE_THS : int = 10
 
     def __post_init__ ( self ) -> None :
-        pass
+        if self.payload_bytes is not None :
+            self.add_frame ( payload_bytes = self.payload_bytes )
 
-    def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex128 ] :
+    def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex64 ] :
 
         if sdr_ctx is not None :
             samples = sdr_ctx.rx ()
@@ -608,7 +610,7 @@ class RxSamples :
             if file_name.endswith('.npy'):
                 samples = ops_file.open_samples_from_npf ( file_name )
             elif file_name.endswith('.csv'):
-                samples = ops_file.open_csv_and_load_np_complex128 ( file_name )
+                samples = ops_file.open_csv_and_load_np_complex ( file_name )
             else:
                 raise ValueError(f"Error: unsupported file format for {file_name}! Supported formats: .npy, .csv")
         else :
@@ -616,41 +618,34 @@ class RxSamples :
         if concatenate :
             if self.concatenates < self.CONCATENATE_THS :
                 self.concatenates += 1
-                #samples_raw = np.concatenate ( [ self.samples_raw , samples ] )
-                self.samples_raw = np.append ( self.samples_raw , samples ) # to samo co powyżej, ale append jest szybszy dla 1 elementu
-                self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples_raw )
+                self.samples_raw = np.append ( self.samples_raw , samples.astype ( np.complex64 ) ) # to samo co powyżej, ale append jest szybszy dla 1 elementu
             else :
                 raise MemoryError ( f"{self.concatenates=}. To prevent modem performance issues, further concatenation is blocked." )
         else :
-            self.samples_raw = samples
-            self.samples_filtered = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples_raw )
-        if self.samples_raw.size == self.samples_filtered.size :
-            return samples
-        else :
-            print ( ( f"{self.samples_raw.size=} {self.samples_filtered.size=}"))
-            raise ValueError ( f"ERROR! samples_raw.size != samples_filtered.size." )
+            self.samples_raw = samples.astype ( np.complex64 )
 
     def detect_frames ( self , deep : bool = False , samples_filtered : bool = True , correct_samples : bool = False , add_peak_at_0 : bool = False ) -> None :
         
         if correct_samples and not samples_filtered :
             raise ValueError ( "Cannot apply correction without filtering. You must set filter=True to apply correction!" )
-        samples = self.samples_filtered.copy () if samples_filtered else self.samples_raw.copy ()
+        samples = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples_raw ).copy () if samples_filtered else self.samples_raw.copy ()
         if correct_samples :
             samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
 
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) , deep = deep )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( clipped = True ) , deep = deep )
         if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
-                frame = RxFrame_v0_1_18 ( samples_filtered = samples [ idx + filters.FIRST_SYMBOL_OFFSET : ] , first_symbol_abs_idx = idx + filters.FIRST_SYMBOL_OFFSET )
+                frame = RxFrame ( samples_filtered = samples [ idx + filters.FIRST_SYMBOL_OFFSET : ] , first_symbol_abs_idx = idx + filters.FIRST_SYMBOL_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
                     previous_processed_idx = frame.frame_end_abs_idx
                     # Dodaj kolejne frame, które zostały wysłane w tym samym strumieniu danych.
                     # Szansa, że jest kolejna ramka jest tylko wtedy jeśli poprzednia była cała.
+                    # Chociaż to podejście nie uwzględnia sytuacji braku całej ramki z powodu chwilowego zaszumienia i możliwości wykrycia kolejnej.
                     while ( frame.has_frame ) :
-                        frame = RxFrame_v0_1_18 ( samples_filtered = samples [ frame.frame_end_abs_idx : ] , first_symbol_abs_idx = frame.frame_end_abs_idx )
+                        frame = RxFrame ( samples_filtered = samples [ frame.frame_end_abs_idx : ] , first_symbol_abs_idx = frame.frame_end_abs_idx )
                         if frame.has_header :
                             self.frames.append ( frame )
                             previous_processed_idx = frame.frame_end_abs_idx
