@@ -52,6 +52,9 @@ def samples_2_bpsk_symbols_v0_1_18 ( samples : NDArray[ np.complex128 ] ) -> NDA
     samples = np.asarray ( samples )
     return np.where ( samples.real > 0.0 , 1.0 + 0j , -1.0 + 0j ).astype ( np.complex128 )
 
+def bits_2_bpsk_symbols ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex64 ] :
+    bits = np.require ( bits , dtype = np.uint8 , requirements = [ 'C' ] )  # gwarantuje uint8 + contiguous
+    return ( bits * 2.0 - 1.0 ).astype ( np.complex64 )
 def create_bpsk_symbols_v0_1_6_fastest ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     bits = np.require ( bits , dtype = np.uint8 , requirements = [ 'C' ] )  # gwarantuje uint8 + contiguous
     return ( bits * 2.0 - 1.0 ).astype ( np.complex128 )

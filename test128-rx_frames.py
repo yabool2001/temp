@@ -26,10 +26,10 @@ import tomllib
 ################
 ### SETTINGS ###
 
-mode : str = 'training' # Available modes: 'training', 'test' or "inference"
+mode : str = 'test' # Available modes: 'training', 'test' or "inference"
 
 dbg = True
-plt = False
+plt = True
 wrt = True
 del_dst = True
 

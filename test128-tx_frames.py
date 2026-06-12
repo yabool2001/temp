@@ -26,12 +26,12 @@ from modules import ops_os , packet , payload_test_data as ptd , sdr
 ################
 ### SETTINGS ###
 
-mode : str = 'training' # Available modes: 'training', 'test' or "inference"
+mode : str = 'test' # Available modes: 'training', 'test' or "inference"
 
 no_frames : int = 1 # Number of frames to transmit in one samples. WORKS ONLY FOR S and M frame sizes
 
 dbg = True
-plt = False
+plt = True
 wrt = True
 del_dst = True
 
@@ -99,7 +99,6 @@ SAMPLES_BUFFER_SIZE_MULTIPLICATOR = 2
 SAMPLES_BUFFER_SIZE = int ( toml_settings["ADALM-Pluto"][ "SAMPLES_BUFFER_SIZE" ] )
 
 def wrt_flat_tensor ( tx_samples : packet.TxSamples , timestamp_group : str ) -> None :
-    tx_samples.save_symbols_2_npf ( file_name = f"{timestamp_group}_tx_symbols" , dir_name = dst_dir , add_timestamp = False )
     tx_samples.save_active_samples_2_npf ( file_name = f"{timestamp_group}_tx_active_samples" , dir_name = dst_dir , add_timestamp = False )
     tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dst_dir , add_timestamp = False )
     if dbg : print ( f"Samples and corresponding symbols saved to npf type files in {dst_dir=} {timestamp_group=}..." )
@@ -121,7 +120,7 @@ def build_tx_samples_and_timestamp_group ( multiplicator : float = SAMPLES_BUFFE
         case b"L" :
             max_samples_size = int ( SAMPLES_BUFFER_SIZE * multiplicator ) # Maksymalna liczba próbek do wysłania w jednej transmisji (80% bufora, aby zostawić miejsce na rozpędzenie się filtra)
             ptd.fill_samples_up_to_max_length ( tx_samples = tx_samples , max_samples_size = max_samples_size )
-    if dbg : print ( f"{tx_samples.samples_4_pluto.size=}" )
+    if dbg : print ( f"{tx_samples.samples.size=}" )
     timestamp_group = ops_os.milis_timestamp ()
     if wrt : wrt_flat_tensor ( tx_samples = tx_samples , timestamp_group = timestamp_group )
     return tx_samples , timestamp_group
@@ -152,7 +151,7 @@ try :
         elif payload_udp == ASCII_ENQ : # ENQUIRY TO send A NEW PACKET
             if dbg : print ( f"Received ASCII_ENQ: {payload_udp=}, to send frame(s)." )
             tx_samples.tx ( sdr_ctx = tx_pluto.pluto_tx_ctx , repeat = 1 )
-            if dbg : print ( f"All {tx_samples.samples_4_pluto.size=} samples transmitted." )
+            if dbg : print ( f"All {tx_samples.samples.size=} samples transmitted." )
             tx_samples = None
             udp_sock.sendto ( ASCII_EOT , udp_sender_addr )
             if dbg : print ( f"Sent ASCII_EOT to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
@@ -163,10 +162,8 @@ try :
             if dbg : print ( f"Received ASCII_FRAME_SIZE: {payload_udp=}, sending timestamp_group." )
             tx_samples , timestamp_group = build_tx_samples_and_timestamp_group ( multiplicator = SAMPLES_BUFFER_SIZE_MULTIPLICATOR , frame_size = ASCII_FRAME_SIZE )
             if plt :
-                tx_samples.plot_symbols ( f"{script_filename} {timestamp_group}" )
                 tx_samples.plot_active_samples ( f"{script_filename} {timestamp_group}" )
                 tx_samples.plot_samples ( f"{script_filename} {timestamp_group}" )
-                tx_samples.plot_samples_4_pluto_spectrum ( f"{ script_filename } {timestamp_group} Samples 4 pluto spectrum" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if dbg : print ( f"Sent {timestamp_group=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
 

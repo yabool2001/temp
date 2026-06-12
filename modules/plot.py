@@ -557,7 +557,7 @@ def complex_symbols_v0_1_6 ( complex_symbols : np.ndarray , title : str = "Konst
 
     fig.show()
 
-def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex128 ] , title : str = "Sygnał zespolony", marker_squares : bool = False , marker_peaks : Optional[ NDArray[ np.uint32 ] ] = None ) -> None :
+def complex_waveform_v0_1_6 ( signal_complex : NDArray[ np.complex64 ] | NDArray[ np.complex128 ] , title : str = "Sygnał zespolony", marker_squares : bool = False , marker_peaks : Optional[ NDArray[ np.uint32 ] ] = None ) -> None :
     """
     Rozszerzona wersja funkcji complex_waveform z dodatkowym parametrem marker_peaks.
     Jeśli marker_peaks zostanie przekazany (np.ndarray z indeksami), peaks zostaną zaznaczone trójkątami na wykresie.

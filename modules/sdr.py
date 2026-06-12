@@ -64,6 +64,23 @@ def init_pluto_v0_1_17 ( sn : str , tx_gain_float : float = TX_GAIN , gain_contr
     if toml_settings["log"]["verbose_2"] : help ( adi.Pluto.rx_output_type ) ; help ( adi.Pluto.gain_control_mode_chan0 ) ; help ( adi.Pluto.tx_lo ) ; help ( adi.Pluto.tx  )
     return sdr
 
+def _validate_scale_and_convert_samples_2_complex128 ( samples : NDArray[ np.complex128 ] , scale : float ) -> NDArray[ np.complex128 ] :
+    samples_complex128 = np.asarray ( samples , dtype = np.complex128 )
+    if not np.isfinite ( scale ) or scale < 0.0 or scale > 1.0 :
+        raise ValueError ( f"Error: {scale=} must be finite and in range 0.0 to 1.0." )
+    if samples_complex128.size > 0 :
+        peak_i = float ( np.max ( np.abs ( samples_complex128.real ) ) )
+        peak_q = float ( np.max ( np.abs ( samples_complex128.imag ) ) )
+        peak_component = max ( peak_i , peak_q )
+        if peak_component * scale > 1.0 :
+            max_safe_scale = 1.0 / peak_component if peak_component > 0.0 else 1.0
+            raise ValueError ( f"Error: {peak_i=:.6f}, {peak_q=:.6f} with {scale=} exceeds per-component DAC range [-1.0, 1.0]. Use {max_safe_scale=:.6f} or normalize samples first." )
+    return samples_complex128
+
+def scale_samples_2_pluto_dac ( samples : NDArray[ np.complex64 ] , scale : float = 1.0 ) -> NDArray[ np.complex128 ] :
+    samples_complex128 = _validate_scale_and_convert_samples_2_complex128 ( samples = samples , scale = scale )
+    return samples_complex128 * PLUTO_DAC_SCALE * scale
+
 def scale_to_pluto_dac_v0_1_11 ( samples : NDArray[ np.complex128 ] , scale : float = 1.0 ) -> NDArray[ np.complex128 ] : # None, because In-place modification
     # In-place scales and clips of normalized samples to ADALM-Pluto DAC units (±PLUTO_DAC_SCALE)
     samples_scaled = samples * PLUTO_DAC_SCALE * scale
