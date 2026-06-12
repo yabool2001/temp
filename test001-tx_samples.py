@@ -56,6 +56,8 @@ timestamp_group = ops_os.milis_timestamp ()
 if wrt :
     tx_samples.save_symbols_from_samples_2_npf ( file_name = f"{timestamp_group}_tx_symbols_from_samples" , dir_name = dst_dir , add_timestamp = False )
     tx_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_tx_samples" , dir_name = dst_dir , add_timestamp = False )
+    tx_samples.save_active_samples_2_npf ( file_name = f"{timestamp_group}_tx_active_samples" , dir_name = dst_dir , add_timestamp = False )
 if plt :
     tx_samples.plot_symbols_from_samples ( f"{script_filename} {timestamp_group}" )
     tx_samples.plot_samples ( f"{script_filename} {timestamp_group}" )
+    tx_samples.plot_active_samples ( f"{script_filename} {timestamp_group}" )

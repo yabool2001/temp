@@ -20,7 +20,7 @@ SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
 FIRST_TO_MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPS // 2 )
 MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPAN * SPS // 2 ) # To jest wartość 22 dla SPAN = 11 i SPS = 4, czyli dokładnie połowa długości filtra RRC w próbkach (11 symboli * 4 próbki/symbol / 2)
 # Używane w packet.TxSamples.create_samples_and_symbols_from_samples() 
-FIRST_SYMBOL_OFFSET = MIDDLE_SYMBOL_OFFSET - FIRST_TO_MIDDLE_SYMBOL_OFFSET
+FIRST_SYMBOL_OFFSET = np.uint32 ( MIDDLE_SYMBOL_OFFSET - FIRST_TO_MIDDLE_SYMBOL_OFFSET )
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
     """
