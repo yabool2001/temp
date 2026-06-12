@@ -85,7 +85,7 @@ SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
 SYNC_SEQUENCE_LEN_SAMPLES = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
 PACKET_LEN_LEN_BITS = 11
 CRC32_LEN_BITS = 32
-MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN = np.uint16 ( 1500 ) # MTU dla IP over ETHERNET
+PAYLOAD_BYTES_LEN_THS = np.uint16 ( 1500 ) # MTU dla IP over ETHERNET
 PACKET_BYTE_LEN_BITS = 8
 FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
 FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
@@ -789,13 +789,30 @@ class TxPacket :
     payload_bytes : NDArray[ np.uint8 ]
     
     # Pola uzupełnianie w __post_init__
-    bytes : NDArray[ np.uint8 ] = field ( init = False )
+    crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
     len : np.uint16 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
-        crc32_bytes = create_crc32_bytes ( self.payload_bytes )
-        self.bytes = np.concatenate ( [ self.payload_bytes , crc32_bytes ] )
-        self.len = np.uint16 ( len ( self.payload_bytes ) + len ( crc32_bytes ) )  # payload + crc32
+        self.check_payload_bytes ()
+        self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
+        self.len = np.uint16 ( self.payload_bytes.size + self.crc32_bytes.size )  # payload + crc32
+        pass
+
+    def check_payload_bytes ( self ) -> None :
+
+        if self.payload_bytes is None :
+            raise ValueError ( "Error: payload_bytes must be provided." )
+        payload_bytes = np.asarray ( self.payload_bytes ).ravel ()
+        if payload_bytes.size == 0 :
+            raise ValueError ( "Error: payload_bytes must not be empty." )
+        if payload_bytes.size > PAYLOAD_BYTES_LEN_THS :
+            raise ValueError ( f"ERROR: {payload_bytes.size=} exceeds {PAYLOAD_BYTES_LEN_THS=}!" )
+        if not np.issubdtype ( payload_bytes.dtype , np.integer ) :
+            if not np.all ( np.equal ( payload_bytes , np.floor ( payload_bytes ) ) ) :
+                raise ValueError ( "Error: payload_bytes must contain only integer values in range 0..255." )
+        if np.any ( payload_bytes < 0 ) or np.any ( payload_bytes > 255 ) :
+            raise ValueError ( "Error: payload_bytes values must be in range 0..255." )
+        self.payload_bytes = payload_bytes.astype ( np.uint8 , copy = False )
 
     def __repr__ ( self ) -> str :
         return ( f"{self.bytes=}, {self.len=}" )
@@ -812,9 +829,9 @@ class TxFrame :
     def __post_init__ ( self ) -> None :
         sync_sequence_bits : NDArray[ np.uint8 ] = BARKER13_BITS
         packet_len_bits : NDArray[ np.uint8 ] = dec2bits ( dec = self.tx_packet.len , num_bits = PACKET_LEN_LEN_BITS )
-        some_bytes : NDArray[ np.uint8 ] = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
-        crc32_bytes = create_crc32_bytes ( bytes = some_bytes )
-        self.header_bytes = np.concatenate ( [ some_bytes , crc32_bytes ] )
+        header_first_3_bytes : NDArray[ np.uint8 ] = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
+        crc32_bytes = create_crc32_bytes ( bytes = header_first_3_bytes )
+        self.header_bytes = np.concatenate ( [ header_first_3_bytes , crc32_bytes ] )
         bits : NDArray[ np.uint8 ] = bytes2bits ( bytes = np.concatenate ( [ self.header_bytes , self.tx_packet.bytes ] ) )
         self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits = bits )
 
@@ -845,19 +862,13 @@ class TxSamples :
 
     def add_frame ( self , payload_bytes : list | tuple | np.ndarray[ np.uint8 ] = None ) -> None :
 
-        if payload_bytes is not None and len ( payload_bytes ) > 0 :
-            payload_bytes_np_arr = np.asarray ( payload_bytes , dtype = np.uint8 ).ravel ()
-            if len ( payload_bytes_np_arr ) > MAX_ALLOWED_PAYLOAD_LEN_BYTES_LEN :
-                raise ValueError ( "Error: Payload exceeds maximum allowed length!" )
-        else :
-            raise ValueError ( "Error: payload_bytes must be provided." )
-        tx_frame = self.create_tx_frame ( payload_bytes_np_arr = payload_bytes_np_arr )
+        tx_frame = self.create_tx_frame ( payload_bytes = payload_bytes )
         self.frames.append ( tx_frame )
         self.create_samples4pluto_active_symbols_and_active_samples ()
 
-    def create_tx_frame ( self , payload_bytes_np_arr : NDArray[ np.uint8 ] ) -> TxFrame :
+    def create_tx_frame ( self , payload_bytes : NDArray[ np.uint8 ] ) -> TxFrame :
 
-        tx_frame_payload = TxPacket ( payload_bytes = payload_bytes_np_arr )
+        tx_frame_payload = TxPacket ( payload_bytes = payload_bytes )
         tx_frame = TxFrame ( tx_packet = tx_frame_payload )
         return tx_frame
 
