@@ -937,7 +937,7 @@ class TxSamples :
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.symbols_from_samples )
 
     def plot_samples ( self , title :str = "" , markers : bool = True ) -> None :
-        idxs : NDArray[ np.uint32 ] = np.array ( [ filters.FIRST_SYMBOL_OFFSET , filters.FIRST_SYMBOL_OFFSET + self.symbols_from_samples.size ] , dtype = np.uint32 ) if markers else None
+        idxs : NDArray[ np.uint32 ] = np.array ( [ self.first_symbol_idx , self.first_symbol_idx + self.symbols_from_samples.size ] , dtype = np.uint32 ) if markers else None
         plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_peaks = idxs )
 
     def plot_active_samples ( self , title :str = "" , markers : bool = True ) -> None :
@@ -947,7 +947,8 @@ class TxSamples :
         plot.complex_waveform_v0_1_6 ( self.symbols_from_samples , f"{title} {self.symbols_from_samples.size=}" )
 
     def plot_samples_4_pluto_spectrum ( self , title : str = "" ) -> None :
-        plot.spectrum_occupancy ( self.samples , 1024 , title )
+        samples_4_pluto : NDArray [ np.complex128 ] = sdr.scale_to_pluto_dac_v0_1_11 ( samples = self.samples , scale = 1.0 )
+        plot.spectrum_occupancy ( samples = samples_4_pluto , nperseg = 1024 , title = f"{title} {samples_4_pluto.size=}" )
 
     def __repr__ ( self ) -> str :
         return ( f"{ self.samples.size= }, { self.symbols_from_samples.size=}" )

@@ -2,7 +2,7 @@
 
 import numpy as np , os , socket , sys , time as t , tomllib
 from pathlib import Path
-from modules import ops_os , packet , payload_test_data as ptd , sdr
+from modules import filters, ops_os , packet , payload_test_data as ptd , sdr
 
 ################
 ### SETTINGS ###
@@ -10,7 +10,7 @@ packet_size : str = 'S' # Available modes: 'S', 'M' or "L"
 no_frames : int = 1 # Number of frames to transmit in one samples. WORKS ONLY FOR S and M frame sizes
 
 dbg = True
-plt = True
+plt = False
 wrt = True
 
 del_dst = True
@@ -61,3 +61,4 @@ if plt :
     tx_samples.plot_symbols_from_samples ( f"{script_filename} {timestamp_group}" )
     tx_samples.plot_samples ( f"{script_filename} {timestamp_group}" )
     tx_samples.plot_active_samples ( f"{script_filename} {timestamp_group}" )
+    tx_samples.plot_samples_4_pluto_spectrum ( f"{script_filename} {timestamp_group}" )
