@@ -10,8 +10,8 @@ packet_size : str = 'S' # Available modes: 'S', 'M' or "L"
 no_frames : int = 1 # Number of frames to transmit in one samples. WORKS ONLY FOR S and M frame sizes
 
 dbg = True
-plt = False
-wrt = True
+plt = True
+wrt = False
 
 del_dst = True
 ################
@@ -22,7 +22,7 @@ script_filename = os.path.basename ( __file__ )
 # Wczytaj plik TOML z konfiguracją
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
-dst_dir = "test001.tx_samples"
+dst_dir = "test001.tx_rx_samples"
 Path ( dst_dir ).mkdir ( parents = True , exist_ok = True )
 if del_dst :
     for file_path in Path ( dst_dir ).glob ( "*" ) :

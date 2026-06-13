@@ -1,0 +1,57 @@
+# Skrypt do testowanie klasy RxSamples, RxFrame i RxSymbol, które służą do odbierania i demodulowania próbek sygnału.
+
+from modules import ops_file, ops_os , packet, plot , sdr
+from pathlib import Path
+from numpy.typing import NDArray
+import numpy as np
+import os , sys , tomllib
+import socket
+import time as t
+import tomllib
+
+################
+### SETTINGS ###
+mode : str = 'test' # Available modes: 'training', 'test' or "inference"
+
+dbg = True
+plt = True
+wrt = False
+del_dir = False
+
+################
+################
+
+np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
+script_filename = os.path.basename ( __file__ )
+
+# Wczytaj plik TOML z konfiguracją
+with open ( "settings.toml" , "rb" ) as settings_file :
+    toml_settings = tomllib.load ( settings_file )
+
+filename = '_rx_samples_'
+dir_name = "test001.tx_rx_samples"
+Path ( dir_name ).mkdir ( parents = True , exist_ok = True )
+if del_dir :
+    for file_path in Path ( dir_name ).glob ( "*" ) :
+        if file_path.is_file () :
+            file_path.unlink ( missing_ok = True )
+
+if mode in ('training', 'test', 'inference') :
+    if dbg : print ( f"Running in {mode=}." )
+else :
+    raise ValueError ( f"Unknown {mode=}. Available modes: 'training', 'test' or 'inference'." )
+timestamp_groups = sorted ( { p.name.split ( "_rx_samples_" , 1 )[ 0 ] for p in Path ( dir_name ).glob("*_rx_samples_*.npy") } )
+rx_samples_files = sorted ( Path ( dir_name ).glob ( f"{timestamp_groups[0]}{filename}*.npy" ) )
+rx_samples = packet.RxSamples ()
+for samples_file in rx_samples_files :
+    rx_samples.rx ( filename_and_dirname = str ( samples_file ) , concatenate = True )
+plot.complex_waveform_v0_1_6 ( rx_samples.create_sync_sequence_samples ( clip_tail = True ) , f"Sync sequence samples (clipped) " )
+rx_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = True )
+
+
+
+
+if dbg : print ( f"\n{script_filename=} {rx_samples=}" )
+
+
+#if wrt : rx_samples.save_samples_2_npf ( file_name = f"{payload_udp.decode("utf-8")}_{filename}" , dir_name = dir_name , add_timestamp = True )

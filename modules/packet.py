@@ -23,22 +23,22 @@ def add2log_packet ( entry : str ) -> None :
     global log_packet
     log_packet += entry + "\n"
 
-def bits_2_byte_list ( bits : np.ndarray ) :
+def bits_2_byte_list ( bits : NDArray[ np.uint8 ] ) -> list [ int ] :
     """
     na bazie def bits_2_byte_list stwórz nową funkcję def bits_2_byte_list_v0_1_7 w której ostatnie brakujące do 8, bity będą uzupełniane zerami. Dzięki temu 
 
-    Zamienia tablicę bitów (0/1) na listę bajtów (List[int]),
+    Zamienia tablicę bitów (0/1) na listę bajtów (List[NDArray[ np.uint8 ]]),
     traktując każdy zestaw 8 bitów jako jeden bajt (big-endian w bajcie).
 
     Parametry:
     -----------
-    bits : np.ndarray
-        Tablica bitów typu np.int64 lub podobnego, długość podzielna przez 8.
+    bits : NDArray[ np.uint8 ]
+        Tablica bitów typu np.uint8, długość podzielna przez 8.
 
     Zwraca:
     --------
-    List[int]
-        Lista bajtów jako liczby całkowite z przedziału 0–255.
+    List[NDArray[ np.uint8 ]]
+        Lista bajtów jako tablice typu np.uint8 z przedziału 0–255.
     """
     if not isinstance(bits, np.ndarray):
         raise TypeError("Argument musi być typu numpy.ndarray.")
@@ -52,19 +52,19 @@ def bits_2_byte_list ( bits : np.ndarray ) :
         byte = 0
         for bit in bits[i:i+8]:
             byte = (byte << 1) | int(bit)
-        byte_list.append(byte)
+        byte_list.append(np.array([byte], dtype=np.uint8))
 
     return byte_list
 
-def bits_2_int ( bits : np.ndarray ) -> int:
+def bits_2_int ( bits : NDArray[ np.uint8 ] ) -> int:
     """
     Zamienia tablicę bitów (najstarszy bit pierwszy) na wartość dziesiętną,
     używając operacji bitowych.
 
     Parametry:
     -----------
-    bits : np.ndarray
-        Tablica bitów (0/1) typu np.int64 lub podobnego, maks. 16 bitów.
+    bits : NDArray[ np.uint8 ]
+        Tablica bitów (0/1) typu np.uint8, maks. 16 bitów.
 
     Zwraca:
     --------
@@ -80,16 +80,115 @@ def bits_2_int ( bits : np.ndarray ) -> int:
         result = (result << 1) | int ( bit )
     return result
 
+BITS_IN_BYTE = np.uint16 ( 8 )
 CONCATENATE_THS : int = 10 # Ograniczenie na liczbę próbek dołączanych do siebie w celu uniknięcia zbyt długich tablic w pamięci.
-BARKER13_BITS = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
-SYNC_SEQUENCE_LEN_BITS = len ( BARKER13_BITS )
-SYNC_SEQUENCE_LEN_SAMPLES = SYNC_SEQUENCE_LEN_BITS * modulation.SPS
-PACKET_LEN_LEN_BITS = 11
-CRC32_LEN_BITS = 32
-PAYLOAD_BYTES_LEN_THS = np.uint16 ( 1500 ) # MTU dla IP over ETHERNET
-PACKET_BYTE_LEN_BITS = 8
-FRAME_LEN_BITS = SYNC_SEQUENCE_LEN_BITS + PACKET_LEN_LEN_BITS + CRC32_LEN_BITS
-FRAME_LEN_SAMPLES = FRAME_LEN_BITS * modulation.SPS
+
+CORR_SEQ_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
+PADDING_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "PADDING_BITS" ] , dtype = np.uint8 )
+SYNC_SEQ_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "SYNC_SEQ_BITS" ] , dtype = np.uint8 )
+RADIO_PREAMBLE_BITS : NDArray[ np.uint8 ] = np.concatenate ( [ CORR_SEQ_BITS , PADDING_BITS , SYNC_SEQ_BITS ] , dtype = np.uint8 )
+RADIO_PREAMBLE_BITS_LEN : np.uint32 = np.uint32 ( len ( RADIO_PREAMBLE_BITS ) )
+RADIO_PREAMBLE_SAMPLES_LEN : np.uint32 = np.uint32 ( RADIO_PREAMBLE_BITS_LEN * modulation.SPS )
+
+RESERVE_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "RESERVE_BITS" ] , dtype = np.uint8 )
+RESERVE_BITS_LEN : np.uint32 = np.uint32 ( len ( RESERVE_BITS ) )
+RESERVE_BITS_SAMPLES_LEN : np.uint32 = np.uint32 ( RESERVE_BITS_LEN * modulation.SPS )
+
+PACKET_LEN_BITS_LEN : np.uint32 = np.uint32 ( 11 )
+CRC32_BYTES_LEN : np.uint32 = np.uint32 ( 4 )
+CRC32_BITS_LEN : np.uint32 = CRC32_BYTES_LEN * BITS_IN_BYTE
+PAYLOAD_BYTES_LEN_THS : np.uint32 = np.uint32 ( 1500 ) # MTU dla IP over ETHERNET
+FRAME_HEADER_LEN_BITS : np.uint32 = RESERVE_BITS_LEN + PACKET_LEN_BITS_LEN + CRC32_BITS_LEN
+FRAME_HEADER_LEN_SAMPLES : np.uint32 = FRAME_HEADER_LEN_BITS * modulation.SPS
+
+def detect_sync_sequence_peaks ( samples: NDArray[ np.complex64 ] , sync_sequence : NDArray[ np.complex64 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
+    
+    plt = False
+    if settings["log"]["verbose_1"] : ts = t.perf_counter_ns ()
+    min_peak_height_ratio = 0.8
+    
+    if deep :
+        peaks_real = np.array ( [] ).astype ( np.uint32 )
+        peaks_neg_real = np.array ( [] ).astype ( np.uint32 )
+        peaks_imag = np.array ( [] ).astype ( np.uint32 )
+        peaks_neg_imag = np.array ( [] ).astype ( np.uint32 )
+    peaks_all = np.array ( [] ).astype ( np.uint32 )
+    peaks = np.array ( [] ).astype ( np.uint32 )
+
+    if deep :
+        corr_real = np.abs ( np.correlate ( samples.real , sync_sequence.real , mode = "valid" ) )
+        corr_neg_real = np.abs ( np.correlate ( -samples.real , sync_sequence.real , mode = "valid" ) )
+        corr_imag = np.abs ( np.correlate ( samples.imag , sync_sequence.real , mode = "valid" ) )
+        corr_neg_imag = np.abs ( np.correlate ( -samples.imag , sync_sequence.real , mode = "valid" ) )
+    corr = np.abs ( np.correlate ( samples , np.conj ( sync_sequence ) , mode = "valid" ) )
+
+    ones = np.ones ( len ( sync_sequence ) )
+    sync_seq_norm = np.linalg.norm ( sync_sequence )
+    
+    if deep :
+        local_energy_real = np.correlate ( samples.real**2 , ones , mode = "valid" )
+        local_energy_neg_real = np.correlate ( ( -samples.real )**2 , ones , mode = "valid" )
+        local_energy_imag = np.correlate ( samples.imag**2 , ones , mode = "valid" )
+        local_energy_neg_imag = np.correlate ( ( -samples.imag )**2 , ones , mode = "valid" )
+    local_energy_abs = np.correlate ( np.abs ( samples )**2 , ones , mode = "valid" )
+    
+    if deep :
+        local_signal_real_norm = np.sqrt ( np.maximum ( local_energy_real , 1e-10 ) )
+        local_signal_neg_real_norm = np.sqrt ( np.maximum ( local_energy_neg_real , 1e-10 ) )
+        local_signal_imag_norm = np.sqrt ( np.maximum ( local_energy_imag , 1e-10 ) )
+        local_signal_neg_imag_norm = np.sqrt ( np.maximum ( local_energy_neg_imag , 1e-10 ) )
+    local_signal_norm = np.sqrt ( np.maximum ( local_energy_abs , 1e-10 ) )
+    
+    # Wynik znormalizowany (wartości teoretycznie od -1.0 do 1.0)
+    if deep :
+        corr_real_norm = corr_real / ( local_signal_real_norm * sync_seq_norm )
+        corr_neg_real_norm = corr_neg_real / ( local_signal_neg_real_norm * sync_seq_norm )
+        corr_imag_norm = corr_imag / ( local_signal_imag_norm * sync_seq_norm )
+        corr_neg_imag_norm = corr_neg_imag / ( local_signal_neg_imag_norm * sync_seq_norm )
+    corr_norm = corr / ( local_signal_norm * sync_seq_norm )
+
+    if deep :
+        max_peak_real_val = np.max ( corr_real_norm )
+        max_peak_neg_real_val = np.max ( corr_neg_real_norm )
+        max_peak_imag_val = np.max ( corr_imag_norm )
+        max_peak_neg_imag_val = np.max ( corr_neg_imag_norm )
+    max_peak_val = np.max ( corr_norm )
+
+    min_correlation_threshold = 0.8
+
+    if deep :
+        final_threshold_real = max ( min_correlation_threshold , max_peak_real_val * min_peak_height_ratio )
+        final_threshold_neg_real = max ( min_correlation_threshold , max_peak_neg_real_val * min_peak_height_ratio )
+        final_threshold_imag = max ( min_correlation_threshold , max_peak_imag_val * min_peak_height_ratio )
+        final_threshold_neg_imag = max ( min_correlation_threshold , max_peak_neg_imag_val * min_peak_height_ratio )
+
+        peaks_real , _ = find_peaks ( corr_real_norm , height = final_threshold_real , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_neg_real , _ = find_peaks ( corr_neg_real_norm , height = final_threshold_neg_real , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_imag , _ = find_peaks ( corr_imag_norm , height = final_threshold_imag , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_neg_imag , _ = find_peaks ( corr_neg_imag_norm , height = final_threshold_neg_imag , distance = len ( sync_sequence ) * modulation.SPS )
+        peaks_all = np.unique ( np.concatenate ( ( peaks_real , peaks_neg_real , peaks_imag , peaks_neg_imag ) ).astype ( np.uint32 ) )
+    final_threshold = max ( min_correlation_threshold , max_peak_val * min_peak_height_ratio )
+    peaks , _ = find_peaks ( corr_norm , height = final_threshold )
+
+    if plt:
+        if deep :
+            if peaks_real.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_real_norm , f"corr_real_norm {corr_real_norm.size=} {peaks_real.size=}" , False , peaks_real )
+            if peaks_neg_real.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_neg_real_norm , f"corr_neg_real_norm {corr_neg_real_norm.size=} {peaks_neg_real.size=}" , False , peaks_neg_real )
+            if peaks_imag.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_imag_norm , f"corr_imag_norm {corr_imag_norm.size=} {peaks_imag.size=}" , False , peaks_imag )
+            if peaks_neg_imag.size > 0 :
+                plot.real_waveform_v0_1_6 ( corr_neg_imag_norm , f"corr_neg_imag_norm {corr_neg_imag_norm.size=} {peaks_neg_imag.size=}" , False , peaks_neg_imag )
+            if peaks_all.size > 0 :
+                plot.complex_waveform_v0_1_6 ( samples , f"samples all {samples.size=} {peaks_all.size=}" , False , peaks_all )
+        if peaks.size > 0 :
+            plot.real_waveform_v0_1_6 ( corr_norm , f"corr_norm {corr_norm.size=} {peaks.size=}" , False , peaks )
+            plot.complex_waveform_v0_1_6 ( samples , f"samples {samples.size=} {peaks.size=}" , False , peaks )
+
+    peaks_all = np.unique ( np.concatenate ( ( peaks_all , peaks ) ).astype ( np.uint32 ) ) # Nie łączyłem tego wcześniej, bo chciałem zobaczyć co dają różne metody korelacji bez abs i jak to się ma w porównaniu do abs.
+    if settings["log"]["verbose_1"] : print(f"detect_sync_sequence_peaks {peaks_all.size=} w czasie [ms]: {( t.perf_counter_ns () - ts ) / 1e6:.1f} ")
+    return peaks_all
 
 def detect_sync_sequence_peaks_v0_1_16 ( samples: NDArray[ np.complex128 ] , sync_sequence : NDArray[ np.complex128 ] , deep : bool = False ) -> NDArray[ np.uint32 ] :
 
@@ -599,22 +698,21 @@ class RxSamples :
     CONCATENATE_THS : int = 10
 
     def __post_init__ ( self ) -> None :
-        if self.payload_bytes is not None :
-            self.add_frame ( payload_bytes = self.payload_bytes )
+        pass
 
-    def rx ( self , sdr_ctx : Pluto  | None = None , file_name : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex64 ] :
+    def rx ( self , sdr_ctx : Pluto  | None = None , filename_and_dirname : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex64 ] :
 
         if sdr_ctx is not None :
             samples = sdr_ctx.rx ()
-        elif file_name is not None :
-            if file_name.endswith('.npy'):
-                samples = ops_file.open_samples_from_npf ( file_name )
-            elif file_name.endswith('.csv'):
-                samples = ops_file.open_csv_and_load_np_complex ( file_name )
+        elif filename_and_dirname is not None :
+            if filename_and_dirname.endswith('.npy'):
+                samples = self.open_and_load_npf ( filename_and_dirname = filename_and_dirname )
+            elif filename_and_dirname.endswith('.csv'):
+                samples = ops_file.open_csv_and_load_np_complex ( filename = filename_and_dirname )
             else:
-                raise ValueError(f"Error: unsupported file format for {file_name}! Supported formats: .npy, .csv")
+                raise ValueError(f"Error: unsupported file format for {filename_and_dirname}! Supported formats: .npy, .csv")
         else :
-            raise ValueError ( "Either sdr_ctx or file_name must be provided." )
+            raise ValueError ( "Either sdr_ctx or filename_and_dirname must be provided." )
         if concatenate :
             if self.concatenates < self.CONCATENATE_THS :
                 self.concatenates += 1
@@ -622,7 +720,8 @@ class RxSamples :
             else :
                 raise MemoryError ( f"{self.concatenates=}. To prevent modem performance issues, further concatenation is blocked." )
         else :
-            self.samples_raw = samples.astype ( np.complex64 )
+            self.samples_raw = samples
+        print ( f"{samples.dtype=}" )
 
     def detect_frames ( self , deep : bool = False , samples_filtered : bool = True , correct_samples : bool = False , add_peak_at_0 : bool = False ) -> None :
         
@@ -630,13 +729,13 @@ class RxSamples :
             raise ValueError ( "Cannot apply correction without filtering. You must set filter=True to apply correction!" )
         samples = filters.apply_rrc_rx_convolve_v0_1_18 ( self.samples_raw ).copy () if samples_filtered else self.samples_raw.copy ()
         if correct_samples :
-            samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
-
-        self.sync_sequence_peaks = detect_sync_sequence_peaks_v0_1_15 ( samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( clipped = True ) , deep = deep )
+            samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( samples , self.create_radio_preamble_and_sync_sequence_samples ( clip_tail = True ) ) )
+        self.sync_sequence_peaks = detect_sync_sequence_peaks ( samples , self.create_corr_seq_samples ( clip_tail = True ) , deep = deep )
         if add_peak_at_0 : self.sync_sequence_peaks = np.insert ( self.sync_sequence_peaks , 0 , 0 )
         previous_processed_idx : np.uint32 = 0
         for idx in self.sync_sequence_peaks :
             if idx > previous_processed_idx or idx == 0 : # idx == 0 jest wtedy kiedy chcemy dodać szczyt na 0, mimo że nie jest on wykryty w detekcji pików, ale chcemy żeby funkcja detect_frames() działała poprawnie nawet wtedy kiedy detekcja pików nie wykryje żadnego piku, a mamy leftoversy z poprzedniego wywołania, które zaczynają się od początku sampli.
+                idx = self.leap_sync_sequence ( samples , idx )
                 frame = RxFrame ( samples_filtered = samples [ idx + filters.FIRST_SYMBOL_OFFSET : ] , first_symbol_abs_idx = idx + filters.FIRST_SYMBOL_OFFSET )
                 if frame.has_header :
                     self.frames.append ( frame )
@@ -651,6 +750,23 @@ class RxSamples :
                             previous_processed_idx = frame.frame_end_abs_idx
                 else :
                     previous_processed_idx = idx
+
+    def leap_sync_sequence ( self , samples : NDArray [ np.complex64 ] , idx : np.uint32 ) -> np.uint32 :
+        # Wycinanie preambuły i sekwencji synchronizacyjnej z sampli, aby pozostały tylko próbki pakietu.
+        # Preambuła i sekwencja synchronizacyjna są potrzebne tylko do detekcji ramki, a nie do dalszego przetwarzania pakietu.
+        # Dlatego po wykryciu ramki wycinamy je z sampli, aby pozostały tylko próbki pakietu.
+        # Dzięki temu funkcja detect_frames() może wykrywać kolejne ramki w tym samym strumieniu danych, a nie tylko pierwszą ramkę
+        # oraz mogą z niej korzystać inne funkcje, które np. przekazują próbki tx_active_samples bez preambuły ani sekwencji synchronizacyjnej.
+        preamble_len_samples = np.uint32 ( SYNC_SEQUENCE_SAMPLES_LEN )
+        sync_sequence_len_samples = np.uint32 ( SYNC_SEQUENCE_SAMPLES_LEN * self.SPS )
+        idx += preamble_len_samples + sync_sequence_len_samples
+        samples_components = [ ( samples.real , "real" ) , ( samples.imag , "imag" ) , ( -samples.real , "-real" ) , ( -samples.imag , "-imag" ) ]
+        for samples_component , samples_name in samples_components :
+            radio_preamble_and_sync_sequence_symbols = samples_component [ idx + filters.MIDDLE_SYMBOL_OFFSET : idx + filters.MIDDLE_SYMBOL_OFFSET + RADIO_PREAMBLE_SAMPLES_LEN + SYNC_SEQUENCE_SAMPLES_LEN : self.SPS ]
+            radio_preamble_and_sync_sequence_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( radio_preamble_and_sync_sequence_symbols )
+            if np.array_equal ( radio_preamble_and_sync_sequence_bits , BARKER13_BITS ) :
+                pass
+        return idx
 
     def aggregate_frame_and_packet_idxs ( self ) -> NDArray [ np.uint32 ] :
 
@@ -668,7 +784,7 @@ class RxSamples :
         if self.frames is not None and len ( self.frames ) > 0 :
             self.tx_symbols = self.open_and_load_npf ( filename_and_dirname = f"{src_dir.name}/{timestamp_group}_tx_{symbols_src}.npy" )
             tx_samples = type ( self ) ()
-            tx_samples.rx ( file_name = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
+            tx_samples.rx ( filename_and_dirname = str ( f"{src_dir.name}/{timestamp_group}_tx_samples.npy" ) )
             tx_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = True )
             for rx_frame in self.frames :
                 for tx_frame in tx_samples.frames :
@@ -717,7 +833,13 @@ class RxSamples :
         self.X_train_samples = self.X_train_samples [ clip1 : clip2 ].copy ()
         self.y_train_tensor = self.y_train_tensor[ clip1 : clip2 ].clone ()
 
-    def open_and_load_npf ( self , filename_and_dirname : str ) -> NDArray[ np.complex128 ] :
+    def create_corr_seq_samples ( self , clip_tail : bool = False ) -> NDArray[ np.complex64 ] :
+
+        corr_seq_bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( CORR_SEQ_BITS )
+        corr_seq_samples = filters.apply_tx_rrc_filter_v0_1_3 ( corr_seq_bpsk_symbols , upsample = True )
+        return corr_seq_samples[ : - filters.LAST_SYMBOL_OFFSET - 1 ] if clip_tail else corr_seq_samples
+
+    def open_and_load_npf ( self , filename_and_dirname : str ) -> NDArray[ np.complex64 ] :
 
         return ops_file.open_samples_from_npf ( filename_and_dirname )
     
@@ -785,12 +907,12 @@ class TxPacket :
     
     # Pola uzupełnianie w __post_init__
     crc32_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    len : np.uint16 = field ( init = False )
+    len : np.uint32 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         self.check_payload_bytes ()
         self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
-        self.len = np.uint16 ( self.payload_bytes.size + self.crc32_bytes.size )  # payload + crc32
+        self.len = np.uint32 ( self.payload_bytes.size + self.crc32_bytes.size )  # payload + crc32
         pass
 
     def check_payload_bytes ( self ) -> None :
@@ -810,7 +932,7 @@ class TxPacket :
         self.payload_bytes = payload_bytes.astype ( np.uint8 , copy = False )
 
     def __repr__ ( self ) -> str :
-        return ( f"{self.bytes=}, {self.len=}" )
+        return ( f"{self.payload_bytes.size=}, {self.payload_bytes=}, {self.crc32_bytes=}, {self.len=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxFrame :
@@ -819,28 +941,23 @@ class TxFrame :
         
     # Pola uzupełnianie w __post_init__
     header_bytes : NDArray[ np.uint8 ] = field ( init = False )
-    #bpsk_symbols : NDArray[ np.complex128 ] = field ( init = False )
 
     def __post_init__ ( self ) -> None :
         sync_sequence_bits : NDArray[ np.uint8 ] = BARKER13_BITS
-        packet_len_bits : NDArray[ np.uint8 ] = dec2bits ( dec = self.tx_packet.len , num_bits = PACKET_LEN_LEN_BITS )
-        header_first_3_bytes : NDArray[ np.uint8 ] = pad_bits2bytes ( np.concatenate ( [ sync_sequence_bits , packet_len_bits ] ) )
-        crc32_bytes = create_crc32_bytes ( bytes = header_first_3_bytes )
-        self.header_bytes = np.concatenate ( [ header_first_3_bytes , crc32_bytes ] )
-        # Jak się okaże, że się obejdzie bez tego to usunąć, bo symbols to jest dublowanie danych z header_bytes, tx_packet.payload_bytes i tx_packet.crc32_bytes, a to jest niepotrzebne zużycie pamięci, bo można zawsze wygenerować symbols z header_bytes i tx_packet.bytes, więc nie ma potrzeby przechowywania ich w TxFrame, a jeśli będzie potrzeba to można je wygenerować na żądanie z header_bytes i tx_packet.
-        #bits : NDArray[ np.uint8 ] = bytes2bits ( bytes = np.concatenate ( [ self.header_bytes , self.tx_packet.bytes ] ) )
-        #self.bpsk_symbols = modulation.create_bpsk_symbols_v0_1_6_fastest_short ( bits = bits )
+        packet_len_bits : NDArray[ np.uint8 ] = dec2bits ( dec = self.tx_packet.len , num_bits = PACKET_LEN_BITS_LEN )
+        reserve_and_packet_len_bytes : NDArray[ np.uint8 ] = pad_bits2bytes ( np.concatenate ( [ RESERVE_BITS , packet_len_bits ] ) )
+        crc32_bytes = create_crc32_bytes ( bytes = reserve_and_packet_len_bytes )
+        self.header_bytes = np.concatenate ( [ reserve_and_packet_len_bytes , crc32_bytes ] )
 
     def __repr__ ( self ) -> str :
         return (
-            f"{self.bpsk_symbols.size=}" )
+            f"{self.header_bytes.size=}, {self.header_bytes=}, {self.tx_packet=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxSamples :
 
     payload_bytes : list | tuple | np.ndarray[ np.uint8 ] | None = None
 
-    radio_preamble_bytes : NDArray[ np.uint8 ] = field ( default_factory = lambda : np.array ( settings[ "RADIO_PREAMBLE_BYTES" ] , dtype = np.uint8 ) , init = False )
     samples : NDArray[ np.complex64 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex64 ) , init = False )
     first_symbol_idx : np.uint32 = filters.FIRST_SYMBOL_OFFSET
     # symbols_from_samples to symbole wzięte z próbkowania samples w miejscach gdzie powinny być aktywne symbole, ale nie z symboli ramek.
@@ -865,15 +982,15 @@ class TxSamples :
 
         frames_bytes : NDArray [ np.uint8 ] = np.concatenate ( [ np.concatenate ( [ frame.header_bytes , frame.tx_packet.payload_bytes , frame.tx_packet.crc32_bytes ] ) for frame in self.frames ] ).astype ( np.uint8 , copy = False )
         frames_bits : NDArray [ np.uint8 ] = bytes2bits ( frames_bytes )
-        frames_bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( frames_bits ).astype ( np.complex64 , copy = False )
-        radio_preamble_bits : NDArray [ np.uint8 ] = bytes2bits ( self.radio_preamble_bytes )
-        radio_preamble_bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( radio_preamble_bits ).astype ( np.complex64 , copy = False )
+        frames_bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( frames_bits )
+        sync_sequence_bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( SYNC_SEQUENCE_BITS )
 
-        symbols = np.concatenate ( [ radio_preamble_bpsk_symbols , frames_bpsk_symbols ] ).astype ( np.complex64 , copy = False )
-        self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( symbols ) ).astype ( np.complex64 , copy = False )
+        bpsk_symbols = np.concatenate ( [ sync_sequence_bpsk_symbols , frames_bpsk_symbols ] ).astype ( np.complex64 , copy = False )
+        self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( bpsk_symbols ) ).astype ( np.complex64 , copy = False )
         
-        last_frame_end_idx = self.first_symbol_idx + symbols.size * self.SPS
-        active_samples = self.samples.real[ self.first_symbol_idx : last_frame_end_idx ]
+        last_frame_end_idx = self.first_symbol_idx + bpsk_symbols.size * self.SPS
+        print ( f"{self.first_symbol_idx=}, {last_frame_end_idx=}, {filters.LAST_SYMBOL_OFFSET=}, {(self.samples.size-filters.LAST_SYMBOL_OFFSET)=}, {self.samples.size=}" )
+        active_samples = self.samples[ self.first_symbol_idx : last_frame_end_idx ]
         self.symbols_from_samples = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
 
     def offsets_accuracy_test ( self ) -> None :

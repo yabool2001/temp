@@ -86,7 +86,7 @@ for timestamp_group in timestamp_groups :
 	
 	# Mała pętla agregująca wszystkie sample z plików należących do tej samej grupy (czyli mających ten sam timestamp w nazwie) do obiektu rx_samples.
 	for samples_file in samples_files :
-		rx_samples.rx ( file_name = str ( samples_file ) , concatenate = True )
+		rx_samples.rx ( filename_and_dirname = str ( samples_file ) , concatenate = True )
 		if dbg : print ( f"{rx_samples.concatenates=}" )
 	rx_samples.detect_frames ( deep = False , samples_filtered = True , correct_samples = False , add_peak_at_0 = False )
 	#if plt : rx_samples.plot_samples ( title = f"{script_filename} {timestamp_group} concatenated rx_samples " , samples_filtered = False , mark_samples = True )

@@ -225,19 +225,19 @@ def real_waveform ( signal_real : NDArray[ np.float64 ] , title : str = "Sygnał
     )
     fig.show()
 
-def real_waveform_v0_1_6(signal_real: NDArray[np.float64], title: str = "Sygnał rzeczywisty", marker_squares: bool = False, marker_peaks: Optional[NDArray[np.int_]] = None) -> None:
+def real_waveform_v0_1_6 ( signal_real : NDArray[ np.float32 ] | NDArray[ np.float64 ] , title: str = "Signal.real" , marker_squares: bool = False , marker_peaks: Optional[ NDArray[ np.uint32 ] ] = None ) -> None :
     """
     Rozszerzona wersja funkcji real_waveform z dodatkowym parametrem marker_peaks.
     Jeśli marker_peaks zostanie przekazany (np.ndarray z indeksami), peaks zostaną zaznaczone trójkątami na wykresie.
 
     Parametry:
-    - signal_real: NDArray[np.float64] (rzeczywisty)
+    - signal_real: NDArray[np.float32] | NDArray[np.float64] (rzeczywisty)
     - title: tytuł wykresu
     - marker_squares: bool — czy rysować znaczniki (kwadraty) na wszystkich próbkach
     - marker_peaks: Optional[NDArray[np.int_]] — indeksy próbek, gdzie zaznaczyć trójkąty (rozmiar taki sam jak marker_squares)
     """
     if np.iscomplexobj(signal_real):
-        raise ValueError("Wejściowy sygnał musi być rzeczywisty NDArray[np.float64]")
+        raise ValueError("Wejściowy sygnał musi być rzeczywisty NDArray[np.float32] lub NDArray[np.float64]")
 
     df = pd.DataFrame({"index": np.arange(len(signal_real)), "value": signal_real})
 

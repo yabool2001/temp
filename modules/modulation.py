@@ -2,13 +2,12 @@ import numpy as np , tomllib
 
 from numpy.lib.stride_tricks import sliding_window_view
 from numpy.typing import NDArray
-from modules import ops_packet , filters
+from modules import filters
 
 with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
 SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
-
 
 def cw ( buffer_size , scale: str ) -> np.complex128 :
 
@@ -20,7 +19,7 @@ def cw ( buffer_size , scale: str ) -> np.complex128 :
 def create_bpsk_symbols_v0_1_6_fastest_short ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     return np.require ( bits , np.uint8 , ['C'] ) * 2.0 - 1.0 + 0j
 
-def bpsk_symbols_2_bits_v0_1_7 ( symbols : NDArray[ np.float64 ] ) -> NDArray[ np.uint8 ] :
+def bpsk_symbols_2_bits_v0_1_7 ( symbols : NDArray[ np.float32 ] | NDArray[ np.float64 ] ) -> NDArray[ np.uint8 ] :
     """
     Odwrotna funkcja do create_bpsk_symbols_v0_1_6_fastest_short.
     Mapuje symbole BPSK (-1+0j -> 0, 1+0j -> 1) na bity.
@@ -58,16 +57,6 @@ def bits_2_bpsk_symbols ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex64 
 def create_bpsk_symbols_v0_1_6_fastest ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
     bits = np.require ( bits , dtype = np.uint8 , requirements = [ 'C' ] )  # gwarantuje uint8 + contiguous
     return ( bits * 2.0 - 1.0 ).astype ( np.complex128 )
-def create_bpsk_symbols_v0_1_6 ( bits : NDArray[ np.uint8 ] ) -> NDArray[ np.complex128 ] :
-    # Map 0 -> -1, 1 -> +1
-    return np.where ( bits == 1 , 1.0 + 0j , -1.0 + 0j ).astype ( np.complex128 )
-def create_bpsk_symbols_v0_1_5 ( bits ) -> np.complex128 :
-    # Map 0 -> -1, 1 -> +1
-    symbols_real = np.where ( bits == 1 , 1.0 , -1.0 ).astype ( np.float64 )
-    # return complex symbols (Q=0)
-    return ( symbols_real + 0j ).astype( np.complex128 )
-def create_bpsk_symbols ( bits ) :
-    return np.array ( [ 1.0 if bit else -1.0 for bit in bits ] , dtype = np.int64 )
 
 def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
     """
@@ -78,7 +67,7 @@ def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
     return upsampled
 
 def generate_barker13_bpsk_samples_v0_1_7 ( clipped = False ) -> NDArray[ np.complex128 ] :
-    symbols = create_bpsk_symbols ( ops_packet.BARKER13_BITS )
+    symbols = bits_2_bpsk_symbols ( BARKER13_BITS )
     samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
     if clipped :
         tail_length = ( filters.SPAN - 1 ) // 2 * SPS  # Oblicz ogon filtra RRC
