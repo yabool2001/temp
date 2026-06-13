@@ -14,7 +14,7 @@ import tomllib
 mode : str = 'test' # Available modes: 'training', 'test' or "inference"
 
 dbg = True
-plt = True
+plt = False
 wrt = False
 del_dir = False
 
@@ -45,7 +45,8 @@ rx_samples_files = sorted ( Path ( dir_name ).glob ( f"{timestamp_groups[0]}{fil
 rx_samples = packet.RxSamples ()
 for samples_file in rx_samples_files :
     rx_samples.rx ( filename_and_dirname = str ( samples_file ) , concatenate = True )
-plot.complex_waveform_v0_1_6 ( rx_samples.create_sync_sequence_samples ( clip_tail = True ) , f"Sync sequence samples (clipped) " )
+if plt : plot.complex_waveform_v0_1_6 ( rx_samples.create_corr_seq_samples ( clip_tail = True ) , f"Sync sequence samples (clipped) " )
+if plt : rx_samples.plot_samples ( title = f"{script_filename}" , mark_samples = True )
 rx_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = True )
 
 

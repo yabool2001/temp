@@ -168,6 +168,7 @@ try :
                 tx_samples.plot_active_samples ( f"{script_filename} {timestamp_group}" )
             udp_sock.sendto ( timestamp_group.encode ( "utf-8" ) , udp_sender_addr ) # Transmisja timestamp_groupu do skryptu test125, który go użyje do nazwania pliku z odebranymi próbkami
             if dbg : print ( f"Sent {timestamp_group=} to { udp_sender_addr[ 0 ] }:{ udp_sender_addr[ 1 ] }" )
+            if dbg : print ( f"{tx_samples.frames[0]=}" )
 
         t.sleep ( 0.05 )  # odciążenie CPU
 
