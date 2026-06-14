@@ -11,6 +11,7 @@ plt : bool = True
 obj : bool = True # obj=object czy chcesz to robic za pomoca klas w modules/packet.py czy tylko funkcji w modules/ops_file.py
 
 dir_name = Path ( "np.test" )
+dir_name = Path ( "test001.tx_rx_samples" )
 
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 

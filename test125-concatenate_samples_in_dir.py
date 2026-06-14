@@ -15,16 +15,17 @@ with open ( "settings.toml" , "rb" ) as settings_file :
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
-plt : bool = False
-wrt : bool = True
+plt : bool = True
+wrt : bool = False
 dbg : bool = True
 del_files : bool = False
 
 
 samples_dir = Path ( "np.tensors" )
+samples_dir = Path ( "test001.tx_rx_samples" )
 
 # Znajdź unikalne grupy plików na podstawie timestampu w nazwie dla plików *_rx_samples_*.npy które nie były jeszcze obrobione!!!
-timestamp_groups = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ] for p in Path("np.tensors").glob("*_rx_samples_*.npy") } )
+timestamp_groups = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ] for p in samples_dir.glob("*_rx_samples_*.npy") } )
 
 for timestamp_group in timestamp_groups :
 	samples_files = sorted ( samples_dir.glob ( f"{timestamp_group}_rx_samples_*.npy" ) )
@@ -32,11 +33,11 @@ for timestamp_group in timestamp_groups :
 	if dbg : print ( f"\n{timestamp_group=} , {samples_files=} , {timestamps=}" )
 	if not samples_files :
 		raise FileNotFoundError ( f"Brak plikow {timestamp_group}_rx_samples_*.npy w katalogu {samples_dir}" )
-	rx_pluto_samples = packet.RxSamples_v0_1_18 ()
+	rx_pluto_samples = packet.RxSamples ()
 	for samples_file in samples_files :
-		rx_pluto_samples.rx ( samples_filename = str ( samples_file ) , concatenate = True )
-	if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} raw samples {rx_pluto_samples.samples.size=}" )
-	rx_pluto_samples.detect_frames ( deep = False , filter = True , correct = True )
+		rx_pluto_samples.rx ( filename_and_dirname = str ( samples_file ) , concatenate = True )
+	rx_pluto_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False )
+	if plt : rx_pluto_samples.plot_samples ( title = f"{script_filename} raw samples" )
 	frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
 	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
 	if clp :
