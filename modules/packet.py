@@ -848,6 +848,7 @@ class RxSamples :
         dirname_and_filename = f"{dir_name}/{filename}"
         ops_file.save_complex_samples_2_npf ( dirname_and_filename = dirname_and_filename , samples = self.X_train_samples )
         filename = ops_file.add_timestamp_2_filename ( f"{timestamp_group}_y_train_tensor.pt" ) if add_timestamp else f"{timestamp_group}_y_train_tensor.pt"
+        dirname_and_filename = f"{dir_name}/{filename}"
         torch.save ( obj = self.y_train_tensor , f = dirname_and_filename )
 
     def plot_samples ( self , title : str = "" , samples_filtered : bool = False , mark_samples : bool = True ) -> None :

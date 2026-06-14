@@ -15,8 +15,8 @@ MODE : str = 'test' # Available modes: 'training', 'test' or "inference"
 SYMBOLS_SRC : str = "active_samples"
 
 dbg = True
-plt = True
-wrt = False
+plt = False
+wrt = True
 del_dir = False
 
 ################
