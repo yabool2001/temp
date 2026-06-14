@@ -23,7 +23,7 @@ MIDDLE_SYMBOL_OFFSET = np.uint32 ( SPAN * SPS // 2 ) # To jest wartość 22 dla 
 #  packet.TxSamples.create_samples_and_symbols_from_samples ()
 #  packet.RxSamples.detect_frames () gdzie jest przekazywany do konstruktora klasy RxFrame jako frame_first_sample_idx
 FIRST_SYMBOL_OFFSET = np.uint32 ( MIDDLE_SYMBOL_OFFSET - FIRST_TO_MIDDLE_SYMBOL_OFFSET )
-LAST_SYMBOL_OFFSET = int ( ( SPAN - 1 ) // 2 * SPS ) # Powinien być int bo jest odejmowany. Oblicz ogon filtra RRC, to jest pierwszy sample, który nie jest już symbolem bpsk, ale tylko ogonem filtra RRC.
+LAST_SYMBOL_OFFSET = int ( ( SPAN - 1 ) // 2 * SPS + 1 ) # Powinien być int bo jest odejmowany. Oblicz ogon filtra RRC, to jest pierwszy sample, który nie jest już symbolem bpsk, ale tylko ogonem filtra RRC.
 
 def rrc_filter_v1 ( beta , sps , num_taps ):
     """

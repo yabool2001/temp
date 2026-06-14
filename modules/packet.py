@@ -84,8 +84,11 @@ BITS_IN_BYTE = np.uint32 ( 8 )
 CONCATENATE_THS : int = 10 # Ograniczenie na liczbę próbek dołączanych do siebie w celu uniknięcia zbyt długich tablic w pamięci.
 
 CORR_SEQ_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
+CORR_SEQ_SAMPLES_LEN : np.uint32 = np.uint32 ( len ( CORR_SEQ_BITS ) * modulation.SPS )
 PADDING_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "PADDING_BITS" ] , dtype = np.uint8 )
+PADDING_SAMPLES_LEN : np.uint32 = np.uint32 ( len ( PADDING_BITS ) * modulation.SPS )
 SYNC_SEQ_BITS : NDArray[ np.uint8 ] = np.array ( settings[ "SYNC_SEQ_BITS" ] , dtype = np.uint8 )
+SYNC_SEQ_SAMPLES_LEN : np.uint32 = np.uint32 ( len ( SYNC_SEQ_BITS ) * modulation.SPS )
 RADIO_PREAMBLE_BITS : NDArray[ np.uint8 ] = np.concatenate ( [ CORR_SEQ_BITS , PADDING_BITS , SYNC_SEQ_BITS ] , dtype = np.uint8 )
 RADIO_PREAMBLE_BITS_LEN : np.uint32 = np.uint32 ( len ( RADIO_PREAMBLE_BITS ) )
 RADIO_PREAMBLE_SAMPLES_LEN : np.uint32 = np.uint32 ( RADIO_PREAMBLE_BITS_LEN * modulation.SPS )
@@ -834,7 +837,7 @@ class RxSamples :
 
         corr_seq_bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( CORR_SEQ_BITS )
         corr_seq_samples = filters.apply_tx_rrc_filter_v0_1_3 ( corr_seq_bpsk_symbols , upsample = True )
-        return corr_seq_samples[ : - filters.LAST_SYMBOL_OFFSET - 1 ] if clip_tail else corr_seq_samples
+        return corr_seq_samples[ : - filters.LAST_SYMBOL_OFFSET ] if clip_tail else corr_seq_samples
 
     def open_and_load_npf ( self , filename_and_dirname : str ) -> NDArray[ np.complex64 ] :
 
@@ -907,6 +910,7 @@ class TxPacket :
     len : np.uint32 = field ( init = False )
 
     def __post_init__ ( self ) -> None :
+
         self.check_payload_bytes ()
         self.crc32_bytes = create_crc32_bytes ( self.payload_bytes )
         self.len = np.uint32 ( self.payload_bytes.size + self.crc32_bytes.size )  # payload + crc32
@@ -961,6 +965,7 @@ class TxSamples :
     # Dlatego te symbole mogą się różnić od tych z ramek, bo są wzięte z próbkowania.
     symbols_from_samples : NDArray[ np.complex64 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.complex64 ) , init = False )
     frames : list[ TxFrame ] = field ( init = False , default_factory = list )
+    idxs : NDArray[ np.uint32 ] = field ( default_factory = lambda : np.array ( [] , dtype = np.uint32 ) , init = False )
     SPS = modulation.SPS
 
     def __post_init__ ( self ) -> None :
@@ -977,15 +982,33 @@ class TxSamples :
 
     def create_samples_and_symbols_from_samples ( self ) -> None :
 
-        frames_bytes : NDArray [ np.uint8 ] = np.concatenate ( [ np.concatenate ( [ frame.header_bytes , frame.tx_packet.payload_bytes , frame.tx_packet.crc32_bytes ] ) for frame in self.frames ] ).astype ( np.uint8 , copy = False )
-        frames_bits : NDArray [ np.uint8 ] = bytes2bits ( frames_bytes )
-        bpsk_symbols : NDArray [ np.complex64 ] = modulation.bits_2_bpsk_symbols ( np.concatenate ( [ RADIO_PREAMBLE_BITS, frames_bits ] ) )
+        frames_bytes : NDArray[ np.uint8 ] = np.concatenate ( [ np.concatenate ( [ frame.header_bytes , frame.tx_packet.payload_bytes , frame.tx_packet.crc32_bytes ] ) for frame in self.frames ] ).astype ( np.uint8 , copy = False )
+        frames_bits : NDArray[ np.uint8 ] = bytes2bits ( frames_bytes )
+        bpsk_symbols : NDArray[ np.complex64 ] = modulation.bits_2_bpsk_symbols ( np.concatenate ( [ RADIO_PREAMBLE_BITS, frames_bits ] ) )
         self.samples = np.ravel ( filters.apply_tx_rrc_filter_v0_1_6 ( bpsk_symbols ) ).astype ( np.complex64 , copy = False )
         
-        last_frame_end_idx = self.first_symbol_idx + bpsk_symbols.size * self.SPS
-        print ( f"{self.first_symbol_idx=}, {last_frame_end_idx=}, {filters.LAST_SYMBOL_OFFSET=}, {(self.samples.size-filters.LAST_SYMBOL_OFFSET)=}, {self.samples.size=}" )
-        active_samples = self.samples[ self.first_symbol_idx : last_frame_end_idx ]
+        tail_first_sample_idx = self.first_symbol_idx + bpsk_symbols.size * self.SPS
+        active_samples = self.samples[ self.first_symbol_idx : tail_first_sample_idx ]
         self.symbols_from_samples = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
+        self.create_idxs ()
+
+    def create_idxs ( self ) -> NDArray[ np.uint32 ] :
+        idxs = [ self.first_symbol_idx , # Pierwszy sample CORR_SEQ
+                 self.first_symbol_idx + CORR_SEQ_SAMPLES_LEN , # Pierwszy sample PADDING
+                 self.first_symbol_idx + CORR_SEQ_SAMPLES_LEN + PADDING_SAMPLES_LEN ] # Pierwszy sample SYNC_SEQ
+        frame_first_symbol_idx : np.uint32 = self.first_symbol_idx + CORR_SEQ_SAMPLES_LEN + PADDING_SAMPLES_LEN + SYNC_SEQ_SAMPLES_LEN # Pierwszy sample RESERVE pierwszej ramki
+        for frame in self.frames :
+            payload_samples_len : np.uint32 = np.uint32 ( frame.tx_packet.payload_bytes.size * BITS_IN_BYTE * self.SPS )
+            payload_first_symbol_idx : np.uint32 = frame_first_symbol_idx + FRAME_HEADER_SAMPLES_LEN
+            idxs.extend ( [ frame_first_symbol_idx , # Pierwszy sample RESERVE
+                            frame_first_symbol_idx + RESERVE_SAMPLES_LEN , # Pierwszy sample PACKET_LEN
+                            frame_first_symbol_idx + RESERVE_SAMPLES_LEN + PACKET_LEN_SAMPLES_LEN , # Pierwszy sample CRC32 nagłówka ramki
+                            payload_first_symbol_idx , # Pierwszy sample payload pakietu
+                            payload_first_symbol_idx + payload_samples_len ] ) # Pierwszy sample CRC32 pakietu
+            frame_first_symbol_idx += FRAME_HEADER_SAMPLES_LEN + payload_samples_len + CRC32_SAMPLES_LEN # Pierwszy sample RESERVE następnej ramki
+        idxs.extend ( [ frame_first_symbol_idx ] )
+        self.idxs = np.array ( idxs , dtype = np.uint32 )
+        return self.idxs
 
     def offsets_accuracy_test ( self ) -> None :
         '''
@@ -1001,7 +1024,7 @@ class TxSamples :
             plot.complex_waveform_v0_1_6 ( samples , f"{script_filename} offset_accuracy_test {samples.size=}" )
             plot.complex_waveform_v0_1_6 ( active_symbols , f"{script_filename} offset_accuracy_test {active_symbols.size=}" )
             for i in range ( 4 ) :
-                first_active_symbol_idx = np.uint32 ( filters.FIRST_SYMBOL_OFFSET + i -1 )
+                first_active_symbol_idx = np.uint32 ( self.first_symbol_idx + i -1 )
                 last_frame_end_idx = first_active_symbol_idx + frames_bpsk_symbols.size * self.SPS
                 active_samples = samples.real[ first_active_symbol_idx : last_frame_end_idx ]
                 active_samples = np.where ( active_samples < 0.0 , np.complex64 ( -1.0 + 0j ) , np.complex64 ( 1.0 + 0j ) )
@@ -1043,8 +1066,7 @@ class TxSamples :
         ops_file.save_complex_samples_2_npf ( filename_and_dirname , self.symbols_from_samples )
 
     def plot_samples ( self , title :str = "" , markers : bool = True ) -> None :
-        idxs : NDArray[ np.uint32 ] = np.array ( [ self.first_symbol_idx , self.first_symbol_idx + self.symbols_from_samples.size ] , dtype = np.uint32 ) if markers else None
-        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_peaks = idxs )
+        plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_peaks = self.idxs )
 
     def plot_active_samples ( self , title :str = "" , markers : bool = True ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples[ self.first_symbol_idx : self.first_symbol_idx + self.symbols_from_samples.size ] , f"{title} {self.symbols_from_samples.size=}" )
@@ -1057,7 +1079,7 @@ class TxSamples :
         plot.spectrum_occupancy ( samples = samples_4_pluto , nperseg = 1024 , title = f"{title} {samples_4_pluto.size=}" )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.samples.size= }, { self.symbols_from_samples.size=}" )
+        return ( f"{self.samples.size=}, {self.symbols_from_samples.size=}, {len(self.frames)=}, {self.frames=}" )
 
 @dataclass ( slots = True , eq = False )
 class TxPluto_v0_1_17 :
@@ -1075,4 +1097,4 @@ class TxPluto_v0_1_17 :
         self.pluto_tx_ctx = sdr.init_pluto_v0_1_17 ( sn = self.sn , tx_gain_float = self.tx_gain_float )
 
     def __repr__ ( self ) -> str :
-        return ( f"{ self.pluto_tx_ctx= }" )
+        return ( f"{self.pluto_tx_ctx=}" )
