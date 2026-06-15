@@ -567,7 +567,7 @@ class RxPacket_v0_1_18 :
             return
 
     def correct_cfo ( self ) -> None :
-        self.samples = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( True ) ) )
+        self.samples_corrected = modulation.zero_quadrature ( corrections.full_compensation_v0_1_5 ( self.samples , modulation.generate_barker13_bpsk_samples_v0_1_7 ( clip_tail = True ) ) )
 
     def plot_complex_samples_filtered_and_corrected ( self , title = "" , marker : bool = False , peaks : NDArray[ np.uint32 ] = None ) -> None :
         plot.complex_waveform_v0_1_6 ( self.samples , f"{title} {self.samples.size=}" , marker_squares = marker , marker_peaks = peaks )

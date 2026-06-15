@@ -25,7 +25,7 @@ def generate_payload_rand_up_2_1500b () -> list [ int ] :
 
 def fill_samples_up_to_max_length ( tx_samples : packet.TxSamples , max_samples_size : int ) -> None :
     payload_sizes = np.array ( [] ).astype ( np.uint32 )
-    while tx_samples.samples_4_pluto.size < max_samples_size :
+    while tx_samples.samples.size < max_samples_size :
         payload_bytes = generate_payload_rand_up_2_1500b ()
         if not np.any ( payload_sizes == np.uint32 ( len ( payload_bytes ) ) ):
             payload_sizes = np.append ( payload_sizes , np.uint32 ( len ( payload_bytes )  ) )

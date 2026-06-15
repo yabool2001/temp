@@ -26,10 +26,10 @@ import tomllib
 ################
 ### SETTINGS ###
 
-mode : str = 'test' # Available modes: 'training', 'test' or "inference"
+mode : str = 'training' # Available modes: 'training', 'test' or "inference"
 
 dbg = True
-plt = True
+plt = False
 wrt = True
 del_dst = True
 
@@ -37,9 +37,9 @@ lipkow_ap = True
 single_machine = True
 legion = True
 
-Nof_ATTEMPTS = int ( 1 )
-Nof_WRTS = int ( 3 )
-frame_size : str = "S" # Available frame sizes: "S" - small, "M" - medium or "L" - large
+Nof_ATTEMPTS = int ( 20 )
+Nof_WRTS = int ( 8 )
+frame_size : str = "L" # Available frame sizes: "S" - small, "M" - medium or "L" - large
 
 ################
 ################

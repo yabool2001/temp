@@ -30,7 +30,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 ### SETTINGS ##########################################################################################################
 #######################################################################################################################
 
-mode : str = 'inference' # 'training' , 'test' lub "inference"
+mode : str = 'training' # 'training' , 'test' lub "inference"
 
 y_train_tensor_src : str = 'active_samples'
 # 'symbols': do tworzenia X_train_samples używamy symboli tx (czyli próbek z pliku {timestamp_group}_tx_active_symbols.npy),
@@ -39,7 +39,7 @@ y_train_tensor_src : str = 'active_samples'
 
 samples_filtered_4_X_train_samples : bool = False # czy do tworzenia X_train_samples używać surowych próbek (samples_raw) czy próbek po filtracji (samples_filtered)
 
-X_y_clipping_mode : str = 'none'
+# X_y_clipping_mode : str = 'none'
 # 'balanced': przycinamy próbki do długości ramki, ale dodajemy trochę rozbiegówki i wygaszenia,
 # 'symbols_only': przycinamy dokładnie do długości ramki bez rozbiegówki i wygaszenia, 
 # 'none': nie przycinamy próbek ani symboli
@@ -94,10 +94,8 @@ for timestamp_group in timestamp_groups :
 	no_X_train_samples_created : int = 0
 	if first_symbol_idx is not None :
 		no_X_train_samples_created += 1
-		if plt : rx_samples.plot_X_and_y ( title = f"{script_filename} {timestamp_group} X_train_samples and y_train_tensor before clipping" , mark_samples = True )
-		if X_y_clipping_mode != 'none' : rx_samples.clip_X_train_samples_and_y_train_tensor ( clipping_mode = X_y_clipping_mode )
-		if plt : rx_samples.plot_X_and_y ( title = f"{script_filename} {timestamp_group} X_train_samples and y_train_tensor after clipping" , mark_samples = False )
-		if wrt : rx_samples.save_train_data ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )
+		if plt : rx_samples.plot_X_and_y ( title = f"{script_filename} {timestamp_group}" , mark_samples = True )
+		if wrt : rx_samples.save_X_and_y ( timestamp_group = f"{timestamp_group}" , dir_name = dst_dir.name , add_timestamp = False )
 		if del_src_files :
 			for file_path in Path ( src_dir ).glob ( f"{timestamp_group}_*.*" ) :
 				if file_path.is_file () :

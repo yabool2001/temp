@@ -8,6 +8,7 @@ with open ( "settings.toml" , "rb" ) as settings_file :
     toml_settings = tomllib.load ( settings_file )
 
 SPS  = int ( toml_settings[ "bpsk" ][ "SPS" ] )
+BARKER13_BITS : NDArray[ np.uint8 ] = np.array ( toml_settings[ "BARKER13_BITS" ] , dtype = np.uint8 )
 
 def cw ( buffer_size , scale: str ) -> np.complex128 :
 
@@ -66,13 +67,11 @@ def upsample_symbols ( symbols: np.ndarray , sps: int ) -> np.ndarray :
     upsampled[ ::sps ] = symbols
     return upsampled
 
-def generate_barker13_bpsk_samples_v0_1_7 ( clipped = False ) -> NDArray[ np.complex128 ] :
-    symbols = bits_2_bpsk_symbols ( BARKER13_BITS )
-    samples = filters.apply_tx_rrc_filter_v0_1_3 ( symbols , True )
-    if clipped :
-        tail_length = ( filters.SPAN - 1 ) // 2 * SPS  # Oblicz ogon filtra RRC
-        samples = samples[ : -tail_length ]  # Przytnij ogon na końcu
-    return samples
+def generate_barker13_bpsk_samples_v0_1_7 ( clip_tail : bool = False ) -> NDArray[ np.complex64 ] :
+
+    corr_seq_bpsk_symbols : NDArray [ np.complex64 ] = bits_2_bpsk_symbols ( BARKER13_BITS )
+    corr_seq_samples = filters.apply_tx_rrc_filter_v0_1_3 ( corr_seq_bpsk_symbols , upsample = True )
+    return corr_seq_samples[ : - filters.LAST_SYMBOL_OFFSET ] if clip_tail else corr_seq_samples
 
 def zero_quadrature ( samples : NDArray[ np.complex128 ] ) -> NDArray[ np.complex128 ] :
     """
