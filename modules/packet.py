@@ -704,10 +704,12 @@ class RxSamples :
     def __post_init__ ( self ) -> None :
         pass
 
-    def rx ( self , sdr_ctx : Pluto  | None = None , filename_and_dirname : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex64 ] :
+    def rx ( self , sdr_ctx : Pluto  | None = None , complex_samples : NDArray[ np.complex64 ] | None = None , filename_and_dirname : str | None = None , concatenate : bool = False ) -> NDArray[ np.complex64 ] :
 
         if sdr_ctx is not None :
             samples = sdr_ctx.rx ()
+        elif complex_samples is not None :
+            samples = complex_samples
         elif filename_and_dirname is not None :
             if filename_and_dirname.endswith('.npy'):
                 samples = self.open_and_load_npf ( filename_and_dirname = filename_and_dirname )
@@ -767,7 +769,7 @@ class RxSamples :
             radio_preamble_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( radio_preamble_symbols )
             if np.array_equal ( radio_preamble_bits , RADIO_PREAMBLE_BITS ) :
                 return idx + filters.FIRST_SYMBOL_OFFSET + RADIO_PREAMBLE_SAMPLES_LEN
-        return None
+        return idx + filters.FIRST_SYMBOL_OFFSET + RADIO_PREAMBLE_SAMPLES_LEN # None
 
     def create_idxs ( self ) -> None :
 

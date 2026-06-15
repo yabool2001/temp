@@ -12,6 +12,8 @@ obj : bool = True # obj=object czy chcesz to robic za pomoca klas w modules/pack
 
 dir_name = Path ( "np.test" )
 dir_name = Path ( "test001.tx_rx_samples" )
+dir_name = Path ( "np.demod" )
+dir_name = Path ( "pt.inference" )
 
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 
@@ -23,7 +25,7 @@ for samples_file in samples_files :
 	if obj :
 		rx_pluto_samples = packet.RxSamples ()
 		# filtrowanie i korekcja wyłączona, bo zastosowana 2 razy nie zadziała
-		rx_pluto_samples.rx ( file_name = str ( samples_file ) , concatenate = False )
+		rx_pluto_samples.rx ( filename_and_dirname = str ( samples_file ) , concatenate = False )
 		rx_pluto_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = False )
 		#frame_starts_idx : NDArray[ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
 		#frame_first_sample_idx : NDArray[ np.uint32 ] = np.array ( [ frame.frame_first_sample_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )

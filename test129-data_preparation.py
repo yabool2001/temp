@@ -30,7 +30,7 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 ### SETTINGS ##########################################################################################################
 #######################################################################################################################
 
-mode : str = 'training' # 'training' , 'test' lub "inference"
+mode : str = 'inference' # 'training' , 'test' lub "inference"
 
 y_train_tensor_src : str = 'active_samples'
 # 'symbols': do tworzenia X_train_samples używamy symboli tx (czyli próbek z pliku {timestamp_group}_tx_active_symbols.npy),

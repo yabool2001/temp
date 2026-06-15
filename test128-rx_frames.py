@@ -23,13 +23,12 @@ import socket
 import time as t
 import tomllib
 
-################
-### SETTINGS ###
-
-mode : str = 'training' # Available modes: 'training', 'test' or "inference"
+################################################################################
+### SETTINGS ###################################################################
+mode : str = 'inference' # Available modes: 'training', 'test' or "inference"
 
 dbg = True
-plt = False
+plt = True
 wrt = True
 del_dst = True
 
@@ -37,12 +36,11 @@ lipkow_ap = True
 single_machine = True
 legion = True
 
-Nof_ATTEMPTS = int ( 20 )
-Nof_WRTS = int ( 8 )
-frame_size : str = "L" # Available frame sizes: "S" - small, "M" - medium or "L" - large
-
-################
-################
+Nof_ATTEMPTS = int ( 1 )
+Nof_WRTS = int ( 3 )
+frame_size : str = "S" # Available frame sizes: "S" - small, "M" - medium or "L" - large
+################################################################################
+################################################################################
 
 np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie podglądu dużych tablic dla debuggera do ułamka sekundy
 script_filename = os.path.basename ( __file__ )

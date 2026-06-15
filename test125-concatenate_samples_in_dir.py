@@ -16,20 +16,21 @@ np.set_printoptions ( threshold = 10 , edgeitems = 3 ) # Ogranicza renderowanie 
 
 clp : bool = False # Czy przyciąć próbki do długości ramki (wymagane do treningu, ale nie do analizy)
 plt : bool = True
-wrt : bool = False
+wrt : bool = True
 dbg : bool = True
 del_files : bool = False
 
 
 samples_dir = Path ( "np.tensors" )
 samples_dir = Path ( "test001.tx_rx_samples" )
+samples_dir = Path ( "np.inference" )
 
 # Znajdź unikalne grupy plików na podstawie timestampu w nazwie dla plików *_rx_samples_*.npy które nie były jeszcze obrobione!!!
 timestamp_groups = sorted ( { p.name.split ( "_rx_samples" , 1 )[ 0 ] for p in samples_dir.glob("*_rx_samples_*.npy") } )
 
 for timestamp_group in timestamp_groups :
 	samples_files = sorted ( samples_dir.glob ( f"{timestamp_group}_rx_samples_*.npy" ) )
-	timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in Path("np.tensors").glob(f"{timestamp_group}_rx_samples_*.npy") } )
+	timestamps = sorted ( { p.stem.split(f"{timestamp_group}_rx_samples_", 1)[1] for p in samples_dir.glob(f"{timestamp_group}_rx_samples_*.npy") } )
 	if dbg : print ( f"\n{timestamp_group=} , {samples_files=} , {timestamps=}" )
 	if not samples_files :
 		raise FileNotFoundError ( f"Brak plikow {timestamp_group}_rx_samples_*.npy w katalogu {samples_dir}" )
@@ -38,16 +39,16 @@ for timestamp_group in timestamp_groups :
 		rx_pluto_samples.rx ( filename_and_dirname = str ( samples_file ) , concatenate = True )
 	rx_pluto_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False )
 	if plt : rx_pluto_samples.plot_samples ( title = f"{script_filename} raw samples" )
-	frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
-	if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"before cliping {script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
+	frame_starts_idx : NDArray [ np.uint32 ] = np.array ( [ frame.first_symbol_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
+	if plt : rx_pluto_samples.plot_samples ( title = f"before cliping {script_filename}" , mark_samples = True )
 	if clp :
 		rx_pluto_samples.clip_samples_for_training ()
-		frame_starts_idx = np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
-		if plt : rx_pluto_samples.plot_complex_samples ( f"{script_filename} {rx_pluto_samples.samples.size=}" , peaks = frame_starts_idx )
-		if plt : rx_pluto_samples.plot_complex_samples_corrected ( title = f"{script_filename} {rx_pluto_samples.samples.size=} {frame_starts_idx.size=}" , peaks = frame_starts_idx )
+		frame_starts_idx = np.array ( [ frame.first_symbol_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 )
+		if plt : rx_pluto_samples.plot_samples ( f"{script_filename}" , mark_samples = True )
+		if plt : rx_pluto_samples.plot_samples ( title = f"{script_filename}" , mark_samples = True )
 	if wrt :
-		rx_pluto_samples.save_complex_samples2npf_v0_1_18 ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
+		rx_pluto_samples.save_samples_2_npf ( file_name = f"{timestamp_group}_rx_samples" , dir_name = samples_dir.name , add_timestamp = False )
 	if del_files :
-		for file_path in Path ( samples_dir ).glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
+		for file_path in samples_dir.glob ( f"{timestamp_group}_rx_samples_*.npy" ) :
 			if file_path.is_file () :
 				file_path.unlink ( missing_ok = True )
