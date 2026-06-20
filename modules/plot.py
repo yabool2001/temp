@@ -144,7 +144,6 @@ def complex_symbols ( complex_symbols : NDArray[ np.complex128 ] , title : str =
     #fig.add_shape ( type = "circle" , x0 = -1 , y0 = -1 , x1 = 1 , y1 = 1 , line_color = "red" , line_dash = "dash" )  # okrąg jednostkowy
     fig.show ()
 
-
 def complex_waveform ( signal_complex: NDArray[ np.complex128 ] , title: str = "Sygnał zespolony" , marker_squares : bool = False ) -> None:
     """
     Rysuje wykres rzeczywistej i urojonej części sygnału zespolonego.
@@ -646,151 +645,6 @@ def flat_tensor_v0_1_18 (
         marker_peaks = resolved_marker_idx
     )
 
-
-def y_train_tensor_as_flat_tensor_v0_1_18 (
-    y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
-    title : str = "Flat tensor from y_train_tensor" ,
-    marker_squares : bool = False ,
-    marker_peaks : Optional[ NDArray[ np.int_ ] ] = None
-) -> None :
-    """
-    Zamienia zapisany y_train_tensor RxSamples_v0_1_18 na 1D flat tensor
-    bez zmiany długości sygnału, a następnie wyświetla go funkcją
-    flat_tensor_v0_1_18.
-
-    Obsługiwane wejścia:
-    - torch.Tensor o kształcie [seq_len] i dtype zespolonym
-    - np.ndarray o kształcie [seq_len] i dtype zespolonym
-    """
-    if isinstance ( y_train_tensor , torch.Tensor ) :
-        tensor = y_train_tensor.detach ().cpu ()
-    else :
-        tensor = torch.as_tensor ( np.asarray ( y_train_tensor ) )
-
-    if tensor.numel () == 0 :
-        raise ValueError ( "Wejściowy y_train_tensor jest pusty." )
-    if tensor.ndim != 1 :
-        raise ValueError ( "y_train_tensor musi być tensorem 1D o kształcie [seq_len]." )
-    if not torch.is_complex ( tensor ) :
-        raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
-
-    flat_tensor = tensor.to ( torch.complex64 )
-    flat_tensor_v0_1_18 (
-        flat_tensor = flat_tensor ,
-        title = title ,
-        marker_squares = marker_squares ,
-        marker_peaks = marker_peaks
-    )
-
-def samples_and_tensor_1k ( X_train_samples : Optional[ NDArray[ np.complex128 ] ] = None ,
-                            y_train_tensor : Optional[ torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ] = None ,
-                            ai_samples : Optional[ NDArray[ np.complex128 ] ] = None ,
-                            ai_symbols : Optional[ NDArray[ np.complex128 ] ] = None ,
-                            idxs : Optional[ NDArray[ np.uint32 ] ] = None,
-                            my_title : str = "") -> None :
-    signal_specs : list[ tuple[ str , NDArray[ np.complex64 ] , str , str ] ] = []
-
-    ths : int = 10000  # Threshold for maximum allowed size of input arrays
-
-    if X_train_samples is not None :
-        normalized_x_train_samples = np.asarray ( X_train_samples , dtype = np.complex64 )
-        if normalized_x_train_samples.size > 0 :
-            if normalized_x_train_samples.ndim != 1 :
-                raise ValueError ( "X_train_samples musi być tablicą 1D." )
-            if not np.iscomplexobj ( normalized_x_train_samples ) :
-                raise ValueError ( "X_train_samples musi zawierać wartości zespolone." )
-            if normalized_x_train_samples.size > ths :
-                raise ValueError ( f"ERROR! X_train_samples exceeds the maximum allowed size of {ths}." )
-            x_train_samples_peak = np.max ( np.abs ( normalized_x_train_samples ) )
-            if x_train_samples_peak > 0 :
-                normalized_x_train_samples = normalized_x_train_samples / x_train_samples_peak
-            signal_specs.append ( ( "X_train_samples" , normalized_x_train_samples , 'blue' , 'green' ) )
-
-    if y_train_tensor is not None :
-        if isinstance ( y_train_tensor , torch.Tensor ) :
-            y_train_tensor_np = y_train_tensor.detach ().cpu ().numpy ()
-        else :
-            y_train_tensor_np = np.asarray ( y_train_tensor )
-
-        if y_train_tensor_np.size > 0 :
-            if y_train_tensor_np.ndim != 1 :
-                raise ValueError ( "y_train_tensor musi być tensorem lub tablicą 1D." )
-            if not np.iscomplexobj ( y_train_tensor_np ) :
-                raise ValueError ( "y_train_tensor musi zawierać wartości zespolone." )
-            if y_train_tensor_np.size > ths :
-                raise ValueError ( f"ERROR! y_train_tensor exceeds the maximum allowed size of {ths}." )
-            signal_specs.append ( ( "y_train_tensor" , np.asarray ( y_train_tensor_np , dtype = np.complex64 ) , 'red' , 'orange' ) )
-
-    if ai_samples is not None :
-        ai_samples_np = np.asarray ( ai_samples , dtype = np.complex64 )
-        if ai_samples_np.size > 0 :
-            if ai_samples_np.ndim != 1 :
-                raise ValueError ( "ai_samples musi być tablicą 1D." )
-            if not np.iscomplexobj ( ai_samples_np ) :
-                raise ValueError ( "ai_samples musi zawierać wartości zespolone." )
-            if ai_samples_np.size > ths :
-                raise ValueError ( f"ERROR! ai_samples exceeds the maximum allowed size of {ths}." )
-            signal_specs.append ( ( "ai_samples" , ai_samples_np , 'purple' , 'brown' ) )
-
-    if ai_symbols is not None :
-        ai_symbols_np = np.asarray ( ai_symbols , dtype = np.complex64 )
-        if ai_symbols_np.size > 0 :
-            if ai_symbols_np.ndim != 1 :
-                raise ValueError ( "ai_symbols musi być tablicą 1D." )
-            if not np.iscomplexobj ( ai_symbols_np ) :
-                raise ValueError ( "ai_symbols musi zawierać wartości zespolone." )
-            if ai_symbols_np.size > ths :
-                raise ValueError ( f"ERROR! ai_symbols exceeds the maximum allowed size of {ths}." )
-            signal_specs.append ( ( "ai_symbols" , ai_symbols_np , 'black' , 'gray' ) )
-
-    if len ( signal_specs ) == 0 :
-        raise ValueError ( "Brak danych do wyświetlenia." )
-
-    marker_colors = [ 'magenta' , 'cyan' , 'gold' , 'limegreen' ]
-    fig = go.Figure ()
-
-    for signal_idx , ( signal_name , signal_values , real_color , imag_color ) in enumerate ( signal_specs ) :
-        x_axis = np.arange ( signal_values.size )
-        fig.add_trace ( go.Scattergl ( x = x_axis , y = signal_values.real , mode = 'lines' , name = f'{signal_name} I (real)' , line = dict ( color = real_color ) ) )
-        fig.add_trace ( go.Scattergl ( x = x_axis , y = signal_values.imag , mode = 'lines' , name = f'{signal_name} Q (imag)' , line = dict ( color = imag_color , dash = 'dash' ) ) )
-
-        if idxs is None :
-            continue
-
-        valid_idxs = np.asarray ( idxs , dtype = np.int_ )
-        valid_idxs = valid_idxs[ ( valid_idxs >= 0 ) & ( valid_idxs < signal_values.size ) ]
-        if valid_idxs.size == 0 :
-            continue
-
-        fig.add_trace (
-            go.Scattergl (
-                x = valid_idxs ,
-                y = signal_values.real[ valid_idxs ] ,
-                mode = 'markers' ,
-                name = f'{signal_name} peaks I' ,
-                marker = dict ( symbol = 'triangle-up' , size = 10 , color = marker_colors[ signal_idx ] , line = dict ( color = real_color , width = 1 ) )
-            )
-        )
-        fig.add_trace (
-            go.Scattergl (
-                x = valid_idxs ,
-                y = signal_values.imag[ valid_idxs ] ,
-                mode = 'markers' ,
-                name = f'{signal_name} peaks Q' ,
-                marker = dict ( symbol = 'triangle-down' , size = 10 , color = marker_colors[ signal_idx ] , line = dict ( color = imag_color , width = 1 ) )
-            )
-        )
-
-    fig.update_layout (
-        title = f"Combined graph {my_title}" ,
-        xaxis_title = "Numer próbki" ,
-        yaxis_title = "Amplituda" ,
-        xaxis = dict ( rangeslider_visible = True ) ,
-        legend = dict ( orientation = "h" , yanchor = "bottom" , y = 1.02 , xanchor = "center" , x = 0.5 ) ,
-        height = 700
-    )
-    fig.show ()
-
 def samples_and_tensor (
     samples : NDArray[ np.complex128 ] ,
     y_train_tensor : torch.Tensor | NDArray[ np.complex64 ] | NDArray[ np.complex128 ] ,
@@ -852,7 +706,6 @@ def samples_and_tensor (
         )
         fig.show ()
 
-
 def tensor_waveform_v0_1_16 (
     signal_tensor : torch.Tensor | NDArray[ np.float32 ] ,
     title : str = "Tensor RxSamples" ,
@@ -909,7 +762,7 @@ def tensor_waveform_v0_1_16 (
         marker_peaks = marker_peaks
     )
 
-def prt_frames ( frames : list[ "packet.RxFrame_v0_1_18" ] , limit : int = len ( "packet.BARKER13_BITS" ) ,  ) -> None :
+def prt_frames ( frames : list[ "packet.RxFrame" ] , limit : int = len ( "packet.BARKER13_BITS" ) ,  ) -> None :
     for frame in frames :
         frame_bits = modulation.bpsk_symbols_2_bits_v0_1_7 ( np.concatenate ( [ frame.header_bpsk_symbols[ : : modulation.SPS ] , frame.packet.bpsk_symbols[ : : modulation.SPS ] ] ) )
         print ( f"{ frame_bits.size=}, {frame.frame_start_abs_idx=}, {frame_bits[ : limit ]=}" )

@@ -112,10 +112,10 @@ if __name__ == "__main__":
     ai_demod_samples = demod ( str ( rx_filename_and_dirname ) )
     rx_ai_samples = packet.RxSamples ()
     rx_ai_samples.rx ( complex_samples = ai_demod_samples , concatenate = False )
-    rx_ai_samples.detect_frames ( deep = False , samples_filtered = False , correct_samples = False , add_peak_at_0 = False )
+    rx_ai_samples.detect_frames ( deep = False , samples_filtered = True , correct_samples = False , add_peak_at_0 = False )
     
     if plt:
-        plot.complex_waveform_v0_1_6 ( ai_demod_samples , f"{script_filename} AI samples {timestamp_group} {ai_demod_samples.size=}" )
+        plot.complex_waveform_v0_1_6 ( ai_demod_samples , f"{script_filename} {timestamp_group} AI samples {ai_demod_samples.size=}" )
         #plot.real_waveform_v0_1_6 ( ai_symbols.real[ first_symbol_abs_idx : last_symbol_abs_idx ] , f"{script_filename} AI symbols.real {timestamp_group} {ai_symbols.size=}" )
         #plot.real_waveform_v0_1_6 ( y_train_symbols.real[ first_symbol_abs_idx : last_symbol_abs_idx ] , f"{script_filename} y_train symbols.real {timestamp_group} {y_train_symbols.size=}" )
 
