@@ -14,6 +14,7 @@ dir_name = Path ( "np.test" )
 dir_name = Path ( "test001.tx_rx_samples" )
 dir_name = Path ( "np.demod" )
 dir_name = Path ( "pt.inference" )
+dir_name = Path ( "pt.training" )
 
 samples_files = sorted ( dir_name.glob ( "*.npy" ) )
 
@@ -33,10 +34,11 @@ for samples_file in samples_files :
 		#	np.array ( [ frame.frame_start_abs_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 ) ,
 		#	np.array ( [ frame.frame_start_abs_first_sample_idx for frame in rx_pluto_samples.frames ] , dtype = np.uint32 ) ) )
 		if plt : rx_pluto_samples.plot_samples ( title = f"{script_filename} {samples_file.name=}")
+		if plt : rx_pluto_samples.plot_samples_spectrum ( title = f"{script_filename} {samples_file.name=}" , N = 2048 )
 	else :
 		samples : NDArray[ np.complex128 ] = ops_file.open_samples_from_npf ( str ( samples_file ) )
 		if dbg : print ( f"\n{samples_file.name} samples.shape={samples.shape} samples.dtype={samples.dtype}" )
 		if plt : plot.complex_waveform_v0_1_6 ( samples , f"{samples_file.name} samples.size={samples.size}")
-	#i += 1
+	i += 1
 	if i >= 2 :
 		break

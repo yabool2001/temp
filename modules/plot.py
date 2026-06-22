@@ -411,7 +411,78 @@ def plot_bpsk_symbols_v2(symbols: np.ndarray,
     # Oś Y dopasowana dynamicznie, ale możesz wymusić np. range=[-1.5, 1.5] jeśli chcesz sztywną skalę
     fig.show()
 
-def spectrum_occupancy ( samples , nperseg = 1024 , title: str = "Spectrum occupancy (PSD)" ) -> None :
+def spectrum_occupancy_gem ( samples , nperseg = 1024 , title : str = "Spectrum occupancy (PSD)" ) -> None :
+    """
+    Funkcja do wizualizacji rzeczywistej zajętości widma (PSD) na podstawie próbek zespolonych I/Q.
+    Automatycznie liczy miarę 99% Occupied Bandwidth (OBW) i centruje oś na bazie f_c SDR-a.
+    """
+    
+    f_s = sdr.F_S  # 3e6 Hz
+    f_c = sdr.F_C  # np. 2.9e9 Hz
+
+    # Dynamiczne dostosowanie nperseg i noverlap
+    len_samples = len(samples)
+    if nperseg > len_samples:
+        nperseg = len_samples 
+    noverlap = min(nperseg // 2, nperseg - 1)
+    
+    # 1. Estymacja PSD z odpowiednimi dla SDR argumentami
+    f, Pxx = signal.welch(
+        samples, 
+        fs=f_s, 
+        window='hann', 
+        nperseg=nperseg, 
+        noverlap=noverlap, 
+        detrend=False,             # POPRAWKA: Nie ukrywaj sprzętowego wycieku LO (składowej DC)
+        scaling='density',
+        return_onesided=False      # POPRAWKA: Wymuś widmo 2-stronne dla sygnałów Baseband (I/Q)
+    )
+    
+    # 2. POPRAWKA KRYTYCZNA: Sortowanie wyjścia z FFT (centrowanie na 0)
+    # Zabezpiecza przed "pajęczyną" rysowaną przez domyślne łączenie punktów w Plotly
+    f = np.fft.fftshift(f)
+    Pxx = np.fft.fftshift(Pxx)
+    
+    # 3. Rzeczywiste obliczenie zajętości pasma: 99% Occupied Bandwidth (OBW)
+    # Dystrybuanta (skumulowana moc znormalizowana do 1.0)
+    cum_power = np.cumsum(Pxx) / np.sum(Pxx)  
+    
+    # Szukamy odcięć dla 0.5% (z lewej) i 99.5% (z prawej)
+    idx_lower = np.argmax(cum_power >= 0.005)
+    idx_upper = np.argmax(cum_power >= 0.995)
+    
+    obw_hz = f[idx_upper] - f[idx_lower]
+    
+    # Przesunięcie częstotliwości o rx_lo (np. 2.9 GHz)
+    f_rf = f + f_c
+    f_lower_rf = f[idx_lower] + f_c
+    f_upper_rf = f[idx_upper] + f_c
+    
+    # Normalizacja do dB/Hz z marginesem na wypadek log(0)
+    Pxx_db = 10 * np.log10(np.abs(Pxx) + 1e-12)
+    
+    # Dynamiczny tytuł informujący od razu o zmierzonej zajętości widma w Hz
+    dynamic_title = f"{title} | Zmierzona zajętość (99% OBW): {obw_hz / 1e3:.2f} kHz"
+    
+    # DataFrame do wizualizacji z pandas i plotly
+    df = pd.DataFrame({'Częstotliwość [Hz]': f_rf, 'PSD [dB/Hz]': Pxx_db})
+    
+    # Wykres interaktywny
+    fig = px.line(df, x='Częstotliwość [Hz]', y='PSD [dB/Hz]', title=dynamic_title)
+    
+    # Naniesienie czerwonych przerywanych linii wyznaczających zajęte pasmo
+    fig.add_vline(x=f_lower_rf, line_dash="dash", line_color="red", annotation_text=" 0.5% Mocy")
+    fig.add_vline(x=f_upper_rf, line_dash="dash", line_color="red", annotation_text=" 99.5% Mocy")
+    
+    fig.update_layout(
+        xaxis_title='Częstotliwość [Hz]', 
+        yaxis_title='Moc spektralna [dB/Hz]',
+        xaxis_range=[f_c - f_s / 2, f_c + f_s / 2]
+    )
+    
+    fig.show()
+
+def spectrum_occupancy_old ( samples , nperseg = 1024 , title: str = "Spectrum occupancy (PSD)" ) -> None :
     """
     Funkcja do wizualizacji zajętości widma (PSD) na podstawie próbek.
     Używa scipy.signal.welch do estymacji PSD, co jest efektywne dla sygnałów BPSK

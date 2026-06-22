@@ -774,7 +774,8 @@ class RxSamples :
     def create_idxs ( self ) -> None :
 
         if self.frames is None or len ( self.frames ) == 0 :
-            raise ValueError ( "ERROR!: No frames available." )
+            if settings["log"]["verbose_2"] : print ( f"Brak ramek do utworzenia idxs w funkcji create_idxs()!" )
+            return
         self.first_symbol_idx = self.frames[ 0 ].first_symbol_abs_idx - SYNC_SEQ_SAMPLES_LEN - PADDING_SAMPLES_LEN - CORR_SEQ_SAMPLES_LEN
         idxs : NDArray[ np.uint32 ] = np.array ( [] , dtype = np.uint32 )
         radio_preamble_idxs : NDArray[ np.uint32 ] = np.array ( [ self.first_symbol_idx , # Pierwszy sample SYNC_SEQ obliczony powyżej
@@ -860,6 +861,9 @@ class RxSamples :
     def plot_X_and_y ( self , title : str = "" , mark_samples : bool = True ) -> None :
         plot.complex_waveform_v0_1_6 ( self.X_train_samples , title = f"{title} {self.X_train_samples.size=}" , marker_peaks = self.idxs - self.first_symbol_idx if mark_samples else None )
         plot.flat_tensor_v0_1_18 ( self.y_train_tensor , title = f"{title} {self.y_train_tensor.shape=}" , marker_peaks = self.idxs - self.first_symbol_idx if mark_samples else None )
+
+    def plot_samples_spectrum ( self , title : str = "" , N : int = 4096 ) -> None :
+        plot.spectrum_occupancy_gem ( samples = self.samples_raw , nperseg = N , title = f"{title} {self.samples_raw.size=}" )
 
     def __repr__ ( self ) -> str :
 
